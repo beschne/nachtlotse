@@ -28,15 +28,36 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   for Bortle 2 and 5) — computed live, not stored, so it can't go stale
   when the underlying constant gets tuned. Not yet wired into catalog
   filtering; today it's informational only.
-- `nachtlotse/data/catalog/` — deep-sky catalog (30 curated objects so far,
-  all Messier). Split into `mag_*.yaml` files by apparent magnitude, not by
-  source catalog — a future NGC/IC object with no Messier number just adds
-  to whichever bin its brightness lands in, and a site+rig's computed
-  limiting magnitude will eventually be able to load only the bins it
-  needs. Every physical object gets exactly one `Target` entry regardless
-  of how many catalogs list it — `Target.aliases` carries the others (e.g.
-  M31's `aliases=("NGC 224",)`), so the same galaxy can never show up
-  twice under two different names.
+- `nachtlotse/data/catalog/` — deep-sky catalog: 88 curated objects (30
+  Messier, 58 NGC/IC — well-known astrophotography targets with no
+  Messier number, e.g. North America Nebula, Veil Nebula, Helix Nebula,
+  Antennae Galaxies). Sourced against
+  [OpenNGC](https://github.com/mattiaverga/OpenNGC) (CC-BY-SA-4.0) rather
+  than memory alone once objects got obscure enough that misremembering a
+  magnitude was a real risk — magnitudes prefer OpenNGC's B-Mag field over
+  V-Mag (an early extraction pass that preferred V-Mag whenever present
+  produced silently wrong values, e.g. the Sculptor Galaxy's V-Mag=11.11
+  vs. its correct B-Mag≈7.9; fixed with a "prefer B, fall back to V"
+  rule with an anomaly guard). Curation stops at objects OpenNGC tags with
+  a real common name — reaching down to ~mag 12.9 (e.g. Little Ghost
+  Nebula); going deeper still would mean pulling in anonymous, rarely
+  imaged galaxies mostly known by catalog number alone, which stretches
+  "well-known target" past what a name-only human curation pass can
+  vouch for. Split into `mag_*.yaml` files by apparent magnitude, not
+  by source catalog — a bin file doesn't care whether an object is
+  Messier, NGC, or IC, and a site+rig's computed limiting magnitude will
+  eventually be able to load only the bins it needs. Every physical object
+  gets exactly one `Target` entry regardless of how many catalogs list it
+  — `Target.aliases` carries the others (e.g. M31's
+  `aliases=("NGC 224",)`; M16's Eagle Nebula carries both `NGC 6611` and
+  `IC 4703`, its two other designations), so the same object can never
+  show up twice under two different names. Two policy tests keep every
+  entry within scope: declination ≥ −30° (reaches ≥20° altitude from any
+  "40°N or further north" site — M83 at −29.87° is the existing edge case
+  that pins this boundary) and magnitude ≤ 18.6 (this project's widest
+  aperture, Redcat 51, under its darkest sky in scope, Bortle 2) — the
+  catalog is well within that ceiling today, so there's room to go deeper
+  later without hitting it.
 - `nachtlotse/data/store.py` — site *and rig* persistence: coordinates,
   measured/sector-derived horizon, region, Bortle class; optics/sensor/mount
   specs, plate scale, FoV. No location or equipment data ships in code —

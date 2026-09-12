@@ -1,6 +1,41 @@
 # Catalog objects magnitude 7.0-7.99. See catalog/__init__.py for the
 # schema. Sorted by magnitude (brightest first).
 
+- name: "Western Veil Nebula"
+  catalog_id: "NGC 6960"
+  ra_deg: 311.425
+  dec_deg: 30.717
+  magnitude: 7.0
+  size_arcmin: [70.0, 6.0]
+
+- name: "Eastern Veil Nebula"
+  catalog_id: "NGC 6992"
+  ra_deg: 314.100
+  dec_deg: 31.717
+  magnitude: 7.0
+  size_arcmin: [60.0, 8.0]
+
+- name: "Iris Nebula"
+  catalog_id: "NGC 7023"
+  ra_deg: 315.398
+  dec_deg: 68.170
+  magnitude: 7.2
+  size_arcmin: [10.0, 8.0]
+
+- name: "Crescent Nebula"
+  catalog_id: "NGC 6888"
+  ra_deg: 303.000
+  dec_deg: 38.350
+  magnitude: 7.4
+  size_arcmin: [20.0, 10.0]
+
+- name: "Pacman Nebula"
+  catalog_id: "NGC 281"
+  ra_deg: 13.200
+  dec_deg: 56.617
+  magnitude: 7.4
+  size_arcmin: [35.0, 30.0]
+
 - name: "Dumbbell Nebula"
   catalog_id: "M27"
   aliases: ["NGC 6853"]
@@ -17,6 +52,27 @@
   magnitude: 7.5
   size_arcmin: [13.0, 12.0]
 
+- name: "Helix Nebula"
+  catalog_id: "NGC 7293"
+  ra_deg: 337.411
+  dec_deg: -20.837
+  magnitude: 7.5
+  size_arcmin: [16.33, 16.33]
+
+- name: "Caroline's Cluster"
+  catalog_id: "NGC 2360"
+  ra_deg: 109.430
+  dec_deg: -15.641
+  magnitude: 7.62
+  size_arcmin: [9.0, 9.0]
+
+- name: "Cocoon Nebula"
+  catalog_id: "IC 5146"
+  ra_deg: 328.370
+  dec_deg: 47.267
+  magnitude: 7.82
+  size_arcmin: [10.0, 10.0]
+
 - name: "Pinwheel Galaxy"
   catalog_id: "M101"
   aliases: ["NGC 5457"]
@@ -24,3 +80,10 @@
   dec_deg: 54.350
   magnitude: 7.9
   size_arcmin: [29.0, 27.0]
+
+- name: "Sculptor Galaxy"
+  catalog_id: "NGC 253"
+  ra_deg: 11.900
+  dec_deg: -25.283
+  magnitude: 7.94
+  size_arcmin: [27.0, 6.5]

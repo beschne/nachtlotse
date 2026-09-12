@@ -1,0 +1,45 @@
+# Catalog objects magnitude 11.0-11.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Horsehead Nebula Region"
+  catalog_id: "IC 434"
+  ra_deg: 85.250
+  dec_deg: -2.467
+  magnitude: 11.0
+  size_arcmin: [90.0, 30.0]
+
+- name: "Bubble Nebula"
+  catalog_id: "NGC 7635"
+  ra_deg: 350.175
+  dec_deg: 61.200
+  magnitude: 11.0
+  size_arcmin: [15.0, 8.0]
+
+- name: "Bow-Tie Nebula"
+  catalog_id: "NGC 40"
+  ra_deg: 3.254
+  dec_deg: 72.522
+  magnitude: 11.27
+  size_arcmin: [0.8, 0.8]
+
+- name: "Umbrella Galaxy"
+  catalog_id: "NGC 4651"
+  ra_deg: 190.928
+  dec_deg: 16.393
+  magnitude: 11.37
+  size_arcmin: [3.87, 2.58]
+
+- name: "Siamese Twins Galaxies"
+  catalog_id: "NGC 4568"
+  aliases: ["NGC 4567"]
+  ra_deg: 189.143
+  dec_deg: 11.239
+  magnitude: 11.62
+  size_arcmin: [4.31, 1.87]
+
+- name: "Blue Flash Nebula"
+  catalog_id: "NGC 6905"
+  ra_deg: 305.596
+  dec_deg: 20.105
+  magnitude: 11.9
+  size_arcmin: [0.67, 0.67]

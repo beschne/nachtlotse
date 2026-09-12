@@ -9,6 +9,27 @@
   magnitude: 8.0
   size_arcmin: [9.0, 4.0]
 
+- name: "Pelican Nebula"
+  catalog_id: "IC 5070"
+  ra_deg: 312.700
+  dec_deg: 44.350
+  magnitude: 8.0
+  size_arcmin: [60.0, 50.0]
+
+- name: "Foxhead Cluster"
+  catalog_id: "NGC 6819"
+  ra_deg: 295.325
+  dec_deg: 40.187
+  magnitude: 8.21
+  size_arcmin: [6.9, 6.9]
+
+- name: "Saturn Nebula"
+  catalog_id: "NGC 7009"
+  ra_deg: 316.045
+  dec_deg: -11.363
+  magnitude: 8.3
+  size_arcmin: [0.70, 0.52]
+
 - name: "Crab Nebula"
   catalog_id: "M1"
   aliases: ["NGC 1952"]
@@ -48,6 +69,13 @@
   dec_deg: 42.033
   magnitude: 8.6
   size_arcmin: [10.0, 6.0]
+
+- name: "Ghost of Jupiter"
+  catalog_id: "NGC 3242"
+  ra_deg: 156.192
+  dec_deg: -18.642
+  magnitude: 8.6
+  size_arcmin: [0.42, 0.42]
 
 - name: "Ring Nebula"
   catalog_id: "M57"

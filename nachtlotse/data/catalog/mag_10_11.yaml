@@ -1,0 +1,81 @@
+# Catalog objects magnitude 10.0-10.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Silver Sliver Galaxy"
+  catalog_id: "NGC 891"
+  ra_deg: 35.650
+  dec_deg: 42.350
+  magnitude: 10.0
+  size_arcmin: [13.5, 2.5]
+
+- name: "Flaming Star Nebula"
+  catalog_id: "IC 405"
+  ra_deg: 79.123
+  dec_deg: 34.356
+  magnitude: 10.0
+  size_arcmin: [50.0, 30.0]
+
+- name: "Blinking Planetary"
+  catalog_id: "NGC 6826"
+  ra_deg: 296.200
+  dec_deg: 50.525
+  magnitude: 10.02
+  size_arcmin: [0.42, 0.42]
+
+- name: "Needle Galaxy"
+  catalog_id: "NGC 4565"
+  ra_deg: 189.075
+  dec_deg: 25.983
+  magnitude: 10.05
+  size_arcmin: [16.0, 2.8]
+
+- name: "Spindle Galaxy"
+  catalog_id: "NGC 3115"
+  ra_deg: 151.308
+  dec_deg: -7.719
+  magnitude: 10.08
+  size_arcmin: [7.1, 3.01]
+
+- name: "Eskimo Nebula"
+  catalog_id: "NGC 2392"
+  ra_deg: 112.295
+  dec_deg: 20.912
+  magnitude: 10.12
+  size_arcmin: [0.86, 0.86]
+
+- name: "Box Nebula"
+  catalog_id: "NGC 6309"
+  ra_deg: 258.518
+  dec_deg: -12.911
+  magnitude: 10.8
+  size_arcmin: [0.26, 0.26]
+
+- name: "Phantom Streak Nebula"
+  catalog_id: "NGC 6741"
+  ra_deg: 285.654
+  dec_deg: -0.449
+  magnitude: 10.8
+  size_arcmin: [0.13, 0.13]
+
+- name: "Coddington's Nebula"
+  catalog_id: "IC 2574"
+  ra_deg: 157.098
+  dec_deg: 68.412
+  magnitude: 10.82
+  size_arcmin: [12.91, 5.57]
+
+- name: "Antennae Galaxies"
+  catalog_id: "NGC 4038"
+  aliases: ["NGC 4039"]
+  ra_deg: 180.471
+  dec_deg: -18.868
+  magnitude: 10.85
+  size_arcmin: [5.42, 3.78]
+
+- name: "The Eyes"
+  catalog_id: "NGC 4438"
+  aliases: ["NGC 4435"]
+  ra_deg: 186.940
+  dec_deg: 13.009
+  magnitude: 10.97
+  size_arcmin: [9.16, 4.02]

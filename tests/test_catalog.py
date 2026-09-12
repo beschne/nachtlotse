@@ -17,17 +17,45 @@ _BIN_BOUNDS: dict[str, tuple[float | None, float]] = {
     "mag_7_8.yaml": (7.0, 8.0),
     "mag_8_9.yaml": (8.0, 9.0),
     "mag_9_10.yaml": (9.0, 10.0),
+    "mag_10_11.yaml": (10.0, 11.0),
+    "mag_11_12.yaml": (11.0, 12.0),
+    "mag_12_13.yaml": (12.0, 13.0),
 }
 
+# Visibility/brightness policy for what belongs in this catalog at all:
+# - Reach at least 20 deg altitude (this project's usual observability
+#   floor, see engine.constraints) for an observer as far south as 40N —
+#   the least favorable latitude among "northern hemisphere, 40N or
+#   further north". At 40N, max altitude = 90 - 40 + dec, so this requires
+#   dec >= -30 (M83 at -29.87 is the existing, deliberately-kept-in edge
+#   case that pins this boundary).
+# - No fainter than this project's own computed photographic ceiling: the
+#   widest-aperture rig (Redcat 51, 51mm) under the darkest sky in scope
+#   (Bortle 2) — see engine.framing.photographic_limiting_magnitude(51.0, 2.0).
+_MIN_DEC_DEG_FOR_40N_VISIBILITY = -30.0
+_MAX_CATALOG_MAGNITUDE = 18.6
 
-def test_catalog_has_around_thirty_unique_objects() -> None:
-    assert 25 <= len(CATALOG) <= 35
+
+def test_catalog_has_around_ninety_unique_objects() -> None:
+    assert 80 <= len(CATALOG) <= 95
 
 
 def test_catalog_ids_are_unique() -> None:
     catalog_ids = [target.catalog_id for target in CATALOG]
     assert len(catalog_ids) == len(set(catalog_ids))
-    assert all(catalog_id.startswith("M") for catalog_id in catalog_ids)
+    assert all(catalog_id.startswith(("M", "NGC", "IC")) for catalog_id in catalog_ids)
+
+
+def test_catalog_targets_are_visible_from_40n_and_within_the_rig_ceiling() -> None:
+    for target in CATALOG:
+        assert target.dec_deg >= _MIN_DEC_DEG_FOR_40N_VISIBILITY, (
+            f"{target.catalog_id} at dec {target.dec_deg} never gets high enough "
+            "from 40N+"
+        )
+        assert target.magnitude <= _MAX_CATALOG_MAGNITUDE, (
+            f"{target.catalog_id} (mag {target.magnitude}) is fainter than any "
+            "rig in scope can reach"
+        )
 
 
 def test_no_alias_collides_with_another_targets_catalog_id_or_alias() -> None:

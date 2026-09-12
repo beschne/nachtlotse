@@ -1,0 +1,51 @@
+# Catalog objects magnitude 12.0-12.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Jellyfish Nebula"
+  catalog_id: "IC 443"
+  ra_deg: 94.156
+  dec_deg: 22.532
+  magnitude: 12.0
+  size_arcmin: [50.0, 40.0]
+
+- name: "Helix Galaxy"
+  catalog_id: "NGC 2685"
+  ra_deg: 133.895
+  dec_deg: 58.734
+  magnitude: 12.16
+  size_arcmin: [4.33, 2.31]
+
+- name: "Bear Paw Galaxy"
+  catalog_id: "NGC 2537"
+  ra_deg: 123.311
+  dec_deg: 45.990
+  magnitude: 12.27
+  size_arcmin: [2.07, 1.96]
+
+- name: "Hubble's Variable Nebula"
+  catalog_id: "NGC 2261"
+  ra_deg: 99.790
+  dec_deg: 8.744
+  magnitude: 12.46
+  size_arcmin: [2.0, 1.0]
+
+- name: "Red Spider Nebula"
+  catalog_id: "NGC 6537"
+  ra_deg: 271.305
+  dec_deg: -19.843
+  magnitude: 12.5
+  size_arcmin: [0.17, 0.17]
+
+- name: "Perseus A"
+  catalog_id: "NGC 1275"
+  ra_deg: 49.951
+  dec_deg: 41.512
+  magnitude: 12.61
+  size_arcmin: [2.16, 1.45]
+
+- name: "Little Ghost Nebula"
+  catalog_id: "NGC 6369"
+  ra_deg: 262.335
+  dec_deg: -23.759
+  magnitude: 12.9
+  size_arcmin: [0.63, 0.63]

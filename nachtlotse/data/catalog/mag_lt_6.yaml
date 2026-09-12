@@ -10,6 +10,13 @@
   magnitude: 1.6
   size_arcmin: [110.0, 110.0]
 
+- name: "Orion's Lower Sword"
+  catalog_id: "NGC 1980"
+  ra_deg: 83.858
+  dec_deg: -5.910
+  magnitude: 2.5
+  size_arcmin: [9.3, 9.3]
+
 - name: "Andromeda Galaxy"
   catalog_id: "M31"
   aliases: ["NGC 224"]
@@ -17,6 +24,13 @@
   dec_deg: 41.2692
   magnitude: 3.4
   size_arcmin: [190.0, 60.0]
+
+- name: "Elephant's Trunk Region"
+  catalog_id: "IC 1396"
+  ra_deg: 324.775
+  dec_deg: 57.500
+  magnitude: 3.5
+  size_arcmin: [170.0, 140.0]
 
 - name: "Beehive Cluster"
   catalog_id: "M44"
@@ -26,6 +40,27 @@
   magnitude: 3.7
   size_arcmin: [95.0, 95.0]
 
+- name: "Double Cluster (h Persei)"
+  catalog_id: "NGC 869"
+  ra_deg: 34.750
+  dec_deg: 57.150
+  magnitude: 3.7
+  size_arcmin: [30.0, 30.0]
+
+- name: "Double Cluster (chi Persei)"
+  catalog_id: "NGC 884"
+  ra_deg: 35.600
+  dec_deg: 57.117
+  magnitude: 3.8
+  size_arcmin: [30.0, 30.0]
+
+- name: "Christmas Tree Cluster"
+  catalog_id: "NGC 2264"
+  ra_deg: 100.243
+  dec_deg: 9.895
+  magnitude: 3.9
+  size_arcmin: [11.4, 11.4]
+
 - name: "Orion Nebula"
   catalog_id: "M42"
   aliases: ["NGC 1976"]
@@ -33,6 +68,27 @@
   dec_deg: -5.450
   magnitude: 4.0
   size_arcmin: [85.0, 60.0]
+
+- name: "North America Nebula"
+  catalog_id: "NGC 7000"
+  ra_deg: 314.700
+  dec_deg: 44.333
+  magnitude: 4.0
+  size_arcmin: [120.0, 100.0]
+
+- name: "Orion's Upper Sword"
+  catalog_id: "NGC 1981"
+  ra_deg: 83.790
+  dec_deg: -4.425
+  magnitude: 4.2
+  size_arcmin: [9.0, 9.0]
+
+- name: "California Nebula"
+  catalog_id: "NGC 1499"
+  ra_deg: 60.810
+  dec_deg: 36.367
+  magnitude: 5.0
+  size_arcmin: [160.0, 40.0]
 
 - name: "Sagittarius Cluster"
   catalog_id: "M22"
@@ -49,6 +105,13 @@
   dec_deg: 24.350
   magnitude: 5.1
   size_arcmin: [28.0, 28.0]
+
+- name: "Rho Ophiuchi Nebula"
+  catalog_id: "IC 4604"
+  ra_deg: 246.380
+  dec_deg: -23.437
+  magnitude: 5.1
+  size_arcmin: [60.0, 25.0]
 
 - name: "Salt-and-Pepper Cluster"
   catalog_id: "M37"

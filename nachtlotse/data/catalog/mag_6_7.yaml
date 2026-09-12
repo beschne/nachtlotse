@@ -49,9 +49,16 @@
   magnitude: 6.3
   size_arcmin: [28.0, 28.0]
 
+- name: "Great Bird Cluster"
+  catalog_id: "NGC 2301"
+  ra_deg: 102.939
+  dec_deg: 0.459
+  magnitude: 6.3
+  size_arcmin: [10.2, 10.2]
+
 - name: "Eagle Nebula"
   catalog_id: "M16"
-  aliases: ["NGC 6611"]
+  aliases: ["NGC 6611", "IC 4703"]
   ra_deg: 274.700
   dec_deg: -13.783
   magnitude: 6.4
@@ -64,3 +71,10 @@
   dec_deg: 69.067
   magnitude: 6.9
   size_arcmin: [27.0, 14.0]
+
+- name: "Owl Cluster"
+  catalog_id: "NGC 457"
+  ra_deg: 19.886
+  dec_deg: 58.291
+  magnitude: 6.97
+  size_arcmin: [7.8, 7.8]
