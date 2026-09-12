@@ -168,3 +168,120 @@ def test_load_local_sites_parses_horizon_points_and_sector_shorthand(
     sector_horizon = by_name["Sector Site"].site.horizon
     assert sector_horizon.min_alt(150.0) == pytest.approx(15.0)  # inside the sector
     assert sector_horizon.min_alt(0.0) == pytest.approx(90.0)  # outside it
+
+
+def test_template_file_parses_into_four_distinct_named_rigs(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    names = {record.rig.name for record in template_rigs}
+    assert names == {
+        "ZWO Seestar S30 Pro",
+        "ZWO Seestar S30 Pro (EQ wedge)",
+        "ZWO Seestar S50 Pro",
+        "Redcat 51 with ASI2600MC Duo",
+    }
+
+
+def test_s30_pro_altaz_and_eq_wedge_variants_share_optics_but_differ_in_mount(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    altaz = store.get_rig_record("S30P").rig
+    eq_wedge = store.get_rig_record("S30P-EQ").rig
+
+    assert altaz.mount.kind == "altaz"
+    assert eq_wedge.mount.kind == "eq"
+    assert altaz.optics.focal_length_mm == pytest.approx(
+        eq_wedge.optics.focal_length_mm
+    )
+    assert altaz.sensor.pixel_um == pytest.approx(eq_wedge.sensor.pixel_um)
+
+
+def test_get_rig_record_matches_by_alias_case_insensitively(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    assert store.get_rig_record("s30p").rig.name == "ZWO Seestar S30 Pro"
+    assert store.get_rig_record("s50p").rig.name == "ZWO Seestar S50 Pro"
+
+
+def test_get_rig_record_falls_back_to_a_unique_substring_match(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    record = store.get_rig_record("Redcat")
+    assert record.rig.name == "Redcat 51 with ASI2600MC Duo"
+
+
+def test_get_rig_record_raises_with_known_rigs_listed_for_a_typo(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    with pytest.raises(ValueError, match="Unknown rig"):
+        store.get_rig_record("Nichtvorhanden")
+
+
+def test_default_rig_record_is_the_first_configured_rig(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    assert store.default_rig_record().rig.name == template_rigs[0].rig.name
+    assert store.default_rig_record().rig.name == "ZWO Seestar S30 Pro"
+
+
+def test_require_rigs_raises_a_helpful_error_pointing_at_the_template(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(store, "RIGS", [])
+    with pytest.raises(ValueError, match="rigs_local.template.yaml"):
+        store.require_rigs()
+
+
+def test_redcat_51_rig_has_an_eq_mount_and_correct_plate_scale(
+    template_rigs: list[store.RigRecord],
+) -> None:
+    rig = store.get_rig_record("Redcat 51 with ASI2600MC Duo").rig
+    assert rig.mount.kind == "eq"
+    assert rig.optics.focal_length_mm == pytest.approx(250.0)
+    assert rig.optics.aperture_mm == pytest.approx(51.0)
+    assert rig.sensor.width_px == 6248
+    assert rig.sensor.height_px == 4176
+    # plate scale = 206.265 * pixel_um / focal_length_mm
+    assert rig.sampling_arcsec_px == pytest.approx(206.265 * 3.76 / 250.0)
+
+
+def test_load_local_rigs_returns_empty_list_when_file_is_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(store, "_LOCAL_RIGS_PATH", tmp_path / "does-not-exist.yaml")
+    assert store._load_local_rigs() == []
+
+
+def test_load_local_rigs_parses_optics_sensor_and_mount(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yaml_path = tmp_path / "rigs_local.yaml"
+    yaml_path.write_text(
+        """
+- name: "Test Rig"
+  aliases: ["TR"]
+  optics:
+    focal_length_mm: 100.0
+    aperture_mm: 20.0
+  sensor:
+    name: "Test Sensor"
+    width_px: 1000
+    height_px: 500
+    pixel_um: 4.0
+  mount:
+    kind: "eq"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(store, "_LOCAL_RIGS_PATH", yaml_path)
+
+    records = store._load_local_rigs()
+    assert len(records) == 1
+    record = records[0]
+
+    assert record.rig.name == "Test Rig"
+    assert record.aliases == ("TR",)
+    assert record.rig.optics.focal_length_mm == pytest.approx(100.0)
+    assert record.rig.sensor.width_px == 1000
+    assert record.rig.mount.kind == "eq"
+    assert record.rig.mount.zenith_avoid_deg is None

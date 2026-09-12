@@ -116,6 +116,9 @@ class Target:
     ra_deg: float
     dec_deg: float
     catalog_id: str = ""
+    # Apparent (major, minor) axis, arcminutes. (0.0, 0.0) means "unknown" —
+    # framing scoring treats that as unconstrained, not "infinitely small".
+    size_arcmin: tuple[float, float] = (0.0, 0.0)
 
 
 @dataclass(frozen=True)

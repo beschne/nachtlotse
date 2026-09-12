@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
@@ -16,54 +17,66 @@ from astropy.time import Time
 
 from nachtlotse.data import store
 from nachtlotse.data.catalog import MESSIER_CORE
-from nachtlotse.data.store import SiteRecord
-from nachtlotse.engine import constraints, ephemeris
-from nachtlotse.engine.models import Mount, Optics, Rig, Sensor, Site, Target
+from nachtlotse.data.store import RigRecord, SiteRecord
+from nachtlotse.engine import constraints, ephemeris, framing
+from nachtlotse.engine.models import Rig, Site, Target
 
-SEESTAR_S30_PRO = Rig(
-    name="ZWO Seestar S30 Pro",
-    optics=Optics(
-        name="Seestar S30 Pro Optics", focal_length_mm=160.0, aperture_mm=30.0
-    ),
-    sensor=Sensor(name="Sony IMX585", width_px=3840, height_px=2160, pixel_um=2.9),
-    mount=Mount(name="Seestar S30 Pro Mount", kind="altaz"),
-)
+
+def _rotation_gate(
+    rig: Rig, site: Site, target: Target
+) -> Callable[[datetime, ephemeris.AltAz], bool] | None:
+    """An `extra_ok` callback for `best_time_tonight`, or None for eq rigs
+    (which have no field-rotation problem to gate on)."""
+    if rig.mount.kind != "altaz":
+        return None
+
+    def gate(sample_time: datetime, _pos: ephemeris.AltAz) -> bool:
+        return framing.has_safe_field_rotation(rig, site, target, sample_time)
+
+    return gate
 
 
 def _rank_targets(
-    site: Site, when: datetime
-) -> list[tuple[Target, datetime, ephemeris.AltAz]]:
+    site: Site, rig: Rig, when: datetime
+) -> list[tuple[Target, datetime, ephemeris.AltAz, float]]:
     """Rank catalog targets by their best moment within tonight's dark window.
 
     A target is dropped unless some moment tonight simultaneously clears
-    altitude, astronomical night, moon separation, and the site's horizon
-    profile (see `engine.constraints.best_time_tonight`). Framing/field-
-    rotation constraints land in M3.
+    altitude, astronomical night, moon separation, the site's horizon
+    profile, and — for alt-az rigs only — safe field rotation near the
+    zenith (see `engine.constraints.best_time_tonight` / `engine.framing`).
+    Each row also carries a framing score (0..1): how well the target's
+    angular size fits `rig`'s field of view.
     """
-    ranked: list[tuple[Target, datetime, ephemeris.AltAz]] = []
+    ranked: list[tuple[Target, datetime, ephemeris.AltAz, float]] = []
     for target in MESSIER_CORE:
-        result = constraints.best_time_tonight(site, target, when)
+        result = constraints.best_time_tonight(
+            site, target, when, extra_ok=_rotation_gate(rig, site, target)
+        )
         if result is None:
             continue
         best_time, pos = result
-        ranked.append((target, best_time, pos))
+        ranked.append((target, best_time, pos, framing.framing_score(rig, target)))
     ranked.sort(key=lambda row: row[2].alt_deg, reverse=True)
     return ranked
 
 
-def _cmd_today(site_name: str | None) -> int:
+def _cmd_today(site_name: str | None, rig_name: str | None) -> int:
     try:
-        record = (
+        site_record = (
             store.get_site_record(site_name)
             if site_name
             else store.default_site_record()
+        )
+        rig_record = (
+            store.get_rig_record(rig_name) if rig_name else store.default_rig_record()
         )
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
 
-    site = record.site
-    rig = SEESTAR_S30_PRO
+    site = site_record.site
+    rig = rig_record.rig
     now = datetime.now(UTC)
     local_tz = ZoneInfo(site.tz)
 
@@ -77,19 +90,20 @@ def _cmd_today(site_name: str | None) -> int:
     )
     print()
 
-    ranked = _rank_targets(site, now)
+    ranked = _rank_targets(site, rig, now)
     if not ranked:
         print(
-            "No catalog target clears altitude/moon/night/horizon constraints tonight."
+            "No catalog target clears altitude/moon/night/horizon/rotation "
+            "constraints tonight."
         )
         return 0
 
-    print(f"{'Target':<32} {'Max Alt':>8} {'Az':>7}  Best time (local)")
-    for target, best_time, pos in ranked:
+    print(f"{'Target':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5}  Best time (local)")
+    for target, best_time, pos, fit in ranked:
         label = f"{target.catalog_id} {target.name}"
         local_time = best_time.astimezone(local_tz)
         print(
-            f"{label:<32} {pos.alt_deg:7.1f}° {pos.az_deg:6.1f}°  "
+            f"{label:<32} {pos.alt_deg:7.1f}° {pos.az_deg:6.1f}° {fit:5.2f}  "
             f"{local_time:%Y-%m-%d %H:%M %Z}"
         )
     return 0
@@ -124,6 +138,37 @@ def _cmd_sites() -> int:
     return 0
 
 
+def _format_rig_line(record: RigRecord) -> str:
+    rig = record.rig
+    aliases = f" (aka {', '.join(record.aliases)})" if record.aliases else ""
+    fov_width_deg, fov_height_deg = rig.fov_deg
+    return (
+        f"{rig.name}{aliases}\n"
+        f"    {rig.optics.focal_length_mm:.0f} mm f/"
+        f"{rig.optics.focal_length_mm / rig.optics.aperture_mm:.1f} "
+        f"({rig.optics.aperture_mm:.0f} mm aperture) · "
+        f"{rig.sensor.width_px}×{rig.sensor.height_px} px, "
+        f"{rig.sensor.pixel_um:.2f} µm · mount: {rig.mount.kind}\n"
+        f"    FoV {fov_width_deg:.2f}° × {fov_height_deg:.2f}° · "
+        f"sampling {rig.sampling_arcsec_px:.2f}″/px"
+    )
+
+
+def _cmd_rigs() -> int:
+    try:
+        store.require_rigs()
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
+    print("Nachtlotse — known rigs")
+    print()
+    for record in store.RIGS:
+        print(_format_rig_line(record))
+        print()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lotse",
@@ -139,15 +184,23 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Site name or alias (default: the first site in your local site list)",
     )
+    today_parser.add_argument(
+        "--rig",
+        default=None,
+        help="Rig name or alias (default: the first rig in your local rig list)",
+    )
 
     subparsers.add_parser("sites", help="List all known observing sites")
+    subparsers.add_parser("rigs", help="List all known rigs")
 
     args = parser.parse_args(argv)
 
     if args.command == "today":
-        return _cmd_today(args.site)
+        return _cmd_today(args.site, args.rig)
     if args.command == "sites":
         return _cmd_sites()
+    if args.command == "rigs":
+        return _cmd_rigs()
     parser.error(f"unknown command: {args.command}")
     return 2
 

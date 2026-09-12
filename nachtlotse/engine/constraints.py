@@ -15,6 +15,7 @@ a dark site.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import numpy as np
@@ -47,7 +48,7 @@ _DEFAULT_MIN_MOON_SEP_DEG = 30.0
 _SAMPLES_PER_NIGHT = 25
 
 
-def _observer(site: Site) -> Observer:
+def build_observer(site: Site) -> Observer:
     return Observer(
         latitude=site.lat_deg * u.deg,
         longitude=site.lon_deg * u.deg,
@@ -56,7 +57,7 @@ def _observer(site: Site) -> Observer:
     )
 
 
-def _fixed_target(target: Target) -> FixedTarget:
+def build_fixed_target(target: Target) -> FixedTarget:
     coord = SkyCoord(ra=target.ra_deg * u.deg, dec=target.dec_deg * u.deg, frame="icrs")
     return FixedTarget(coord=coord, name=target.name)
 
@@ -86,7 +87,7 @@ def dark_window(site: Site, reference: datetime) -> tuple[datetime, datetime]:
     If `reference` falls within a night, returns that night's window;
     otherwise returns the next upcoming one.
     """
-    observer = _observer(site)
+    observer = build_observer(site)
     t_ref = Time(reference)
 
     evening_start = observer.twilight_evening_astronomical(t_ref, which="previous")
@@ -116,7 +117,7 @@ def is_observable_tonight(
     constraints during tonight's astronomical-twilight dark window.
     """
     evening_start, morning_end = dark_window(site, reference)
-    observer = _observer(site)
+    observer = build_observer(site)
     times = Time(
         np.linspace(Time(evening_start).jd, Time(morning_end).jd, _SAMPLES_PER_NIGHT),
         format="jd",
@@ -129,7 +130,7 @@ def is_observable_tonight(
     ]
 
     table = observability_table(
-        night_constraints, observer, [_fixed_target(target)], times=times
+        night_constraints, observer, [build_fixed_target(target)], times=times
     )
     return bool(table["ever observable"][0])
 
@@ -141,6 +142,7 @@ def best_time_tonight(
     *,
     min_alt_deg: float = _DEFAULT_MIN_ALT_DEG,
     min_moon_sep_deg: float = _DEFAULT_MIN_MOON_SEP_DEG,
+    extra_ok: Callable[[datetime, ephemeris.AltAz], bool] | None = None,
 ) -> tuple[datetime, ephemeris.AltAz] | None:
     """The best (highest-altitude) moment tonight that clears altitude,
     the site's horizon profile, and moon separation — or None if there
@@ -150,6 +152,12 @@ def best_time_tonight(
     horizon); this only runs the finer per-sample horizon search once that
     passes, since a target the site's horizon blocks everywhere it would
     otherwise be observable is a real "no", not caught by the pre-check.
+
+    `extra_ok`, if given, is an additional per-sample gate (e.g. rig-aware
+    field-rotation safety from `engine.framing`) — kept as an injected
+    callback rather than a parameter here so this module stays rig-agnostic
+    and doesn't need to import `framing` (which itself imports the
+    `build_observer`/`build_fixed_target` helpers below).
     """
     if not is_observable_tonight(
         site,
@@ -174,6 +182,8 @@ def best_time_tonight(
         if not clears_horizon(site, pos):
             continue
         if _moon_separation_deg(site, target, sample_time) < min_moon_sep_deg:
+            continue
+        if extra_ok is not None and not extra_ok(sample_time, pos):
             continue
         if best is None or pos.alt_deg > best[1].alt_deg:
             best = (sample_time, pos)

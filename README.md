@@ -28,34 +28,54 @@ is fully backed by `pytest` against known astronomical values.
 ✅ **M0 — Scaffolding & engine core**, done.
 ✅ **M1 — Moon & dark window**, done.
 ✅ **M2 — Horizon profiles & multiple sites**, done.
+✅ **M3 — Rig scoring, framing & field rotation**, done.
 
 - `nachtlotse/engine/models.py` — data model (`Site`, `HorizonProfile`, `Optics`,
   `Sensor`, `Mount`, `Rig`, `Target`, `Verdict`) as immutable dataclasses.
+  `Target.size_arcmin` carries apparent angular size for framing.
 - `nachtlotse/engine/ephemeris.py` — altitude/azimuth/transit/max-altitude of a
   target via `skyfield`.
 - `nachtlotse/engine/constraints.py` — astronomical-twilight dark window,
   altitude/night/moon-separation gating via `astroplan`, and horizon-profile
   clearance (`site.horizon.min_alt(az)`) via per-sample `skyfield` checks.
-- `nachtlotse/data/catalog.py` — Messier core catalog (30 objects).
-- `nachtlotse/data/store.py` — site persistence: name, coordinates, measured
-  or sector-derived horizon profile, region, Bortle class. No location data
-  ships in code — sites live entirely in a local, gitignored
-  `nachtlotse/data/sites_local.yaml`. `sites_local.template.yaml` (committed)
-  documents the format with two real examples; copy it to get started (see
-  Quickstart below).
-- `nachtlotse/cli.py` — `lotse today [--site NAME]` ranks tonight's
-  *observable* targets (night + moon + altitude + horizon) by best altitude
-  within the dark window; `lotse sites` lists all known sites. Rig stays
-  hardcoded (ZWO Seestar S30 Pro) — multiple rigs land in M3.
+- `nachtlotse/engine/framing.py` — framing score (does the target's angular
+  size fit the rig's field of view?) and alt-az field-rotation safety: the
+  rate of change of the parallactic angle (via `astroplan`) diverges near
+  the zenith, so a target an eq rig can shoot right at its peak gets pushed
+  to a lower, rotation-safe moment — or excluded outright — on an alt-az
+  rig. Eq mounts are never gated on this.
+- `nachtlotse/data/catalog.py` — Messier core catalog (30 objects, with
+  apparent sizes).
+- `nachtlotse/data/store.py` — site *and rig* persistence: coordinates,
+  measured/sector-derived horizon, region, Bortle class; optics/sensor/mount
+  specs, plate scale, FoV. No location or equipment data ships in code —
+  both live entirely in local, gitignored `sites_local.yaml` /
+  `rigs_local.yaml`. The matching `*.template.yaml` files (committed)
+  document the formats with real examples; copy one to get started (see
+  Quickstart below). `mount.kind` is a setup choice, not a fixed hardware
+  property — even an alt-az smart telescope can be wedge-mounted and
+  polar-aligned for true eq tracking, so the same optics/sensor can appear
+  as two separate rig entries under different aliases (e.g. `S30P` for a
+  Seestar's native alt-az ball mount vs. `S30P-EQ` on a latitude wedge);
+  pick per session with `--rig`.
+- `nachtlotse/cli.py` — `lotse today [--site NAME] [--rig NAME]` ranks
+  tonight's *observable* targets (night + moon + altitude + horizon +
+  rig-aware field rotation) by best altitude within the dark window, with a
+  framing-fit column; `lotse sites` / `lotse rigs` list what's configured.
 - Tests against independently known astronomical/textbook values (Polaris
   altitude ≈ geographic latitude, transit altitude = 90° − lat + dec, a target
   coincident with the Moon's own position always fails separation, a
-  full-circle horizon wall drops an otherwise-observable target) plus
-  catalog/store/CLI smoke tests — including that the same sky yields
-  different target lists at two sites with different horizons.
+  full-circle horizon wall drops an otherwise-observable target, plate scale
+  = 206.265 × pixel_um / focal_length_mm, field-rotation rate calibrated
+  numerically against astroplan's own parallactic angle near vs. far from
+  the zenith) plus catalog/store/CLI smoke tests — including that the same
+  sky yields different target lists at two sites with different horizons,
+  and that a near-zenith target is downgraded for an alt-az rig but not an
+  eq one.
 
-Not yet implemented (by design, later milestones): framing/field-rotation
-constraints, multiple rigs, weather.
+Not yet implemented (by design, later milestones): weather, the GO/MARGINAL/
+SKIP verdict, and a "best rig for this target" chooser — `lotse today`
+scores targets for whichever rig you pass, it doesn't yet pick between rigs.
 
 The full roadmap (M0–M6) and all architecture decisions are documented in
 [`CLAUDE.md`](./CLAUDE.md).
@@ -67,20 +87,22 @@ Requires [`uv`](https://docs.astral.sh/uv/).
 ```bash
 uv sync                # set up the environment + dependencies
 cp nachtlotse/data/sites_local.template.yaml nachtlotse/data/sites_local.yaml
-                        # then edit it: your own sites, or keep the two examples
+cp nachtlotse/data/rigs_local.template.yaml nachtlotse/data/rigs_local.yaml
+                        # then edit both: your own sites/gear, or keep the examples
 uv run pytest          # run the tests
 uv run ruff check .    # lint
 uv run ruff format .   # format
-uv run lotse today     # rank tonight's targets for your first site + Seestar S30 Pro
+uv run lotse today     # rank tonight's targets for your first site + rig
 uv run lotse sites     # list all configured observing sites
+uv run lotse rigs      # list all configured rigs
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment
 (`.venv`), managed by `uv` — no need to activate it manually.
 
-Without a `sites_local.yaml`, `lotse today`/`lotse sites` exit with a message
-pointing at the template — the test suite still passes either way, since it
-never depends on your local site list.
+Without a `sites_local.yaml`/`rigs_local.yaml`, the affected commands exit
+with a message pointing at the matching template — the test suite still
+passes either way, since it never depends on your local site/rig lists.
 
 On the first test run, `skyfield` downloads the JPL ephemeris `de421.bsp`
 (~17 MB) once and caches it in `.cache/skyfield/` (not part of the git repo).

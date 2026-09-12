@@ -1,0 +1,88 @@
+# Template for your rig list.
+#
+# This file is NOT read by Nachtlotse (see store.py) — it's an example to
+# copy from:
+#
+#   cp nachtlotse/data/rigs_local.template.yaml nachtlotse/data/rigs_local.yaml
+#
+# Edit the copy freely: replace these examples with your own gear, or keep
+# some and add more. `rigs_local.yaml` is gitignored — your rig list never
+# gets committed. The first entry in your file becomes the default rig for
+# `lotse today` when you don't pass --rig.
+#
+# Fields:
+#   name                required
+#   aliases             optional, e.g. a short callsign like "S30P"
+#   optics.focal_length_mm, optics.aperture_mm       required
+#   sensor.width_px, sensor.height_px, sensor.pixel_um   required
+#   mount.kind          required: "altaz" or "eq" — alt-az mounts get
+#                        penalized for field rotation near the zenith (M3);
+#                        eq mounts don't.
+#   optics.name, sensor.name, mount.name              optional labels
+#   mount.zenith_avoid_deg                             optional
+#
+# mount.kind is a setup choice, not a fixed hardware property: the two
+# "ZWO Seestar S30 Pro" entries below share identical optics/sensor but
+# differ only in mount — native ball mount (altaz) vs. wedge-mounted with a
+# polar-aligned latitude wedge (eq, enabling longer single exposures without
+# field rotation). List both under different aliases and pick per session.
+
+- name: "ZWO Seestar S30 Pro"
+  aliases: ["S30P"]
+  optics:
+    name: "Seestar S30 Pro Optics"
+    focal_length_mm: 160.0
+    aperture_mm: 30.0
+  sensor:
+    name: "Sony IMX585"
+    width_px: 3840
+    height_px: 2160
+    pixel_um: 2.9
+  mount:
+    name: "Seestar S30 Pro Mount"
+    kind: "altaz"
+
+- name: "ZWO Seestar S30 Pro (EQ wedge)"
+  aliases: ["S30P-EQ"]
+  optics:
+    name: "Seestar S30 Pro Optics"
+    focal_length_mm: 160.0
+    aperture_mm: 30.0
+  sensor:
+    name: "Sony IMX585"
+    width_px: 3840
+    height_px: 2160
+    pixel_um: 2.9
+  mount:
+    name: "Latitude wedge, polar-aligned"
+    kind: "eq"
+
+- name: "ZWO Seestar S50 Pro"
+  aliases: ["S50P"]
+  optics:
+    name: "Seestar S50 Pro Optics"
+    focal_length_mm: 260.0
+    aperture_mm: 50.0
+  sensor:
+    name: "Seestar S50 Pro Sensor"
+    width_px: 3840
+    height_px: 2160
+    pixel_um: 2.9
+  mount:
+    name: "Seestar S50 Pro Mount"
+    kind: "altaz"
+
+- name: "Redcat 51 with ASI2600MC Duo"
+  aliases: ["Redcat51"]
+  optics:
+    name: "William Optics RedCat 51 (Petzval APO, no flattener needed)"
+    focal_length_mm: 250.0
+    aperture_mm: 51.0
+  sensor:
+    name: "ZWO ASI2600MC Duo (Sony IMX571, APS-C)"
+    width_px: 6248
+    height_px: 4176
+    pixel_um: 3.76
+  mount:
+    name: "EQ mount"
+    kind: "eq"
