@@ -23,6 +23,8 @@ def test_today_command_prints_dark_window_moon_and_a_ranked_table(
     assert template_rigs[0].rig.name in output
     assert "Dark window:" in output
     assert "Moon:" in output
+    assert "Weather:" in output
+    assert "Verdict:" in output
 
     default_site = store.default_site_record().site
     default_rig = store.default_rig_record().rig
@@ -49,6 +51,32 @@ def test_today_command_accepts_a_rig_by_name_or_alias(
     assert cli.main(["today", "--rig", "S50P"]) == 0
     output = capsys.readouterr().out
     assert "ZWO Seestar S50 Pro" in output
+
+
+def test_today_command_accepts_a_date_and_uses_that_nights_dark_window(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = cli.main(["today", "--date", "2026-11-14"])
+    assert exit_code == 0
+
+    output = capsys.readouterr().out
+    assert "Dark window: 2026-11-14" in output
+    # Weather is far beyond Open-Meteo's forecast horizon, so this must
+    # fall back gracefully rather than error.
+    assert "Weather: unavailable" in output
+    assert "Verdict:" in output
+
+
+def test_today_command_rejects_a_malformed_date(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = cli.main(["today", "--date", "14.11.2026"])
+    assert exit_code == 2
+    assert "Invalid --date" in capsys.readouterr().err
 
 
 def test_today_command_rejects_an_unknown_site(
@@ -229,6 +257,60 @@ def test_altaz_rig_devalues_a_near_zenith_target_that_an_eq_rig_keeps_at_peak(
     if altaz_ranked:
         assert altaz_ranked[0][2].alt_deg < eq_alt  # pushed off the unsafe peak
     # else: fully excluded for the night — also a valid "devalued" outcome.
+
+
+def test_today_command_skips_on_overcast_weather(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """M4 DoD: overcast sky -> SKIP with the reason named in the output."""
+    from nachtlotse.weather import open_meteo
+
+    def overcast_everywhere(lat_deg: float, lon_deg: float) -> list:
+        base = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+        return [
+            open_meteo.HourlyWeather(
+                when=base + timedelta(hours=offset),
+                cloud_cover_pct=95.0,
+                wind_speed_kmh=5.0,
+                humidity_pct=80.0,
+                dew_point_c=5.0,
+                temperature_c=15.0,
+            )
+            for offset in range(-24, 72)
+        ]
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", overcast_everywhere)
+
+    assert cli.main(["today"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Verdict: SKIP" in output
+    assert "cloud cover" in output.lower()
+
+
+def test_today_command_falls_back_gracefully_when_weather_is_unavailable(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Weather is an optional layer — no network must not break the ranking."""
+    from nachtlotse.weather import open_meteo
+
+    def always_unavailable(lat_deg: float, lon_deg: float) -> list:
+        raise open_meteo.WeatherUnavailable("simulated: no network")
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", always_unavailable)
+
+    assert cli.main(["today"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Weather: unavailable" in output
+    assert "Verdict:" in output  # still produced, from sky geometry alone
+    assert "Best time (local)" in output  # the ranked table still printed
 
 
 def test_unknown_command_is_rejected() -> None:

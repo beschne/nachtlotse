@@ -122,6 +122,20 @@ class Target:
 
 
 @dataclass(frozen=True)
+class WeatherSummary:
+    """The engine's view of a weather forecast, aggregated over an
+    observing window — independent of whichever provider supplied it (see
+    `weather/open_meteo.py`). Optional input to `engine.scoring`; the
+    engine core never fetches this itself.
+    """
+
+    max_cloud_cover_pct: float
+    avg_cloud_cover_pct: float
+    max_wind_kmh: float
+    min_dew_point_spread_c: float  # smallest (temperature - dew point); low = dew risk
+
+
+@dataclass(frozen=True)
 class Verdict:
     level: Literal["GO", "MARGINAL", "SKIP"]
     reasons: list[str]
