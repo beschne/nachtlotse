@@ -1,0 +1,75 @@
+# Catalog objects brighter than magnitude 6. See catalog/__init__.py for
+# the schema and how these mag_*.yaml files are loaded.
+# Sorted by magnitude (brightest first); for variables, the brighter of
+# the two known extremes.
+
+- name: "Pleiades"
+  catalog_id: "M45"
+  ra_deg: 56.750
+  dec_deg: 24.117
+  magnitude: 1.6
+  size_arcmin: [110.0, 110.0]
+
+- name: "Andromeda Galaxy"
+  catalog_id: "M31"
+  aliases: ["NGC 224"]
+  ra_deg: 10.6847
+  dec_deg: 41.2692
+  magnitude: 3.4
+  size_arcmin: [190.0, 60.0]
+
+- name: "Beehive Cluster"
+  catalog_id: "M44"
+  aliases: ["NGC 2632"]
+  ra_deg: 130.100
+  dec_deg: 19.983
+  magnitude: 3.7
+  size_arcmin: [95.0, 95.0]
+
+- name: "Orion Nebula"
+  catalog_id: "M42"
+  aliases: ["NGC 1976"]
+  ra_deg: 83.850
+  dec_deg: -5.450
+  magnitude: 4.0
+  size_arcmin: [85.0, 60.0]
+
+- name: "Sagittarius Cluster"
+  catalog_id: "M22"
+  aliases: ["NGC 6656"]
+  ra_deg: 279.100
+  dec_deg: -23.900
+  magnitude: 5.1
+  size_arcmin: [24.0, 24.0]
+
+- name: "Shoe-Buckle Cluster"
+  catalog_id: "M35"
+  aliases: ["NGC 2168"]
+  ra_deg: 92.250
+  dec_deg: 24.350
+  magnitude: 5.1
+  size_arcmin: [28.0, 28.0]
+
+- name: "Salt-and-Pepper Cluster"
+  catalog_id: "M37"
+  aliases: ["NGC 2099"]
+  ra_deg: 88.100
+  dec_deg: 32.550
+  magnitude: 5.6
+  size_arcmin: [24.0, 24.0]
+
+- name: "Triangulum Galaxy"
+  catalog_id: "M33"
+  aliases: ["NGC 598"]
+  ra_deg: 23.475
+  dec_deg: 30.650
+  magnitude: 5.7
+  size_arcmin: [61.0, 42.0]
+
+- name: "Hercules Cluster"
+  catalog_id: "M13"
+  aliases: ["NGC 6205"]
+  ra_deg: 250.425
+  dec_deg: 36.467
+  magnitude: 5.8
+  size_arcmin: [20.0, 20.0]

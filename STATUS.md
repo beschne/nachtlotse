@@ -22,9 +22,21 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   rate of change of the parallactic angle (via `astroplan`) diverges near
   the zenith, so a target an eq rig can shoot right at its peak gets pushed
   to a lower, rotation-safe moment — or excluded outright — on an alt-az
-  rig. Eq mounts are never gated on this.
-- `nachtlotse/data/catalog.py` — Messier core catalog (30 objects, with
-  apparent sizes).
+  rig. Eq mounts are never gated on this. Also `photographic_limiting_magnitude`:
+  a rough, explicitly tunable estimate of the faintest magnitude a stacked
+  session can reach, from aperture + Bortle class (`lotse rigs` shows it
+  for Bortle 2 and 5) — computed live, not stored, so it can't go stale
+  when the underlying constant gets tuned. Not yet wired into catalog
+  filtering; today it's informational only.
+- `nachtlotse/data/catalog/` — deep-sky catalog (30 curated objects so far,
+  all Messier). Split into `mag_*.yaml` files by apparent magnitude, not by
+  source catalog — a future NGC/IC object with no Messier number just adds
+  to whichever bin its brightness lands in, and a site+rig's computed
+  limiting magnitude will eventually be able to load only the bins it
+  needs. Every physical object gets exactly one `Target` entry regardless
+  of how many catalogs list it — `Target.aliases` carries the others (e.g.
+  M31's `aliases=("NGC 224",)`), so the same galaxy can never show up
+  twice under two different names.
 - `nachtlotse/data/store.py` — site *and rig* persistence: coordinates,
   measured/sector-derived horizon, region, Bortle class; optics/sensor/mount
   specs, plate scale, FoV. No location or equipment data ships in code —

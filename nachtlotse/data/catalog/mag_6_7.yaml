@@ -1,0 +1,66 @@
+# Catalog objects magnitude 6.0-6.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Lagoon Nebula"
+  catalog_id: "M8"
+  aliases: ["NGC 6523"]
+  ra_deg: 270.950
+  dec_deg: -24.383
+  magnitude: 6.0
+  size_arcmin: [90.0, 40.0]
+
+- name: "Omega Nebula"
+  catalog_id: "M17"
+  aliases: ["NGC 6618"]
+  ra_deg: 275.200
+  dec_deg: -16.183
+  magnitude: 6.0
+  size_arcmin: [20.0, 15.0]
+
+- name: "Pinwheel Cluster"
+  catalog_id: "M36"
+  aliases: ["NGC 1960"]
+  ra_deg: 84.025
+  dec_deg: 34.133
+  magnitude: 6.0
+  size_arcmin: [12.0, 12.0]
+
+- name: "Pegasus Cluster"
+  catalog_id: "M15"
+  aliases: ["NGC 7078"]
+  ra_deg: 322.500
+  dec_deg: 12.167
+  magnitude: 6.2
+  size_arcmin: [18.0, 18.0]
+
+- name: "Wild Duck Cluster"
+  catalog_id: "M11"
+  aliases: ["NGC 6705"]
+  ra_deg: 282.775
+  dec_deg: -6.267
+  magnitude: 6.3
+  size_arcmin: [14.0, 14.0]
+
+- name: "Trifid Nebula"
+  catalog_id: "M20"
+  aliases: ["NGC 6514"]
+  ra_deg: 270.575
+  dec_deg: -23.033
+  magnitude: 6.3
+  size_arcmin: [28.0, 28.0]
+
+- name: "Eagle Nebula"
+  catalog_id: "M16"
+  aliases: ["NGC 6611"]
+  ra_deg: 274.700
+  dec_deg: -13.783
+  magnitude: 6.4
+  size_arcmin: [35.0, 28.0]
+
+- name: "Bode's Galaxy"
+  catalog_id: "M81"
+  aliases: ["NGC 3031"]
+  ra_deg: 148.900
+  dec_deg: 69.067
+  magnitude: 6.9
+  size_arcmin: [27.0, 14.0]

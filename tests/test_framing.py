@@ -166,3 +166,48 @@ def test_framing_score_treats_unknown_size_as_unconstrained() -> None:
     unknown_size_target = Target(name="unknown", ra_deg=0.0, dec_deg=0.0)
     assert unknown_size_target.size_arcmin == (0.0, 0.0)
     assert framing.framing_score(ALTAZ_RIG, unknown_size_target) == pytest.approx(1.0)
+
+
+def test_photographic_limiting_magnitude_matches_hand_calculation_for_30mm() -> None:
+    # 2.7 + 5*log10(30) + 7.0 + (7.3 - 6.9) = 17.49 at Bortle 2
+    assert framing.photographic_limiting_magnitude(30.0, 2.0) == pytest.approx(
+        17.49, abs=0.01
+    )
+    # 2.7 + 5*log10(30) + 7.0 + (5.8 - 6.9) = 15.99 at Bortle 5
+    assert framing.photographic_limiting_magnitude(30.0, 5.0) == pytest.approx(
+        15.99, abs=0.01
+    )
+
+
+def test_photographic_limiting_magnitude_increases_with_aperture() -> None:
+    small = framing.photographic_limiting_magnitude(30.0, 4.0)
+    large = framing.photographic_limiting_magnitude(51.0, 4.0)
+    assert large > small
+
+
+def test_photographic_limiting_magnitude_increases_in_darker_skies() -> None:
+    """Lower Bortle number = darker sky = fainter (higher) reachable magnitude."""
+    dark = framing.photographic_limiting_magnitude(50.0, 2.0)
+    bright = framing.photographic_limiting_magnitude(50.0, 7.0)
+    assert dark > bright
+
+
+def test_photographic_limiting_magnitude_interpolates_fractional_bortle_classes() -> (
+    None
+):
+    at_four = framing.photographic_limiting_magnitude(50.0, 4.0)
+    at_five = framing.photographic_limiting_magnitude(50.0, 5.0)
+    at_four_and_a_half = framing.photographic_limiting_magnitude(50.0, 4.5)
+
+    assert at_five < at_four_and_a_half < at_four
+
+
+def test_photographic_limiting_magnitude_clamps_bortle_class_to_the_valid_range() -> (
+    None
+):
+    assert framing.photographic_limiting_magnitude(50.0, 0.0) == pytest.approx(
+        framing.photographic_limiting_magnitude(50.0, 1.0)
+    )
+    assert framing.photographic_limiting_magnitude(50.0, 12.0) == pytest.approx(
+        framing.photographic_limiting_magnitude(50.0, 9.0)
+    )

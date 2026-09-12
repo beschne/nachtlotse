@@ -1,4 +1,4 @@
-"""Framing and alt-az field-rotation heuristics.
+"""Framing, alt-az field-rotation, and limiting-magnitude heuristics.
 
 Framing: does the target's angular size fit the rig's field of view? Purely
 geometric, independent of time — see `framing_score`.
@@ -12,10 +12,17 @@ project's latitude range (~50°N): roughly 0.3–0.5°/min far from the zenith,
 climbing past ~1.5°/min inside a ~5° zenith radius and past ~20°/min inside
 1°. Eq mounts don't have this problem at all — `has_safe_field_rotation`
 always returns True for them, regardless of zenith proximity.
+
+Limiting magnitude: how faint a target a rig can usefully image at a given
+sky darkness — see `photographic_limiting_magnitude`. Meant to eventually
+bound which catalog magnitude bins (see `data/catalog/`) are worth loading
+for a given site+rig, instead of curating "interesting" NGC/IC objects by
+hand.
 """
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timedelta
 
 from astropy.time import Time
@@ -101,3 +108,68 @@ def has_safe_field_rotation(
     return bool(
         field_rotation_rate_deg_per_min(site, target, when) <= max_rate_deg_per_min
     )
+
+
+# Naked-eye limiting magnitude (NELM) by Bortle dark-sky class — commonly
+# cited approximate midpoints for John Bortle's 2001 scale. Linearly
+# interpolated for fractional classes (a site documented as "4-5" -> 4.5).
+_NELM_BY_BORTLE: dict[float, float] = {
+    1.0: 7.8,
+    2.0: 7.3,
+    3.0: 6.8,
+    4.0: 6.3,
+    5.0: 5.8,
+    6.0: 5.25,
+    7.0: 4.75,
+    8.0: 4.0,
+    9.0: 3.5,
+}
+
+# The sky darkness the aperture-only formula below implicitly assumes
+# (roughly Bortle 3-4) — subtracting this calibrates it to any other class.
+_NELM_FORMULA_REFERENCE = 6.9
+
+# Rough gain a stacked astrophotography session has over naked-eye visual
+# limiting magnitude, for a "typical" session (tens of minutes of total
+# integration). By far the biggest source of uncertainty in this estimate —
+# a much longer or shorter session shifts the real number substantially.
+# Tune this against your own results, not the physics below.
+DEFAULT_INTEGRATION_GAIN_MAG = 7.0
+
+
+def _naked_eye_limiting_magnitude(bortle_class: float) -> float:
+    """NELM at a (possibly fractional) Bortle class, via linear
+    interpolation between the standard scale's integer classes."""
+    lower = min(max(math.floor(bortle_class), 1), 9)
+    upper = min(max(math.ceil(bortle_class), 1), 9)
+    if lower == upper:
+        return _NELM_BY_BORTLE[float(lower)]
+    fraction = bortle_class - lower
+    return _NELM_BY_BORTLE[float(lower)] + fraction * (
+        _NELM_BY_BORTLE[float(upper)] - _NELM_BY_BORTLE[float(lower)]
+    )
+
+
+def photographic_limiting_magnitude(
+    aperture_mm: float,
+    bortle_class: float,
+    *,
+    integration_gain_mag: float = DEFAULT_INTEGRATION_GAIN_MAG,
+) -> float:
+    """Rough estimate of the faintest magnitude a stacked astrophotography
+    session can usefully reach, for a given aperture and sky darkness.
+
+    Deliberately simple — a real exposure-time calculator would also need
+    sensor QE, read noise, pixel scale, and actual integration time, none
+    of which this project tracks yet. Built from the classic visual
+    telescope limiting-magnitude formula (2.7 + 5*log10(D_mm)), adjusted
+    for the site's actual sky darkness and a single tunable constant for
+    the photographic gain over visual. A starting heuristic for bounding
+    the catalog by brightness, not a precision prediction — CLAUDE.md's M4
+    note on tunable heuristics applies here just as much.
+    """
+    visual_dark_sky_mag = 2.7 + 5 * math.log10(aperture_mm)
+    sky_adjustment_mag = (
+        _naked_eye_limiting_magnitude(bortle_class) - _NELM_FORMULA_REFERENCE
+    )
+    return visual_dark_sky_mag + integration_gain_mag + sky_adjustment_mag

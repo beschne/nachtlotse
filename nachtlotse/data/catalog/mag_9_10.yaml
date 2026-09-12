@@ -1,0 +1,18 @@
+# Catalog objects magnitude 9.0-9.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Leo Triplet — M65"
+  catalog_id: "M65"
+  aliases: ["NGC 3623"]
+  ra_deg: 169.725
+  dec_deg: 13.083
+  magnitude: 9.3
+  size_arcmin: [9.8, 2.9]
+
+- name: "Phantom Galaxy"
+  catalog_id: "M74"
+  aliases: ["NGC 628"]
+  ra_deg: 24.175
+  dec_deg: 15.783
+  magnitude: 9.4
+  size_arcmin: [10.5, 9.5]

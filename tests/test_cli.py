@@ -226,7 +226,7 @@ def test_altaz_rig_devalues_a_near_zenith_target_that_an_eq_rig_keeps_at_peak(
     near_zenith_target = Target(
         name="near-zenith test target", ra_deg=lst_deg, dec_deg=site.lat_deg - 0.5
     )
-    monkeypatch.setattr(cli, "MESSIER_CORE", [near_zenith_target])
+    monkeypatch.setattr(cli, "CATALOG", [near_zenith_target])
 
     t_transit = observer.target_meridian_transit_time(
         night_reference, build_fixed_target(near_zenith_target), which="nearest"

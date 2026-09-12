@@ -116,9 +116,17 @@ class Target:
     ra_deg: float
     dec_deg: float
     catalog_id: str = ""
+    # Alternate catalog designations for the same physical object (e.g. M31
+    # -> ("NGC 224",)) — lets a target appear once, findable under any of
+    # its names, instead of duplicated across catalog files.
+    aliases: tuple[str, ...] = ()
     # Apparent (major, minor) axis, arcminutes. (0.0, 0.0) means "unknown" —
     # framing scoring treats that as unconstrained, not "infinitely small".
     size_arcmin: tuple[float, float] = (0.0, 0.0)
+    # Apparent visual magnitude — for variable objects, the brighter
+    # (numerically lower) of its known extremes. 99.0 means "unknown" and
+    # sorts/filters as if arbitrarily faint, never as suspiciously bright.
+    magnitude: float = 99.0
 
 
 @dataclass(frozen=True)

@@ -16,7 +16,7 @@ from astroplan import moon_illumination
 from astropy.time import Time
 
 from nachtlotse.data import store
-from nachtlotse.data.catalog import MESSIER_CORE
+from nachtlotse.data.catalog import CATALOG
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import constraints, ephemeris, framing, scoring
 from nachtlotse.engine.models import Rig, Site, Target, WeatherSummary
@@ -50,7 +50,7 @@ def _rank_targets(
     angular size fits `rig`'s field of view.
     """
     ranked: list[tuple[Target, datetime, ephemeris.AltAz, float]] = []
-    for target in MESSIER_CORE:
+    for target in CATALOG:
         result = constraints.best_time_tonight(
             site, target, when, extra_ok=_rotation_gate(rig, site, target)
         )
@@ -190,10 +190,17 @@ def _cmd_sites() -> int:
     return 0
 
 
+_RIG_LIST_REFERENCE_BORTLE_CLASSES = (2.0, 5.0)
+
+
 def _format_rig_line(record: RigRecord) -> str:
     rig = record.rig
     aliases = f" (aka {', '.join(record.aliases)})" if record.aliases else ""
     fov_width_deg, fov_height_deg = rig.fov_deg
+    limiting_mags = ", ".join(
+        f"Bortle {bortle_class:.0f} ~{framing.photographic_limiting_magnitude(rig.optics.aperture_mm, bortle_class):.1f} mag"
+        for bortle_class in _RIG_LIST_REFERENCE_BORTLE_CLASSES
+    )
     return (
         f"{rig.name}{aliases}\n"
         f"    {rig.optics.focal_length_mm:.0f} mm f/"
@@ -202,7 +209,8 @@ def _format_rig_line(record: RigRecord) -> str:
         f"{rig.sensor.width_px}×{rig.sensor.height_px} px, "
         f"{rig.sensor.pixel_um:.2f} µm · mount: {rig.mount.kind}\n"
         f"    FoV {fov_width_deg:.2f}° × {fov_height_deg:.2f}° · "
-        f"sampling {rig.sampling_arcsec_px:.2f}″/px"
+        f"sampling {rig.sampling_arcsec_px:.2f}″/px\n"
+        f"    Rough limiting magnitude (stacked, tunable estimate): {limiting_mags}"
     )
 
 

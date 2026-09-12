@@ -1,0 +1,26 @@
+# Catalog objects magnitude 7.0-7.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Dumbbell Nebula"
+  catalog_id: "M27"
+  aliases: ["NGC 6853"]
+  ra_deg: 299.900
+  dec_deg: 22.717
+  magnitude: 7.5
+  size_arcmin: [8.0, 5.6]
+
+- name: "Southern Pinwheel Galaxy"
+  catalog_id: "M83"
+  aliases: ["NGC 5236"]
+  ra_deg: 204.250
+  dec_deg: -29.867
+  magnitude: 7.5
+  size_arcmin: [13.0, 12.0]
+
+- name: "Pinwheel Galaxy"
+  catalog_id: "M101"
+  aliases: ["NGC 5457"]
+  ra_deg: 210.800
+  dec_deg: 54.350
+  magnitude: 7.9
+  size_arcmin: [29.0, 27.0]
