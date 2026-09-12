@@ -1,0 +1,51 @@
+"""Messier core catalog (~30 objects) — data, not engine logic.
+
+Coordinates are J2000 equinox, accurate to roughly an arcminute — good enough
+for altitude ranking, not for plate-solving/pointing.
+"""
+
+from __future__ import annotations
+
+from nachtlotse.engine.models import Target
+
+MESSIER_CORE: list[Target] = [
+    Target(name="Crab Nebula", ra_deg=83.633, dec_deg=22.017, catalog_id="M1"),
+    Target(name="Lagoon Nebula", ra_deg=270.950, dec_deg=-24.383, catalog_id="M8"),
+    Target(name="Wild Duck Cluster", ra_deg=282.775, dec_deg=-6.267, catalog_id="M11"),
+    Target(name="Hercules Cluster", ra_deg=250.425, dec_deg=36.467, catalog_id="M13"),
+    Target(name="Pegasus Cluster", ra_deg=322.500, dec_deg=12.167, catalog_id="M15"),
+    Target(name="Eagle Nebula", ra_deg=274.700, dec_deg=-13.783, catalog_id="M16"),
+    Target(name="Omega Nebula", ra_deg=275.200, dec_deg=-16.183, catalog_id="M17"),
+    Target(name="Trifid Nebula", ra_deg=270.575, dec_deg=-23.033, catalog_id="M20"),
+    Target(
+        name="Sagittarius Cluster", ra_deg=279.100, dec_deg=-23.900, catalog_id="M22"
+    ),
+    Target(name="Dumbbell Nebula", ra_deg=299.900, dec_deg=22.717, catalog_id="M27"),
+    Target(name="Andromeda Galaxy", ra_deg=10.6847, dec_deg=41.2692, catalog_id="M31"),
+    Target(name="Triangulum Galaxy", ra_deg=23.475, dec_deg=30.650, catalog_id="M33"),
+    Target(name="Shoe-Buckle Cluster", ra_deg=92.250, dec_deg=24.350, catalog_id="M35"),
+    Target(name="Pinwheel Cluster", ra_deg=84.025, dec_deg=34.133, catalog_id="M36"),
+    Target(
+        name="Salt-and-Pepper Cluster", ra_deg=88.100, dec_deg=32.550, catalog_id="M37"
+    ),
+    Target(name="Orion Nebula", ra_deg=83.850, dec_deg=-5.450, catalog_id="M42"),
+    Target(name="Beehive Cluster", ra_deg=130.100, dec_deg=19.983, catalog_id="M44"),
+    Target(name="Pleiades", ra_deg=56.750, dec_deg=24.117, catalog_id="M45"),
+    Target(name="Whirlpool Galaxy", ra_deg=202.475, dec_deg=47.200, catalog_id="M51"),
+    Target(name="Ring Nebula", ra_deg=283.400, dec_deg=33.033, catalog_id="M57"),
+    Target(name="Sunflower Galaxy", ra_deg=198.950, dec_deg=42.033, catalog_id="M63"),
+    Target(name="Black Eye Galaxy", ra_deg=194.175, dec_deg=21.683, catalog_id="M64"),
+    Target(name="Leo Triplet — M65", ra_deg=169.725, dec_deg=13.083, catalog_id="M65"),
+    Target(name="Leo Triplet — M66", ra_deg=170.050, dec_deg=12.983, catalog_id="M66"),
+    Target(name="Phantom Galaxy", ra_deg=24.175, dec_deg=15.783, catalog_id="M74"),
+    Target(name="Bode's Galaxy", ra_deg=148.900, dec_deg=69.067, catalog_id="M81"),
+    Target(name="Cigar Galaxy", ra_deg=148.950, dec_deg=69.683, catalog_id="M82"),
+    Target(
+        name="Southern Pinwheel Galaxy",
+        ra_deg=204.250,
+        dec_deg=-29.867,
+        catalog_id="M83",
+    ),
+    Target(name="Pinwheel Galaxy", ra_deg=210.800, dec_deg=54.350, catalog_id="M101"),
+    Target(name="Sombrero Galaxy", ra_deg=190.000, dec_deg=-11.617, catalog_id="M104"),
+]

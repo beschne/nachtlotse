@@ -1,0 +1,31 @@
+[project]
+name = "nachtlotse"
+version = "0.1.0"
+description = "Deterministic astrophotography session planner: scores sky, site, and equipment into a GO/MARGINAL/SKIP verdict"
+requires-python = ">=3.12"
+dependencies = [
+    "astroplan>=0.10.1",
+    "astropy>=8.0.1",
+    "numpy>=2.5.3",
+    "skyfield>=1.55",
+]
+
+[project.scripts]
+lotse = "nachtlotse.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.7",
+]
+
+[tool.ruff]
+target-version = "py312"
+extend-exclude = ["*.md"]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
