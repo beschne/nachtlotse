@@ -62,6 +62,11 @@ is fully backed by `pytest` against known astronomical values.
   tonight's *observable* targets (night + moon + altitude + horizon +
   rig-aware field rotation) by best altitude within the dark window, with a
   framing-fit column; `lotse sites` / `lotse rigs` list what's configured.
+  The list is sorted descending by "Max Alt" — the highest altitude each
+  target safely reaches under *all* active constraints tonight, not
+  necessarily its true meridian-transit altitude, so a target whose best
+  window is horizon- or rotation-limited can rank below one with a lower
+  transit but a cleaner shot.
 - Tests against independently known astronomical/textbook values (Polaris
   altitude ≈ geographic latitude, transit altitude = 90° − lat + dec, a target
   coincident with the Moon's own position always fails separation, a
@@ -95,6 +100,10 @@ uv run ruff format .   # format
 uv run lotse today     # rank tonight's targets for your first site + rig
 uv run lotse sites     # list all configured observing sites
 uv run lotse rigs      # list all configured rigs
+
+# --site and --rig accept a name or alias (or a unique substring of one),
+# and can be combined; either defaults to the first entry in its file:
+uv run lotse today --site "Großer Feldberg" --rig S30P
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment
