@@ -8,7 +8,7 @@
 # Edit the copy freely: replace these examples with your own gear, or keep
 # some and add more. `rigs_local.yaml` is gitignored — your rig list never
 # gets committed. The first entry in your file becomes the default rig for
-# `lotse today` when you don't pass --rig.
+# `lotse plan` when you don't pass --rig.
 #
 # Fields:
 #   name                required

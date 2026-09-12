@@ -65,11 +65,12 @@ def _rank_targets(
 def _fetch_weather_summary(
     site: Site, evening_start: datetime, morning_end: datetime
 ) -> WeatherSummary | None:
-    """Tonight's weather for `site`'s dark window, or None if unreachable.
+    """Weather for `site`'s dark window on the planned night, or None if
+    unreachable.
 
     Weather is an optional layer (see CLAUDE.md's Leitprinzip): any
     failure here — no network, a bad response — must not stop `lotse
-    today` from producing a ranking, just narrow the verdict to sky
+    plan` from producing a ranking, just narrow the verdict to sky
     geometry alone.
     """
     try:
@@ -90,9 +91,7 @@ def _format_weather_line(weather: WeatherSummary | None) -> str:
     )
 
 
-def _cmd_today(
-    site_name: str | None, rig_name: str | None, date_str: str | None
-) -> int:
+def _cmd_plan(site_name: str | None, rig_name: str | None, date_str: str | None) -> int:
     try:
         site_record = (
             store.get_site_record(site_name)
@@ -229,20 +228,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    today_parser = subparsers.add_parser(
-        "today", help="Rank tonight's observable Messier-core targets by max altitude"
+    plan_parser = subparsers.add_parser(
+        "plan",
+        help="Rank observable Messier-core targets for a night (default: tonight)",
     )
-    today_parser.add_argument(
+    plan_parser.add_argument(
         "--site",
         default=None,
         help="Site name or alias (default: the first site in your local site list)",
     )
-    today_parser.add_argument(
+    plan_parser.add_argument(
         "--rig",
         default=None,
         help="Rig name or alias (default: the first rig in your local rig list)",
     )
-    today_parser.add_argument(
+    plan_parser.add_argument(
         "--date",
         default=None,
         help=(
@@ -257,8 +257,8 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    if args.command == "today":
-        return _cmd_today(args.site, args.rig, args.date)
+    if args.command == "plan":
+        return _cmd_plan(args.site, args.rig, args.date)
     if args.command == "sites":
         return _cmd_sites()
     if args.command == "rigs":

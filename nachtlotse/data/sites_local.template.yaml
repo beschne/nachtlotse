@@ -8,7 +8,7 @@
 # Edit the copy freely: replace these two examples with your own sites, or
 # keep them and add more. `sites_local.yaml` is gitignored — your sites
 # never get committed. The first entry in your file becomes the default
-# site for `lotse today` when you don't pass --site.
+# site for `lotse plan` when you don't pass --site.
 #
 # Fields:
 #   name, lat_deg, lon_deg, elevation_m   required

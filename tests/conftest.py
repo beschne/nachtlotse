@@ -13,7 +13,7 @@ def _no_real_weather_requests(
     request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Keep the whole suite offline: nothing should hit the real Open-Meteo
-    API just because a test calls `lotse today`. Defaults to a fixed
+    API just because a test calls `lotse plan`. Defaults to a fixed
     clear-sky forecast spanning any plausible dark window; tests that care
     about specific weather (or its absence) can monkeypatch
     `open_meteo.fetch_hourly` again inside their own body to override this.

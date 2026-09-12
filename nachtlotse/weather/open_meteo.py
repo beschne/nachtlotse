@@ -18,7 +18,8 @@ from nachtlotse.engine.models import WeatherSummary
 
 _API_URL = "https://api.open-meteo.com/v1/forecast"
 _TIMEOUT_S = 10.0
-_FORECAST_DAYS = 2  # enough to cover tonight's dark window regardless of the hour
+_FORECAST_DAYS = 16  # Open-Meteo's max for the free hourly forecast — covers
+# `lotse plan --date` for any night within that horizon, not just tonight.
 _HOURLY_FIELDS = (
     "cloudcover,windspeed_10m,relative_humidity_2m,dew_point_2m,temperature_2m"
 )

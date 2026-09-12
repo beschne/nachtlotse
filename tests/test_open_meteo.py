@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
@@ -42,6 +43,22 @@ def test_fetch_hourly_parses_a_well_formed_response() -> None:
     assert hours[2].cloud_cover_pct == pytest.approx(90.0)
     assert hours[1].wind_speed_kmh == pytest.approx(8.0)
     assert hours[1].dew_point_c == pytest.approx(7.5)
+
+
+def test_fetch_hourly_requests_a_forecast_horizon_of_at_least_two_weeks() -> None:
+    """Regression guard: `lotse plan --date` needs weather for any night
+    within a couple of weeks out, not just tonight — a too-short
+    `forecast_days` silently degrades every future-dated query to
+    "Weather: unavailable" without ever raising an error.
+    """
+    with patch(
+        "urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)
+    ) as mock_urlopen:
+        open_meteo.fetch_hourly(50.237, 8.551)
+
+    requested_url = mock_urlopen.call_args.args[0]
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(requested_url).query)
+    assert int(query["forecast_days"][0]) >= 14
 
 
 def test_fetch_hourly_raises_weather_unavailable_on_network_error() -> None:

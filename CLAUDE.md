@@ -59,7 +59,7 @@ nachtlotse/
 │   └── hrz.py           # .HRZ import (from M2)
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
 ├── ui/              # swappable — streamlit (MVP), later qt/ or web/
-├── cli.py           # `lotse today`, `lotse sites`, `lotse rigs`
+├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs`
 └── tests/
 ```
 
@@ -139,7 +139,7 @@ core grows before the UI is added.
 - Engine: altitude/azimuth/transit time of a target via `skyfield`.
 - Small catalog (Messier core, ~30 objects). Ranking by max altitude within the
   time window.
-- CLI: `lotse today` prints top targets as a table.
+- CLI: `lotse plan` prints top targets as a table.
 - **DoD:** tests compare altitude/transit against known ephemeris values
   (± tolerance).
 
@@ -220,7 +220,7 @@ uv sync                       # environment/dependencies
 uv run pytest                 # tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
-uv run lotse today            # today's recommendation (from M0)
+uv run lotse plan              # tonight's recommendation (from M0)
 uv run streamlit run ui/app.py  # UI (from M5)
 ```
 
@@ -230,5 +230,5 @@ uv run streamlit run ui/app.py  # UI (from M5)
 
 Start with **M0**. First lay down the data model (`engine/models.py`) and an
 ephemeris test, then write `ephemeris.py` to satisfy it (TDD). Only once
-`lotse today` produces a plausible, tested target list for Bad Homburg with the
+`lotse plan` produces a plausible, tested target list for Bad Homburg with the
 Seestar S30 Pro rig, move on to M1.

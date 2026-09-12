@@ -49,7 +49,7 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   Cloud cover, wind, dew-point margin, and low altitude can each downgrade
   the verdict, worst-wins; thresholds are named module constants, called
   out as a tunable heuristic rather than physics (per CLAUDE.md's M4 note).
-- `nachtlotse/cli.py` — `lotse today [--site NAME] [--rig NAME] [--date YYYY-MM-DD]`
+- `nachtlotse/cli.py` — `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD]`
   ranks tonight's (or the given date's) *observable* targets (night + moon
   + altitude + horizon + rig-aware field rotation) by best altitude within
   the dark window, with a framing-fit column, a weather summary, and a
@@ -75,6 +75,6 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## Not yet implemented (by design)
 
-A "best rig for this target" chooser — `lotse today` scores targets for
+A "best rig for this target" chooser — `lotse plan` scores targets for
 whichever rig you pass, it doesn't yet pick between rigs. Later milestones
 (M5 UI, M6 comfort/prose) are documented in [CLAUDE.md](./CLAUDE.md).

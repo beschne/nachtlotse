@@ -32,7 +32,7 @@ is fully backed by `pytest` against known astronomical values.
 - ✅ **M4 — Weather & verdict**, done.
 
 Not yet implemented (by design, later milestones): a "best rig for this
-target" chooser — `lotse today` scores targets for whichever rig you pass,
+target" chooser — `lotse plan` scores targets for whichever rig you pass,
 it doesn't yet pick between rigs.
 
 Module-by-module detail: [STATUS.md](./STATUS.md). Full roadmap and all
@@ -50,19 +50,19 @@ cp nachtlotse/data/rigs_local.template.yaml nachtlotse/data/rigs_local.yaml
 uv run pytest          # run the tests
 uv run ruff check .    # lint
 uv run ruff format .   # format
-uv run lotse today     # rank tonight's targets for your first site + rig
+uv run lotse plan      # rank tonight's targets for your first site + rig
 uv run lotse sites     # list all configured observing sites
 uv run lotse rigs      # list all configured rigs
 
 # --site and --rig accept a name or alias (or a unique substring of one),
 # and can be combined; either defaults to the first entry in its file:
-uv run lotse today --site "Großer Feldberg" --rig S30P
+uv run lotse plan --site "Großer Feldberg" --rig S30P
 
 # --date plans for a given night (YYYY-MM-DD, local to the site) instead
 # of tonight — useful for checking ahead. Weather beyond Open-Meteo's
-# forecast horizon (a few days) shows as unavailable; the sky-geometry
+# forecast horizon (16 days) shows as unavailable; the sky-geometry
 # ranking and verdict still work for any date, past or future:
-uv run lotse today --site Mönstadt --date 2026-11-14
+uv run lotse plan --site Mönstadt --date 2026-11-14
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment

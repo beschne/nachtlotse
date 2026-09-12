@@ -10,12 +10,12 @@ from nachtlotse import cli
 from nachtlotse.data import store
 
 
-def test_today_command_prints_dark_window_moon_and_a_ranked_table(
+def test_plan_command_prints_dark_window_moon_and_a_ranked_table(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    exit_code = cli.main(["today"])
+    exit_code = cli.main(["plan"])
     assert exit_code == 0
 
     output = capsys.readouterr().out
@@ -33,32 +33,32 @@ def test_today_command_prints_dark_window_moon_and_a_ranked_table(
         assert target.catalog_id in output
 
 
-def test_today_command_accepts_a_site_by_name_or_alias(
+def test_plan_command_accepts_a_site_by_name_or_alias(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    assert cli.main(["today", "--site", "Sternwarte"]) == 0
+    assert cli.main(["plan", "--site", "Sternwarte"]) == 0
     output = capsys.readouterr().out
     assert "Volkssternwarte Hochtaunus" in output
 
 
-def test_today_command_accepts_a_rig_by_name_or_alias(
+def test_plan_command_accepts_a_rig_by_name_or_alias(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    assert cli.main(["today", "--rig", "S50P"]) == 0
+    assert cli.main(["plan", "--rig", "S50P"]) == 0
     output = capsys.readouterr().out
     assert "ZWO Seestar S50 Pro" in output
 
 
-def test_today_command_accepts_a_date_and_uses_that_nights_dark_window(
+def test_plan_command_accepts_a_date_and_uses_that_nights_dark_window(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    exit_code = cli.main(["today", "--date", "2026-11-14"])
+    exit_code = cli.main(["plan", "--date", "2026-11-14"])
     assert exit_code == 0
 
     output = capsys.readouterr().out
@@ -69,51 +69,51 @@ def test_today_command_accepts_a_date_and_uses_that_nights_dark_window(
     assert "Verdict:" in output
 
 
-def test_today_command_rejects_a_malformed_date(
+def test_plan_command_rejects_a_malformed_date(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    exit_code = cli.main(["today", "--date", "14.11.2026"])
+    exit_code = cli.main(["plan", "--date", "14.11.2026"])
     assert exit_code == 2
     assert "Invalid --date" in capsys.readouterr().err
 
 
-def test_today_command_rejects_an_unknown_site(
+def test_plan_command_rejects_an_unknown_site(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    exit_code = cli.main(["today", "--site", "Nirgendwo"])
+    exit_code = cli.main(["plan", "--site", "Nirgendwo"])
     assert exit_code == 2
 
 
-def test_today_command_rejects_an_unknown_rig(
+def test_plan_command_rejects_an_unknown_rig(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    exit_code = cli.main(["today", "--rig", "Nichtvorhanden"])
+    exit_code = cli.main(["plan", "--rig", "Nichtvorhanden"])
     assert exit_code == 2
 
 
-def test_today_command_reports_the_setup_hint_when_no_sites_are_configured(
+def test_plan_command_reports_the_setup_hint_when_no_sites_are_configured(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(store, "SITES", [])
-    exit_code = cli.main(["today"])
+    exit_code = cli.main(["plan"])
     assert exit_code == 2
     assert "No observing sites configured" in capsys.readouterr().err
 
 
-def test_today_command_reports_the_setup_hint_when_no_rigs_are_configured(
+def test_plan_command_reports_the_setup_hint_when_no_rigs_are_configured(
     template_sites: list[store.SiteRecord],
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(store, "RIGS", [])
-    exit_code = cli.main(["today"])
+    exit_code = cli.main(["plan"])
     assert exit_code == 2
     assert "No rigs configured" in capsys.readouterr().err
 
@@ -259,7 +259,7 @@ def test_altaz_rig_devalues_a_near_zenith_target_that_an_eq_rig_keeps_at_peak(
     # else: fully excluded for the night — also a valid "devalued" outcome.
 
 
-def test_today_command_skips_on_overcast_weather(
+def test_plan_command_skips_on_overcast_weather(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     monkeypatch: pytest.MonkeyPatch,
@@ -284,14 +284,14 @@ def test_today_command_skips_on_overcast_weather(
 
     monkeypatch.setattr(open_meteo, "fetch_hourly", overcast_everywhere)
 
-    assert cli.main(["today"]) == 0
+    assert cli.main(["plan"]) == 0
     output = capsys.readouterr().out
 
     assert "Verdict: SKIP" in output
     assert "cloud cover" in output.lower()
 
 
-def test_today_command_falls_back_gracefully_when_weather_is_unavailable(
+def test_plan_command_falls_back_gracefully_when_weather_is_unavailable(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     monkeypatch: pytest.MonkeyPatch,
@@ -305,7 +305,7 @@ def test_today_command_falls_back_gracefully_when_weather_is_unavailable(
 
     monkeypatch.setattr(open_meteo, "fetch_hourly", always_unavailable)
 
-    assert cli.main(["today"]) == 0
+    assert cli.main(["plan"]) == 0
     output = capsys.readouterr().out
 
     assert "Weather: unavailable" in output
