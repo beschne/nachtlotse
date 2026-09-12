@@ -26,21 +26,25 @@ is fully backed by `pytest` against known astronomical values.
 ## Status
 
 ✅ **M0 — Scaffolding & engine core**, done.
+✅ **M1 — Moon & dark window**, done.
 
 - `nachtlotse/engine/models.py` — data model (`Site`, `HorizonProfile`, `Optics`,
   `Sensor`, `Mount`, `Rig`, `Target`, `Verdict`) as immutable dataclasses.
-- `nachtlotse/engine/ephemeris.py` — altitude/azimuth/transit time of a target
-  via `skyfield`.
+- `nachtlotse/engine/ephemeris.py` — altitude/azimuth/transit/max-altitude of a
+  target via `skyfield`.
+- `nachtlotse/engine/constraints.py` — astronomical-twilight dark window and an
+  altitude/night/moon-separation observability gate, via `astroplan`.
 - `nachtlotse/data/catalog.py` — Messier core catalog (30 objects).
-- `nachtlotse/cli.py` — `lotse today`, ranking tonight's targets by max altitude
-  for the hardcoded reference site (Bad Homburg) and rig (ZWO Seestar S30 Pro).
-- Tests against independently known astronomical values (Polaris altitude ≈
-  geographic latitude, transit altitude = 90° − lat + dec) plus catalog/CLI
-  smoke tests.
+- `nachtlotse/cli.py` — `lotse today`, ranking tonight's *observable* targets
+  (constraints applied) by max altitude within the dark window, for the
+  hardcoded reference site (Bad Homburg) and rig (ZWO Seestar S30 Pro).
+- Tests against independently known astronomical/textbook values (Polaris
+  altitude ≈ geographic latitude, transit altitude = 90° − lat + dec, a target
+  coincident with the Moon's own position always fails separation) plus
+  catalog/CLI smoke tests.
 
-Not yet implemented (by design, later milestones): twilight/dark-window,
-moon-distance, and horizon constraints — `lotse today` currently ranks by raw
-transit altitude only, day or night.
+Not yet implemented (by design, later milestones): horizon-profile and
+framing/field-rotation constraints, multiple sites/rigs, weather.
 
 The full roadmap (M0–M6) and all architecture decisions are documented in
 [`CLAUDE.md`](./CLAUDE.md).

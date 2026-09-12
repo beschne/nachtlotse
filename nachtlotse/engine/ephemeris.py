@@ -78,3 +78,24 @@ def find_transit(
             f"No culmination of {target.name!r} within window {start} .. {end}"
         )
     return transits[0].utc_datetime()
+
+
+def max_altitude(
+    site: Site, target: Target, start: datetime, end: datetime
+) -> tuple[datetime, AltAz]:
+    """Time and position of the highest altitude within [start, end].
+
+    Altitude has a single maximum (the meridian transit) per sidereal day
+    and is monotonic on either side of it. If the transit falls inside the
+    window, that's the maximum; otherwise the window is monotonic
+    throughout, so the maximum sits at one of its two edges.
+    """
+    try:
+        transit_time = find_transit(site, target, start, end)
+    except ValueError:
+        start_pos = altaz(site, target, start)
+        end_pos = altaz(site, target, end)
+        if start_pos.alt_deg >= end_pos.alt_deg:
+            return start, start_pos
+        return end, end_pos
+    return transit_time, altaz(site, target, transit_time)

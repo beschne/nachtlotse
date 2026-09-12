@@ -19,6 +19,13 @@ dev = [
     "ruff>=0.16.7",
 ]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    # Benign third-party noise, not actionable from this codebase.
+    "ignore::astropy.coordinates.errors.NonRotationTransformationWarning",
+    "ignore:Setting the dtype on a NumPy array:DeprecationWarning:skyfield",
+]
+
 [tool.ruff]
 target-version = "py312"
 extend-exclude = ["*.md"]

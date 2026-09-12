@@ -69,6 +69,40 @@ def test_altitude_rises_toward_transit_and_falls_afterward() -> None:
     assert alt_at_transit > alt_one_hour_after
 
 
+def test_max_altitude_matches_transit_when_window_contains_it() -> None:
+    start = datetime(2026, 9, 12, 0, 0, tzinfo=UTC)
+    end = start + timedelta(days=1)
+
+    transit_time = ephemeris.find_transit(BAD_HOMBURG, M31, start, end)
+    max_time, max_pos = ephemeris.max_altitude(BAD_HOMBURG, M31, start, end)
+
+    assert max_time == transit_time
+    assert max_pos == ephemeris.altaz(BAD_HOMBURG, M31, transit_time)
+
+
+def test_max_altitude_falls_back_to_window_edge_when_transit_is_excluded() -> None:
+    day_start = datetime(2026, 9, 12, 0, 0, tzinfo=UTC)
+    day_end = day_start + timedelta(days=1)
+    transit_time = ephemeris.find_transit(BAD_HOMBURG, M31, day_start, day_end)
+    transit_alt_deg = ephemeris.altaz(BAD_HOMBURG, M31, transit_time).alt_deg
+
+    # A short window entirely after the transit: altitude only falls across
+    # it, so the maximum must sit at its start edge.
+    window_start = transit_time + timedelta(hours=1)
+    window_end = transit_time + timedelta(hours=2)
+
+    with pytest.raises(ValueError, match="No culmination"):
+        ephemeris.find_transit(BAD_HOMBURG, M31, window_start, window_end)
+
+    max_time, max_pos = ephemeris.max_altitude(
+        BAD_HOMBURG, M31, window_start, window_end
+    )
+
+    assert max_time == window_start
+    assert max_pos == ephemeris.altaz(BAD_HOMBURG, M31, window_start)
+    assert max_pos.alt_deg < transit_alt_deg
+
+
 def test_altaz_requires_timezone_aware_datetime() -> None:
     naive = datetime(2026, 9, 12, 22, 0)  # noqa: DTZ001 -- test case for the guard
     with pytest.raises(ValueError):

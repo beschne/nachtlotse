@@ -7,11 +7,14 @@ happens only here, never inside the engine core (UTC internally throughout).
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
+from astroplan import moon_illumination
+from astropy.time import Time
+
 from nachtlotse.data.catalog import MESSIER_CORE
-from nachtlotse.engine import ephemeris
+from nachtlotse.engine import constraints, ephemeris
 from nachtlotse.engine.models import (
     HorizonProfile,
     Mount,
@@ -40,29 +43,25 @@ SEESTAR_S30_PRO = Rig(
     mount=Mount(name="Seestar S30 Pro Mount", kind="altaz"),
 )
 
-_RANKING_WINDOW_HOURS = 24
-
 
 def _rank_targets(
     site: Site, when: datetime
 ) -> list[tuple[Target, datetime, ephemeris.AltAz]]:
-    """Rank catalog targets by max altitude (transit) within the next 24h.
+    """Rank catalog targets by max altitude within tonight's dark window.
 
-    No twilight/moon/horizon constraints yet — those land in M1/M2. A target
-    is dropped only if it never rises above the local horizon (alt <= 0) at
-    this site.
+    A target is dropped if it never simultaneously clears the altitude,
+    astronomical-night, and moon-separation constraints during that window
+    (see `engine.constraints`). Horizon-profile and framing constraints land
+    in M2/M3.
     """
-    window_end = when + timedelta(hours=_RANKING_WINDOW_HOURS)
+    evening_start, morning_end = constraints.dark_window(site, when)
+
     ranked: list[tuple[Target, datetime, ephemeris.AltAz]] = []
     for target in MESSIER_CORE:
-        try:
-            transit_time = ephemeris.find_transit(site, target, when, window_end)
-        except ValueError:
+        if not constraints.is_observable_tonight(site, target, when):
             continue
-        pos = ephemeris.altaz(site, target, transit_time)
-        if pos.alt_deg <= 0.0:
-            continue
-        ranked.append((target, transit_time, pos))
+        max_time, pos = ephemeris.max_altitude(site, target, evening_start, morning_end)
+        ranked.append((target, max_time, pos))
     ranked.sort(key=lambda row: row[2].alt_deg, reverse=True)
     return ranked
 
@@ -73,15 +72,27 @@ def _cmd_today() -> int:
     now = datetime.now(UTC)
     local_tz = ZoneInfo(site.tz)
 
-    ranked = _rank_targets(site, now)
+    evening_start, morning_end = constraints.dark_window(site, now)
+    illumination_pct = moon_illumination(Time(now)) * 100
 
     print(f"Nachtlotse — {site.name} ({rig.name})")
-    print(f"{'Target':<32} {'Max Alt':>8} {'Az @ Transit':>13}  Transit (local)")
-    for target, transit_time, pos in ranked:
+    print(
+        f"Dark window: {evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
+        f"{morning_end.astimezone(local_tz):%H:%M %Z}  ·  Moon: {illumination_pct:.0f}% illuminated"
+    )
+    print()
+
+    ranked = _rank_targets(site, now)
+    if not ranked:
+        print("No catalog target clears altitude/moon/night constraints tonight.")
+        return 0
+
+    print(f"{'Target':<32} {'Max Alt':>8} {'Az':>7}  Best time (local)")
+    for target, max_time, pos in ranked:
         label = f"{target.catalog_id} {target.name}"
-        local_time = transit_time.astimezone(local_tz)
+        local_time = max_time.astimezone(local_tz)
         print(
-            f"{label:<32} {pos.alt_deg:7.1f}° {pos.az_deg:12.1f}°  "
+            f"{label:<32} {pos.alt_deg:7.1f}° {pos.az_deg:6.1f}°  "
             f"{local_time:%Y-%m-%d %H:%M %Z}"
         )
     return 0
@@ -94,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser(
-        "today", help="Rank tonight's Messier-core targets by max altitude"
+        "today", help="Rank tonight's observable Messier-core targets by max altitude"
     )
     args = parser.parse_args(argv)
 
