@@ -1,4 +1,4 @@
-"""Constraint tests against independently derived expectations (M1 DoD)."""
+"""Constraint tests against independently derived expectations (M1/M2 DoD)."""
 
 from __future__ import annotations
 
@@ -88,3 +88,60 @@ def test_target_coincident_with_the_moon_drops_out() -> None:
         )
         is False
     )
+
+
+# A single-point profile makes `HorizonProfile.min_alt` return that altitude
+# for every azimuth (see engine/models.py's wrap-around branch) — a uniform
+# 90° wall, i.e. nothing is ever observable here regardless of direction.
+WALLED_SITE = Site(
+    name="Walled test site",
+    lat_deg=BAD_HOMBURG.lat_deg,
+    lon_deg=BAD_HOMBURG.lon_deg,
+    elevation_m=BAD_HOMBURG.elevation_m,
+    tz=BAD_HOMBURG.tz,
+    horizon=HorizonProfile(points=[(0.0, 90.0)]),
+)
+
+
+def test_clears_horizon_respects_the_site_profile() -> None:
+    from nachtlotse.engine import ephemeris
+
+    low = ephemeris.AltAz(alt_deg=10.0, az_deg=180.0, distance_au=1.0)
+    high = ephemeris.AltAz(alt_deg=80.0, az_deg=180.0, distance_au=1.0)
+
+    assert constraints.clears_horizon(BAD_HOMBURG, low) is True  # flat horizon
+    assert constraints.clears_horizon(WALLED_SITE, low) is False
+    assert constraints.clears_horizon(WALLED_SITE, high) is False  # even near zenith
+
+
+def test_best_time_tonight_is_none_behind_a_full_horizon_wall() -> None:
+    """M2 DoD: a horizon that walls off the whole sky drops a target that
+    the night/moon/altitude gate alone would have accepted.
+    """
+    reference = datetime(2026, 9, 12, 15, 0, tzinfo=UTC)
+
+    assert (
+        constraints.is_observable_tonight(
+            BAD_HOMBURG, CIRCUMPOLAR_TARGET, reference, min_moon_sep_deg=0.0
+        )
+        is True
+    )
+    assert (
+        constraints.best_time_tonight(
+            WALLED_SITE, CIRCUMPOLAR_TARGET, reference, min_moon_sep_deg=0.0
+        )
+        is None
+    )
+
+
+def test_best_time_tonight_returns_a_horizon_clearing_position_when_open() -> None:
+    reference = datetime(2026, 9, 12, 15, 0, tzinfo=UTC)
+
+    result = constraints.best_time_tonight(
+        BAD_HOMBURG, CIRCUMPOLAR_TARGET, reference, min_moon_sep_deg=0.0
+    )
+
+    assert result is not None
+    _best_time, pos = result
+    assert pos.alt_deg > 0.0
+    assert constraints.clears_horizon(BAD_HOMBURG, pos) is True

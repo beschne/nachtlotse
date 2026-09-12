@@ -7,32 +7,18 @@ happens only here, never inside the engine core (UTC internally throughout).
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from astroplan import moon_illumination
 from astropy.time import Time
 
+from nachtlotse.data import store
 from nachtlotse.data.catalog import MESSIER_CORE
+from nachtlotse.data.store import SiteRecord
 from nachtlotse.engine import constraints, ephemeris
-from nachtlotse.engine.models import (
-    HorizonProfile,
-    Mount,
-    Optics,
-    Rig,
-    Sensor,
-    Site,
-    Target,
-)
-
-BAD_HOMBURG = Site(
-    name="Bad Homburg",
-    lat_deg=50.2266,
-    lon_deg=8.6180,
-    elevation_m=190.0,
-    tz="Europe/Berlin",
-    horizon=HorizonProfile(points=[]),
-)
+from nachtlotse.engine.models import Mount, Optics, Rig, Sensor, Site, Target
 
 SEESTAR_S30_PRO = Rig(
     name="ZWO Seestar S30 Pro",
@@ -47,27 +33,36 @@ SEESTAR_S30_PRO = Rig(
 def _rank_targets(
     site: Site, when: datetime
 ) -> list[tuple[Target, datetime, ephemeris.AltAz]]:
-    """Rank catalog targets by max altitude within tonight's dark window.
+    """Rank catalog targets by their best moment within tonight's dark window.
 
-    A target is dropped if it never simultaneously clears the altitude,
-    astronomical-night, and moon-separation constraints during that window
-    (see `engine.constraints`). Horizon-profile and framing constraints land
-    in M2/M3.
+    A target is dropped unless some moment tonight simultaneously clears
+    altitude, astronomical night, moon separation, and the site's horizon
+    profile (see `engine.constraints.best_time_tonight`). Framing/field-
+    rotation constraints land in M3.
     """
-    evening_start, morning_end = constraints.dark_window(site, when)
-
     ranked: list[tuple[Target, datetime, ephemeris.AltAz]] = []
     for target in MESSIER_CORE:
-        if not constraints.is_observable_tonight(site, target, when):
+        result = constraints.best_time_tonight(site, target, when)
+        if result is None:
             continue
-        max_time, pos = ephemeris.max_altitude(site, target, evening_start, morning_end)
-        ranked.append((target, max_time, pos))
+        best_time, pos = result
+        ranked.append((target, best_time, pos))
     ranked.sort(key=lambda row: row[2].alt_deg, reverse=True)
     return ranked
 
 
-def _cmd_today() -> int:
-    site = BAD_HOMBURG
+def _cmd_today(site_name: str | None) -> int:
+    try:
+        record = (
+            store.get_site_record(site_name)
+            if site_name
+            else store.default_site_record()
+        )
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
+    site = record.site
     rig = SEESTAR_S30_PRO
     now = datetime.now(UTC)
     local_tz = ZoneInfo(site.tz)
@@ -84,17 +79,48 @@ def _cmd_today() -> int:
 
     ranked = _rank_targets(site, now)
     if not ranked:
-        print("No catalog target clears altitude/moon/night constraints tonight.")
+        print(
+            "No catalog target clears altitude/moon/night/horizon constraints tonight."
+        )
         return 0
 
     print(f"{'Target':<32} {'Max Alt':>8} {'Az':>7}  Best time (local)")
-    for target, max_time, pos in ranked:
+    for target, best_time, pos in ranked:
         label = f"{target.catalog_id} {target.name}"
-        local_time = max_time.astimezone(local_tz)
+        local_time = best_time.astimezone(local_tz)
         print(
             f"{label:<32} {pos.alt_deg:7.1f}° {pos.az_deg:6.1f}°  "
             f"{local_time:%Y-%m-%d %H:%M %Z}"
         )
+    return 0
+
+
+def _format_site_line(record: SiteRecord) -> str:
+    site = record.site
+    profile = "measured" if len(site.horizon.points) > 4 else "flat/sector"
+    aliases = f" (aka {', '.join(record.aliases)})" if record.aliases else ""
+    details = (
+        f"    {site.lat_deg:.5f}°N {site.lon_deg:.5f}°E, {site.elevation_m:.0f} m · "
+        f"{record.region} · Bortle {record.bortle} · horizon: {profile}"
+    )
+    lines = [f"{site.name}{aliases}", details]
+    if record.address:
+        lines.append(f"    {record.address}")
+    return "\n".join(lines)
+
+
+def _cmd_sites() -> int:
+    try:
+        store.require_sites()
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
+    print("Nachtlotse — known sites")
+    print()
+    for record in store.SITES:
+        print(_format_site_line(record))
+        print()
     return 0
 
 
@@ -104,13 +130,24 @@ def main(argv: list[str] | None = None) -> int:
         description="Nachtlotse — deterministic astrophotography session planner",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser(
+
+    today_parser = subparsers.add_parser(
         "today", help="Rank tonight's observable Messier-core targets by max altitude"
     )
+    today_parser.add_argument(
+        "--site",
+        default=None,
+        help="Site name or alias (default: the first site in your local site list)",
+    )
+
+    subparsers.add_parser("sites", help="List all known observing sites")
+
     args = parser.parse_args(argv)
 
     if args.command == "today":
-        return _cmd_today()
+        return _cmd_today(args.site)
+    if args.command == "sites":
+        return _cmd_sites()
     parser.error(f"unknown command: {args.command}")
     return 2
 

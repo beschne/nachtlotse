@@ -1,11 +1,15 @@
-"""Twilight and moon constraints — is a target worth shooting tonight?
+"""Twilight, moon, and horizon constraints — is a target worth shooting tonight?
 
-Built on astroplan/astropy rather than the skyfield-based `ephemeris` module:
-astroplan already ships the exact building blocks this milestone calls for
-(`AltitudeConstraint`, `AtNightConstraint`, `MoonSeparationConstraint`,
-`observability_table`). Kept fully offline — IERS auto-download is disabled;
-the bundled `astropy-iers-data` package is precise enough for twilight/moon
-timing, and no network access is needed at a dark site.
+Twilight/moon/altitude gating is built on astroplan/astropy: astroplan ships
+the exact building blocks M1 called for (`AltitudeConstraint`,
+`AtNightConstraint`, `MoonSeparationConstraint`, `observability_table`).
+Horizon-profile clearance (M2) has no astroplan equivalent — `HorizonProfile`
+is this project's own model — so `best_time_tonight` samples the night with
+the skyfield-based `ephemeris` module instead and checks each sample against
+`site.horizon.min_alt(az)` directly. Kept fully offline throughout — IERS
+auto-download is disabled; the bundled `astropy-iers-data` package is
+precise enough for twilight/moon timing, and no network access is needed at
+a dark site.
 """
 
 from __future__ import annotations
@@ -23,11 +27,12 @@ from astroplan import (
     observability_table,
 )
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import EarthLocation, SkyCoord, get_body
 from astropy.coordinates.errors import NonRotationTransformationWarning
 from astropy.time import Time
 from astropy.utils import iers
 
+from nachtlotse.engine import ephemeris
 from nachtlotse.engine.models import Site, Target
 
 iers.conf.auto_download = False
@@ -54,6 +59,25 @@ def _observer(site: Site) -> Observer:
 def _fixed_target(target: Target) -> FixedTarget:
     coord = SkyCoord(ra=target.ra_deg * u.deg, dec=target.dec_deg * u.deg, frame="icrs")
     return FixedTarget(coord=coord, name=target.name)
+
+
+def _earth_location(site: Site) -> EarthLocation:
+    return EarthLocation(
+        lat=site.lat_deg * u.deg,
+        lon=site.lon_deg * u.deg,
+        height=site.elevation_m * u.m,
+    )
+
+
+def _moon_separation_deg(site: Site, target: Target, when: datetime) -> float:
+    moon = get_body("moon", Time(when), _earth_location(site))
+    target_coord = SkyCoord(ra=target.ra_deg * u.deg, dec=target.dec_deg * u.deg)
+    return float(moon.separation(target_coord).deg)
+
+
+def clears_horizon(site: Site, pos: ephemeris.AltAz) -> bool:
+    """Whether a position sits above the site's horizon profile."""
+    return bool(pos.alt_deg > site.horizon.min_alt(pos.az_deg))
 
 
 def dark_window(site: Site, reference: datetime) -> tuple[datetime, datetime]:
@@ -108,3 +132,50 @@ def is_observable_tonight(
         night_constraints, observer, [_fixed_target(target)], times=times
     )
     return bool(table["ever observable"][0])
+
+
+def best_time_tonight(
+    site: Site,
+    target: Target,
+    reference: datetime,
+    *,
+    min_alt_deg: float = _DEFAULT_MIN_ALT_DEG,
+    min_moon_sep_deg: float = _DEFAULT_MIN_MOON_SEP_DEG,
+) -> tuple[datetime, ephemeris.AltAz] | None:
+    """The best (highest-altitude) moment tonight that clears altitude,
+    the site's horizon profile, and moon separation — or None if there
+    isn't one.
+
+    `is_observable_tonight` is a cheap pre-check (night/altitude/moon, no
+    horizon); this only runs the finer per-sample horizon search once that
+    passes, since a target the site's horizon blocks everywhere it would
+    otherwise be observable is a real "no", not caught by the pre-check.
+    """
+    if not is_observable_tonight(
+        site,
+        target,
+        reference,
+        min_alt_deg=min_alt_deg,
+        min_moon_sep_deg=min_moon_sep_deg,
+    ):
+        return None
+
+    evening_start, morning_end = dark_window(site, reference)
+    start_jd = Time(evening_start).jd
+    end_jd = Time(morning_end).jd
+
+    best: tuple[datetime, ephemeris.AltAz] | None = None
+    for sample_jd in np.linspace(start_jd, end_jd, _SAMPLES_PER_NIGHT):
+        sample_time = Time(sample_jd, format="jd").to_datetime(timezone=UTC)
+        pos = ephemeris.altaz(site, target, sample_time)
+
+        if pos.alt_deg < min_alt_deg:
+            continue
+        if not clears_horizon(site, pos):
+            continue
+        if _moon_separation_deg(site, target, sample_time) < min_moon_sep_deg:
+            continue
+        if best is None or pos.alt_deg > best[1].alt_deg:
+            best = (sample_time, pos)
+
+    return best

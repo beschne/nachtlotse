@@ -93,6 +93,7 @@ dependencies = [
     { name = "astroplan" },
     { name = "astropy" },
     { name = "numpy" },
+    { name = "pyyaml" },
     { name = "skyfield" },
 ]
 
@@ -107,6 +108,7 @@ requires-dist = [
     { name = "astroplan", specifier = ">=0.10.1" },
     { name = "astropy", specifier = ">=8.0.1" },
     { name = "numpy", specifier = ">=2.5.3" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "skyfield", specifier = ">=1.55" },
 ]
 

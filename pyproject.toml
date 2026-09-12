@@ -7,6 +7,7 @@ dependencies = [
     "astroplan>=0.10.1",
     "astropy>=8.0.1",
     "numpy>=2.5.3",
+    "pyyaml>=6.0.3",
     "skyfield>=1.55",
 ]
 

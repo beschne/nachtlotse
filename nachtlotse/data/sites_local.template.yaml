@@ -1,0 +1,65 @@
+# Template for your observing-site list.
+#
+# This file is NOT read by Nachtlotse (see store.py) — it's an example to
+# copy from:
+#
+#   cp nachtlotse/data/sites_local.template.yaml nachtlotse/data/sites_local.yaml
+#
+# Edit the copy freely: replace these two examples with your own sites, or
+# keep them and add more. `sites_local.yaml` is gitignored — your sites
+# never get committed. The first entry in your file becomes the default
+# site for `lotse today` when you don't pass --site.
+#
+# Fields:
+#   name, lat_deg, lon_deg, elevation_m   required
+#   tz                                    optional, default "Europe/Berlin"
+#   region, bortle, address, aliases      optional, for `lotse sites` display
+#   horizon_points: [[az_deg, alt_deg], ...]
+#     Measured horizon — minimum altitude by azimuth, linearly interpolated
+#     (wraps at 360°/0°). Use this if you've actually surveyed the site.
+#   sector: [start_deg, end_deg]  or  [start_deg, end_deg, min_alt_deg]
+#     Shorthand for "only this clockwise arc is open sky" (wraps past 360°
+#     if start > end); everything outside becomes a 90° wall. min_alt_deg
+#     (default 0°) is the minimum altitude within the open arc.
+#   Omit both horizon_points and sector for an unrestricted 360° view.
+
+- name: "Volkssternwarte Hochtaunus"
+  lat_deg: 50.23709
+  lon_deg: 8.55088
+  elevation_m: 316.0
+  region: "Taunus"
+  bortle: "5 (heavily light-polluted, urban fringe)"
+  address: "Elisabethenschneise 2, 61350 Bad Homburg vor der Höhe"
+  aliases: ["Sternwarte", "Kuppel"]
+  horizon_points:
+    - [0.0, 19.8]
+    - [10.5, 10.5]
+    - [31.6, 20.6]
+    - [46.9, 36.8]
+    - [65.0, 44.2]
+    - [90.0, 6.5]
+    - [113.8, 30.8]
+    - [140.8, 18.1]
+    - [178.1, 23.0]
+    - [204.3, 27.0]
+    - [224.7, 30.0]
+    - [246.3, 28.7]
+    - [262.2, 24.7]
+    - [281.5, 24.9]
+    - [284.7, 34.3]
+    - [293.3, 23.1]
+    - [306.7, 24.7]
+    - [320.5, 30.0]
+    - [329.2, 35.2]
+    - [352.5, 32.1]
+    - [358.6, 26.8]
+
+- name: "Großer Feldberg"
+  lat_deg: 50.23243
+  lon_deg: 8.4575
+  elevation_m: 873.0
+  region: "Taunus"
+  bortle: "4"
+  address: "Plateau Großer Feldberg, 61389 Schmitten - Niederreifenberg"
+  aliases: ["Feldberg"]
+  # no horizon_points/sector: unrestricted 360° view

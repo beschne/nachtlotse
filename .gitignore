@@ -11,3 +11,8 @@ wheels/
 
 # Skyfield ephemeris cache (large binary, re-downloadable)
 .cache/
+
+# Your local observing-site list — never committed (may hold non-public
+# coordinates & horizon surveys). Copy sites_local.template.yaml to create
+# it; see nachtlotse/data/store.py.
+nachtlotse/data/sites_local.yaml
