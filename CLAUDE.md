@@ -194,18 +194,28 @@ Ideas for after the MVP, in priority order:
 
 1. Expand the catalog with further typical astrophotography targets, sourced
    from various catalogs beyond Messier/NGC/IC.
-2. Streamlit UI: clicking a backup target shows the same detail panel as the
+2. Revisit the handful of targets left out of a catalog import for lacking a
+   Messier/NGC/IC designation or a reliably sourced magnitude — worth a
+   fresh look once better data (or a relaxed schema constraint) makes them
+   addable. See STATUS.md's catalog section for the current skip list.
+3. Tag catalog objects by type — emission nebula, reflection nebula,
+   planetary nebula, dark nebula, galaxy, galaxy group, open cluster,
+   globular cluster — so targets can be filtered/searched by category. An
+   object can carry more than one tag (e.g. M42 is both an emission and a
+   reflection nebula).
+4. Streamlit UI: clicking a backup target shows the same detail panel as the
    hero (stats + altitude curve).
-3. Streamlit UI: a real RGB/visual image of the hero target (e.g. from an
+5. Streamlit UI: a real RGB/visual image of the hero target (e.g. from an
    image survey), cached locally rather than refetched on every rerun.
-4. Current events: well-placed comets, supernova alerts.
-5. A "best rig for this target" chooser — `lotse plan` scores targets for
+6. Current events: well-placed comets, supernova alerts; later also minor
+   planets/asteroids and near-Earth objects (NEOs).
+7. A "best rig for this target" chooser — `lotse plan` scores targets for
    whichever rig you pass, it doesn't yet pick between rigs.
-6. Session log: record what's already been captured, and when — total
+8. Session log: record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-7. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+9. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
    from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)

@@ -15,12 +15,34 @@
   magnitude: 7.0
   size_arcmin: [60.0, 8.0]
 
+- name: "Running Man Nebula"
+  catalog_id: "NGC 1977"
+  ra_deg: 83.816
+  dec_deg: -4.844
+  magnitude: 7.0
+  size_arcmin: [20.0, 10.0]
+
+- name: "Heart Nebula"
+  catalog_id: "IC 1805"
+  ra_deg: 38.173
+  dec_deg: 61.457
+  magnitude: 7.03
+  size_arcmin: [60.0, 60.0]
+
 - name: "Iris Nebula"
   catalog_id: "NGC 7023"
   ra_deg: 315.398
   dec_deg: 68.170
   magnitude: 7.2
   size_arcmin: [10.0, 8.0]
+
+- name: "Globular Cluster M5"
+  catalog_id: "M5"
+  aliases: ["NGC 5904"]
+  ra_deg: 229.641
+  dec_deg: 2.083
+  magnitude: 7.34
+  size_arcmin: [15.0, 15.0]
 
 - name: "Crescent Nebula"
   catalog_id: "NGC 6888"
@@ -59,12 +81,27 @@
   magnitude: 7.5
   size_arcmin: [16.33, 16.33]
 
+- name: "Ancient Open Cluster M67"
+  catalog_id: "M67"
+  aliases: ["NGC 2682"]
+  ra_deg: 132.834
+  dec_deg: 11.812
+  magnitude: 7.6
+  size_arcmin: [33.0, 33.0]
+
 - name: "Caroline's Cluster"
   catalog_id: "NGC 2360"
   ra_deg: 109.430
   dec_deg: -15.641
   magnitude: 7.62
   size_arcmin: [9.0, 9.0]
+
+- name: "Wizard Nebula"
+  catalog_id: "NGC 7380"
+  ra_deg: 341.838
+  dec_deg: 58.132
+  magnitude: 7.62
+  size_arcmin: [25.0, 20.0]
 
 - name: "Cocoon Nebula"
   catalog_id: "IC 5146"

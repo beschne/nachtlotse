@@ -10,10 +10,19 @@
 
 - name: "Rosette Nebula"
   catalog_id: "NGC 2237"
+  aliases: ["NGC 2244"]
   ra_deg: 98.075
   dec_deg: 4.867
   magnitude: 9.0
   size_arcmin: [80.0, 60.0]
+
+- name: "Spiral Galaxy M106"
+  catalog_id: "M106"
+  aliases: ["NGC 4258"]
+  ra_deg: 184.740
+  dec_deg: 47.304
+  magnitude: 9.12
+  size_arcmin: [16.98, 7.24]
 
 - name: "Blue Snowball Nebula"
   catalog_id: "NGC 7662"
@@ -52,6 +61,13 @@
   magnitude: 9.47
   size_arcmin: [14.45, 2.2]
 
+- name: "Open Cluster NGC 2158"
+  catalog_id: "NGC 2158"
+  ra_deg: 91.857
+  dec_deg: 24.096
+  magnitude: 9.49
+  size_arcmin: [8.4, 8.4]
+
 - name: "Hamburger Galaxy"
   catalog_id: "NGC 3628"
   ra_deg: 170.075
@@ -73,6 +89,29 @@
   magnitude: 9.6
   size_arcmin: [11.0, 10.0]
 
+- name: "Hidden Galaxy"
+  catalog_id: "IC 342"
+  ra_deg: 56.702
+  dec_deg: 68.096
+  magnitude: 9.68
+  size_arcmin: [19.77, 18.79]
+
+- name: "Elliptical Galaxy M86"
+  catalog_id: "M86"
+  aliases: ["NGC 4406"]
+  ra_deg: 186.549
+  dec_deg: 12.946
+  magnitude: 9.74
+  size_arcmin: [11.53, 8.43]
+
+- name: "Spiral Galaxy M77"
+  catalog_id: "M77"
+  aliases: ["NGC 1068"]
+  ra_deg: 40.670
+  dec_deg: -0.013
+  magnitude: 9.74
+  size_arcmin: [6.11, 5.61]
+
 - name: "Cat's Eye Nebula"
   catalog_id: "NGC 6543"
   ra_deg: 269.639
@@ -86,3 +125,10 @@
   dec_deg: -14.153
   magnitude: 9.9
   size_arcmin: [0.77, 0.77]
+
+- name: "Ringed Galaxy NGC 4725"
+  catalog_id: "NGC 4725"
+  ra_deg: 192.611
+  dec_deg: 25.501
+  magnitude: 9.92
+  size_arcmin: [9.71, 7.10]

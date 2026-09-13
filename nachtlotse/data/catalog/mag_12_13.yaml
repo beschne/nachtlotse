@@ -15,6 +15,14 @@
   magnitude: 12.16
   size_arcmin: [4.33, 2.31]
 
+- name: "Little Dumbbell Nebula"
+  catalog_id: "M76"
+  aliases: ["NGC 650"]
+  ra_deg: 25.582
+  dec_deg: 51.575
+  magnitude: 12.2
+  size_arcmin: [1.12, 1.12]
+
 - name: "Bear Paw Galaxy"
   catalog_id: "NGC 2537"
   ra_deg: 123.311
@@ -22,12 +30,26 @@
   magnitude: 12.27
   size_arcmin: [2.07, 1.96]
 
+- name: "Galaxy NGC 255"
+  catalog_id: "NGC 255"
+  ra_deg: 11.947
+  dec_deg: -11.469
+  magnitude: 12.4
+  size_arcmin: [2.04, 1.85]
+
 - name: "Hubble's Variable Nebula"
   catalog_id: "NGC 2261"
   ra_deg: 99.790
   dec_deg: 8.744
   magnitude: 12.46
   size_arcmin: [2.0, 1.0]
+
+- name: "Galaxy NGC 4312"
+  catalog_id: "NGC 4312"
+  ra_deg: 185.631
+  dec_deg: 15.538
+  magnitude: 12.48
+  size_arcmin: [5.02, 1.15]
 
 - name: "Red Spider Nebula"
   catalog_id: "NGC 6537"

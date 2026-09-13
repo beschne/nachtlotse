@@ -16,6 +16,21 @@
   magnitude: 8.0
   size_arcmin: [60.0, 50.0]
 
+- name: "Skull Nebula"
+  catalog_id: "NGC 246"
+  ra_deg: 11.764
+  dec_deg: -11.872
+  magnitude: 8.0
+  size_arcmin: [4.08, 4.08]
+
+- name: "Reflection Nebula M78"
+  catalog_id: "M78"
+  aliases: ["NGC 2068"]
+  ra_deg: 86.691
+  dec_deg: 0.079
+  magnitude: 8.0
+  size_arcmin: [4.5, 4.5]
+
 - name: "Foxhead Cluster"
   catalog_id: "NGC 6819"
   ra_deg: 295.325
@@ -62,6 +77,14 @@
   magnitude: 8.5
   size_arcmin: [9.3, 5.4]
 
+- name: "Globular Cluster M12"
+  catalog_id: "M12"
+  aliases: ["NGC 6218"]
+  ra_deg: 251.811
+  dec_deg: -1.948
+  magnitude: 8.52
+  size_arcmin: [11.1, 11.1]
+
 - name: "Sunflower Galaxy"
   catalog_id: "M63"
   aliases: ["NGC 5055"]
@@ -77,6 +100,14 @@
   magnitude: 8.6
   size_arcmin: [0.42, 0.42]
 
+- name: "Croc's Eye Galaxy"
+  catalog_id: "M94"
+  aliases: ["NGC 4736"]
+  ra_deg: 192.721
+  dec_deg: 41.120
+  magnitude: 8.71
+  size_arcmin: [7.74, 6.68]
+
 - name: "Ring Nebula"
   catalog_id: "M57"
   aliases: ["NGC 6720"]
@@ -85,6 +116,35 @@
   magnitude: 8.8
   size_arcmin: [1.4, 1.0]
 
+- name: "Spiral Galaxy NGC 2403"
+  catalog_id: "NGC 2403"
+  ra_deg: 114.214
+  dec_deg: 65.603
+  magnitude: 8.83
+  size_arcmin: [19.95, 10.07]
+
+- name: "Open Cluster NGC 6939"
+  catalog_id: "NGC 6939"
+  ra_deg: 307.876
+  dec_deg: 60.662
+  magnitude: 8.85
+  size_arcmin: [12.0, 12.0]
+
+- name: "Open Cluster NGC 1907"
+  catalog_id: "NGC 1907"
+  ra_deg: 82.019
+  dec_deg: 35.326
+  magnitude: 8.87
+  size_arcmin: [5.4, 5.4]
+
+- name: "Andromeda Companion M32"
+  catalog_id: "M32"
+  aliases: ["NGC 221"]
+  ra_deg: 10.674
+  dec_deg: 40.865
+  magnitude: 8.89
+  size_arcmin: [7.74, 4.86]
+
 - name: "Leo Triplet — M66"
   catalog_id: "M66"
   aliases: ["NGC 3627"]
@@ -92,3 +152,11 @@
   dec_deg: 12.983
   magnitude: 8.9
   size_arcmin: [9.1, 4.2]
+
+- name: "Andromeda Companion M110"
+  catalog_id: "M110"
+  aliases: ["NGC 205"]
+  ra_deg: 10.092
+  dec_deg: 41.685
+  magnitude: 8.9
+  size_arcmin: [16.22, 9.59]

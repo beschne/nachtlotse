@@ -83,6 +83,14 @@
   magnitude: 4.2
   size_arcmin: [9.0, 9.0]
 
+- name: "Open Cluster M47"
+  catalog_id: "M47"
+  aliases: ["NGC 2422"]
+  ra_deg: 114.146
+  dec_deg: -14.483
+  magnitude: 4.42
+  size_arcmin: [19.8, 19.8]
+
 - name: "California Nebula"
   catalog_id: "NGC 1499"
   ra_deg: 60.810

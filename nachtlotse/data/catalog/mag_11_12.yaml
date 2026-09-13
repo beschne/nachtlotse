@@ -15,6 +15,14 @@
   magnitude: 11.0
   size_arcmin: [15.0, 8.0]
 
+- name: "Splinter Galaxy"
+  catalog_id: "NGC 5907"
+  aliases: ["NGC 5906"]
+  ra_deg: 228.974
+  dec_deg: 56.329
+  magnitude: 11.07
+  size_arcmin: [11.30, 1.75]
+
 - name: "Bow-Tie Nebula"
   catalog_id: "NGC 40"
   ra_deg: 3.254
@@ -29,6 +37,28 @@
   magnitude: 11.37
   size_arcmin: [3.87, 2.58]
 
+- name: "Thor's Helmet"
+  catalog_id: "NGC 2359"
+  ra_deg: 109.629
+  dec_deg: -13.227
+  magnitude: 11.45
+  size_arcmin: [9.0, 6.0]
+
+- name: "Galaxy NGC 3718"
+  catalog_id: "NGC 3718"
+  ra_deg: 173.145
+  dec_deg: 53.068
+  magnitude: 11.52
+  size_arcmin: [4.70, 2.34]
+
+- name: "Owl Nebula"
+  catalog_id: "M97"
+  aliases: ["NGC 3587"]
+  ra_deg: 168.699
+  dec_deg: 55.019
+  magnitude: 11.60
+  size_arcmin: [3.58, 3.58]
+
 - name: "Siamese Twins Galaxies"
   catalog_id: "NGC 4568"
   aliases: ["NGC 4567"]
@@ -36,6 +66,21 @@
   dec_deg: 11.239
   magnitude: 11.62
   size_arcmin: [4.31, 1.87]
+
+- name: "Galaxy NGC 3729"
+  catalog_id: "NGC 3729"
+  ra_deg: 173.456
+  dec_deg: 53.126
+  magnitude: 11.72
+  size_arcmin: [2.89, 2.09]
+
+- name: "Hickson 44 Galaxy Group"
+  catalog_id: "NGC 3190"
+  aliases: ["NGC 3189"]
+  ra_deg: 154.523
+  dec_deg: 21.832
+  magnitude: 11.88
+  size_arcmin: [3.64, 1.22]
 
 - name: "Blue Flash Nebula"
   catalog_id: "NGC 6905"

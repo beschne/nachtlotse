@@ -20,6 +20,7 @@ _BIN_BOUNDS: dict[str, tuple[float | None, float]] = {
     "mag_10_11.yaml": (10.0, 11.0),
     "mag_11_12.yaml": (11.0, 12.0),
     "mag_12_13.yaml": (12.0, 13.0),
+    "mag_13_14.yaml": (13.0, 14.0),
 }
 
 # Visibility/brightness policy for what belongs in this catalog at all:
@@ -36,8 +37,8 @@ _MIN_DEC_DEG_FOR_40N_VISIBILITY = -30.0
 _MAX_CATALOG_MAGNITUDE = 18.6
 
 
-def test_catalog_has_around_ninety_unique_objects() -> None:
-    assert 80 <= len(CATALOG) <= 95
+def test_catalog_has_around_140_unique_objects() -> None:
+    assert 130 <= len(CATALOG) <= 150
 
 
 def test_catalog_ids_are_unique() -> None:

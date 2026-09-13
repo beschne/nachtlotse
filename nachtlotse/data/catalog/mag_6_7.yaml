@@ -33,6 +33,14 @@
   magnitude: 6.2
   size_arcmin: [18.0, 18.0]
 
+- name: "Globular Cluster M2"
+  catalog_id: "M2"
+  aliases: ["NGC 7089"]
+  ra_deg: 323.363
+  dec_deg: -0.823
+  magnitude: 6.25
+  size_arcmin: [8.4, 8.4]
+
 - name: "Wild Duck Cluster"
   catalog_id: "M11"
   aliases: ["NGC 6705"]
@@ -56,6 +64,22 @@
   magnitude: 6.3
   size_arcmin: [10.2, 10.2]
 
+- name: "Open Cluster M46"
+  catalog_id: "M46"
+  aliases: ["NGC 2437"]
+  ra_deg: 115.445
+  dec_deg: -14.810
+  magnitude: 6.33
+  size_arcmin: [21.0, 21.0]
+
+- name: "Globular Cluster M3"
+  catalog_id: "M3"
+  aliases: ["NGC 5272"]
+  ra_deg: 205.547
+  dec_deg: 28.375
+  magnitude: 6.39
+  size_arcmin: [16.2, 16.2]
+
 - name: "Eagle Nebula"
   catalog_id: "M16"
   aliases: ["NGC 6611", "IC 4703"]
@@ -64,6 +88,21 @@
   magnitude: 6.4
   size_arcmin: [35.0, 28.0]
 
+- name: "Starfish Cluster"
+  catalog_id: "M38"
+  aliases: ["NGC 1912"]
+  ra_deg: 82.177
+  dec_deg: 35.855
+  magnitude: 6.69
+  size_arcmin: [9.6, 9.6]
+
+- name: "Soul Nebula"
+  catalog_id: "IC 1848"
+  ra_deg: 42.794
+  dec_deg: 60.402
+  magnitude: 6.87
+  size_arcmin: [40.0, 10.0]
+
 - name: "Bode's Galaxy"
   catalog_id: "M81"
   aliases: ["NGC 3031"]
@@ -71,6 +110,14 @@
   dec_deg: 69.067
   magnitude: 6.9
   size_arcmin: [27.0, 14.0]
+
+- name: "Open Cluster M52"
+  catalog_id: "M52"
+  aliases: ["NGC 7654"]
+  ra_deg: 351.202
+  dec_deg: 61.593
+  magnitude: 6.9
+  size_arcmin: [9.9, 9.9]
 
 - name: "Owl Cluster"
   catalog_id: "NGC 457"

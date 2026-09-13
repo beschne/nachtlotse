@@ -1,0 +1,24 @@
+# Catalog objects magnitude 13.0-13.99. See catalog/__init__.py for the
+# schema. Sorted by magnitude (brightest first).
+
+- name: "Witch Head Nebula"
+  catalog_id: "IC 2118"
+  aliases: ["NGC 1909"]
+  ra_deg: 76.231
+  dec_deg: -7.266
+  magnitude: 13.0
+  size_arcmin: [180.0, 60.0]
+
+- name: "Stephan's Quintet"
+  catalog_id: "NGC 7320"
+  ra_deg: 339.014
+  dec_deg: 33.948
+  magnitude: 13.21
+  size_arcmin: [2.55, 1.40]
+
+- name: "Fetus Nebula"
+  catalog_id: "NGC 7008"
+  ra_deg: 315.137
+  dec_deg: 54.543
+  magnitude: 13.3
+  size_arcmin: [1.43, 1.43]

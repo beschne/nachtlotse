@@ -52,12 +52,20 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/data/catalog/`
 
-- Deep-sky catalog: 88 curated objects (30 Messier, 58 NGC/IC — well-known
+- Deep-sky catalog: 138 curated objects (54 Messier, 84 NGC/IC — well-known
   astrophotography targets with no Messier number, e.g. North America
   Nebula, Veil Nebula, Helix Nebula, Antennae Galaxies).
 - Sourced against [OpenNGC](https://github.com/mattiaverga/OpenNGC)
   (CC-BY-SA-4.0) rather than memory alone once objects got obscure enough
-  that misremembering a magnitude was a real risk.
+  that misremembering a magnitude was a real risk. A second expansion pass
+  cross-referenced every target listed in Ruben Kier's *The 100 Best
+  Astrophotography Targets* (chapters 1–12) against the catalog and added
+  the ones missing; a handful of the book's targets were left out because
+  they only carry a Sharpless/Abell/van den Bergh designation with no
+  NGC/IC/Messier number (Medusa Nebula, Wolf's Cave, the Cave Nebula) or
+  because no reliably sourced magnitude could be found distinct from a
+  companion object (Angel Nebula NGC 2170, Tadpole Nebula IC 410, Hockey
+  Stick Galaxy NGC 4656).
 - Magnitudes prefer OpenNGC's B-Mag field over V-Mag (an early extraction
   pass that preferred V-Mag whenever present produced silently wrong
   values, e.g. the Sculptor Galaxy's V-Mag=11.11 vs. its correct
