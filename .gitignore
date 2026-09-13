@@ -16,3 +16,6 @@ wheels/
 # matching *.template.yaml to create them; see nachtlotse/data/store.py.
 nachtlotse/data/sites_local.yaml
 nachtlotse/data/rigs_local.yaml
+
+# Local secrets — never committed.
+secrets/
