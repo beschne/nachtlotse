@@ -19,7 +19,14 @@ from astropy.time import Time
 
 from nachtlotse.data.catalog import CATALOG
 from nachtlotse.engine import constraints, ephemeris, framing, scoring
-from nachtlotse.engine.models import Rig, Site, Target, TargetType, Verdict, WeatherSummary
+from nachtlotse.engine.models import (
+    Rig,
+    Site,
+    Target,
+    TargetType,
+    Verdict,
+    WeatherSummary,
+)
 from nachtlotse.weather import open_meteo
 
 

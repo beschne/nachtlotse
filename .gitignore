@@ -14,8 +14,9 @@ wheels/
 
 # Your local observing-site and rig lists — never committed. Copy the
 # matching *.template.yaml to create them; see nachtlotse/data/store.py.
-nachtlotse/data/sites_local.yaml
-nachtlotse/data/rigs_local.yaml
+# (unanchored, so it matches regardless of how deep the project root sits)
+sites_local.yaml
+rigs_local.yaml
 
 # Local secrets — never committed.
 secrets/
