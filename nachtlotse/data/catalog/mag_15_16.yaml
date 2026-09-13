@@ -1,6 +1,13 @@
 # Catalog objects magnitude 15.0-15.99. See catalog/__init__.py for the
 # schema. Sorted by magnitude (brightest first).
 
+- name: "Abell 31"
+  catalog_id: "Abell 31"
+  ra_deg: 133.548
+  dec_deg: 8.908
+  magnitude: 15.5
+  size_arcmin: [16.2, 16.2]
+
 - name: "Medusa Nebula"
   catalog_id: "Abell 21"
   aliases: ["Sh2-274", "PK 205+14.1"]

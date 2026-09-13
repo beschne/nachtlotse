@@ -88,3 +88,17 @@
   dec_deg: 20.105
   magnitude: 11.9
   size_arcmin: [0.67, 0.67]
+
+- name: "Draco Trio — NGC 5985"
+  catalog_id: "NGC 5985"
+  ra_deg: 234.904
+  dec_deg: 59.332
+  magnitude: 11.95
+  size_arcmin: [3.98, 2.01]
+
+- name: "Draco Trio — NGC 5982"
+  catalog_id: "NGC 5982"
+  ra_deg: 234.666
+  dec_deg: 59.356
+  magnitude: 11.98
+  size_arcmin: [3.07, 2.00]

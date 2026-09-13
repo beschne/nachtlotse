@@ -52,25 +52,35 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/data/catalog/`
 
-- Deep-sky catalog: 142 curated objects (54 Messier, 88 non-Messier —
+- Deep-sky catalog: 150 curated objects (55 Messier, 95 non-Messier —
   well-known astrophotography targets cataloged under NGC, IC, or another
   designation entirely, e.g. North America Nebula, Veil Nebula, Helix
   Nebula, Antennae Galaxies, the Medusa Nebula as Abell 21, Wolf's Cave
   Nebula as vdB 152, the Cave Nebula as Caldwell 9).
 - Sourced against [OpenNGC](https://github.com/mattiaverga/OpenNGC)
   (CC-BY-SA-4.0) rather than memory alone once objects got obscure enough
-  that misremembering a magnitude was a real risk. A second expansion pass
-  cross-referenced every target listed in Ruben Kier's *The 100 Best
-  Astrophotography Targets* (chapters 1–12) against the catalog and added
-  the ones missing; `catalog_id` is not restricted to Messier/NGC/IC — a
-  handful of the added targets only exist in the Sharpless, Abell, van den
-  Bergh, or Caldwell catalogs and were sourced from SIMBAD/Wikipedia
-  instead of OpenNGC once it had nothing for them. Two of the book's
-  targets are still left out because no reliably sourced magnitude exists
-  for the object itself, distinct from a companion object it's often
-  conflated with (Angel Nebula NGC 2170 — no magnitude in OpenNGC, SIMBAD,
-  or Wikipedia; Tadpole Nebula IC 410 — OpenNGC/NED treat it as a duplicate
-  of its embedded cluster NGC 1893's magnitude, not a separate figure).
+  that misremembering a magnitude was a real risk. Two further expansion
+  passes cross-referenced every target listed in Ruben Kier's *The 100 Best
+  Astrophotography Targets* (chapters 1–12) and, later, Charles Bracken's
+  *The Astrophotography Planner* (2nd ed.) table of contents against the
+  catalog and added the ones missing; `catalog_id` is not restricted to
+  Messier/NGC/IC — a number of the added targets only exist in the
+  Sharpless, Abell, van den Bergh, or Caldwell catalogs and were sourced
+  from SIMBAD/Wikipedia instead of OpenNGC once it had nothing for them.
+  A number of both books' targets are left out because no reliably sourced
+  magnitude exists for the object itself, distinct from a companion object
+  or illuminating star it's routinely conflated with — e.g. the Angel
+  Nebula (NGC 2170), the Tadpole Nebula (IC 410, OpenNGC/NED treat it as a
+  duplicate of its embedded cluster NGC 1893), the Blue Horsehead Nebula
+  (IC 4592, whose only published "magnitude" is its illuminating star Nu
+  Scorpii's), and IC 417/IC 59 (no magnitude in OpenNGC, SIMBAD, or
+  Wikipedia at all). Pure-Sharpless emission nebulae and Barnard/Lynds dark
+  nebulae almost never carry a published integrated magnitude in either
+  OpenNGC or SIMBAD (confirmed target-by-target, not assumed) — CTB1,
+  Simeis 147, Barnard's Loop, the Tulip/Flying Bat/Lion/Lobster Claw/
+  Scarlet Letter/Dolphin/Propeller/Gamma Cygni nebulae, the Snake/Pipe/
+  Barnard's E/Dark Shark dark nebulae, and the Squid Nebula (OU4, no formal
+  catalog designation at all) are left out on that basis.
 - Magnitudes prefer OpenNGC's B-Mag field over V-Mag (an early extraction
   pass that preferred V-Mag whenever present produced silently wrong
   values, e.g. the Sculptor Galaxy's V-Mag=11.11 vs. its correct

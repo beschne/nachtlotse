@@ -8,6 +8,14 @@
   magnitude: 9.0
   size_arcmin: [12.0, 6.0]
 
+- name: "De Mairan's Nebula"
+  catalog_id: "M43"
+  aliases: ["NGC 1982"]
+  ra_deg: 83.883
+  dec_deg: -5.299
+  magnitude: 9.0
+  size_arcmin: [20.0, 15.0]
+
 - name: "Rosette Nebula"
   catalog_id: "NGC 2237"
   aliases: ["NGC 2244"]
@@ -33,7 +41,7 @@
 
 - name: "Wolf's Cave Nebula"
   catalog_id: "vdB 152"
-  aliases: ["Cederblad 201", "LBN 524"]
+  aliases: ["Cederblad 201", "LBN 524", "Barnard 175"]
   ra_deg: 333.352
   dec_deg: 70.251
   magnitude: 9.29
@@ -133,6 +141,13 @@
   dec_deg: -14.153
   magnitude: 9.9
   size_arcmin: [0.77, 0.77]
+
+- name: "Bubble Galaxy"
+  catalog_id: "NGC 3521"
+  ra_deg: 166.453
+  dec_deg: -0.036
+  magnitude: 9.90
+  size_arcmin: [8.32, 4.47]
 
 - name: "Ringed Galaxy NGC 4725"
   catalog_id: "NGC 4725"

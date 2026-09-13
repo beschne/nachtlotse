@@ -67,6 +67,13 @@
   magnitude: 10.08
   size_arcmin: [8.26, 5.51]
 
+- name: "Fly Nebula"
+  catalog_id: "NGC 1931"
+  ra_deg: 82.856
+  dec_deg: 34.246
+  magnitude: 10.1
+  size_arcmin: [4.8, 4.8]
+
 - name: "Eskimo Nebula"
   catalog_id: "NGC 2392"
   ra_deg: 112.295

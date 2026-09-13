@@ -22,3 +22,17 @@
   dec_deg: 54.543
   magnitude: 13.3
   size_arcmin: [1.43, 1.43]
+
+- name: "Ghost of Cassiopeia"
+  catalog_id: "IC 63"
+  ra_deg: 14.870
+  dec_deg: 60.912
+  magnitude: 13.33
+  size_arcmin: [10.0, 3.0]
+
+- name: "Draco Trio — NGC 5981"
+  catalog_id: "NGC 5981"
+  ra_deg: 234.473
+  dec_deg: 59.392
+  magnitude: 13.89
+  size_arcmin: [2.73, 0.37]

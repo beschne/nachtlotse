@@ -10,6 +10,7 @@
 
 - name: "Eastern Veil Nebula"
   catalog_id: "NGC 6992"
+  aliases: ["NGC 6995"]
   ra_deg: 314.100
   dec_deg: 31.717
   magnitude: 7.0
