@@ -1,83 +1,22 @@
 """Command-line interface — the outermost UI boundary.
 
-Imports the engine and data layers; local-timezone conversion for display
-happens only here, never inside the engine core (UTC internally throughout).
+Imports the engine and data layers (via `planning`); local-timezone
+conversion for display happens only here, never inside the engine core
+(UTC internally throughout).
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Callable
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
-from astroplan import moon_illumination
-from astropy.time import Time
-
+from nachtlotse import planning
 from nachtlotse.data import store
-from nachtlotse.data.catalog import CATALOG
 from nachtlotse.data.store import RigRecord, SiteRecord
-from nachtlotse.engine import constraints, ephemeris, framing, scoring
-from nachtlotse.engine.models import Rig, Site, Target, WeatherSummary
-from nachtlotse.weather import open_meteo
-
-
-def _rotation_gate(
-    rig: Rig, site: Site, target: Target
-) -> Callable[[datetime, ephemeris.AltAz], bool] | None:
-    """An `extra_ok` callback for `best_time_tonight`, or None for eq rigs
-    (which have no field-rotation problem to gate on)."""
-    if rig.mount.kind != "altaz":
-        return None
-
-    def gate(sample_time: datetime, _pos: ephemeris.AltAz) -> bool:
-        return framing.has_safe_field_rotation(rig, site, target, sample_time)
-
-    return gate
-
-
-def _rank_targets(
-    site: Site, rig: Rig, when: datetime
-) -> list[tuple[Target, datetime, ephemeris.AltAz, float]]:
-    """Rank catalog targets by their best moment within tonight's dark window.
-
-    A target is dropped unless some moment tonight simultaneously clears
-    altitude, astronomical night, moon separation, the site's horizon
-    profile, and — for alt-az rigs only — safe field rotation near the
-    zenith (see `engine.constraints.best_time_tonight` / `engine.framing`).
-    Each row also carries a framing score (0..1): how well the target's
-    angular size fits `rig`'s field of view.
-    """
-    ranked: list[tuple[Target, datetime, ephemeris.AltAz, float]] = []
-    for target in CATALOG:
-        result = constraints.best_time_tonight(
-            site, target, when, extra_ok=_rotation_gate(rig, site, target)
-        )
-        if result is None:
-            continue
-        best_time, pos = result
-        ranked.append((target, best_time, pos, framing.framing_score(rig, target)))
-    ranked.sort(key=lambda row: row[2].alt_deg, reverse=True)
-    return ranked
-
-
-def _fetch_weather_summary(
-    site: Site, evening_start: datetime, morning_end: datetime
-) -> WeatherSummary | None:
-    """Weather for `site`'s dark window on the planned night, or None if
-    unreachable.
-
-    Weather is an optional layer (see CLAUDE.md's Leitprinzip): any
-    failure here — no network, a bad response — must not stop `lotse
-    plan` from producing a ranking, just narrow the verdict to sky
-    geometry alone.
-    """
-    try:
-        hours = open_meteo.fetch_hourly(site.lat_deg, site.lon_deg)
-    except open_meteo.WeatherUnavailable:
-        return None
-    return open_meteo.summarize_window(hours, evening_start, morning_end)
+from nachtlotse.engine import framing
+from nachtlotse.engine.models import WeatherSummary
 
 
 def _format_weather_line(weather: WeatherSummary | None) -> str:
@@ -123,35 +62,34 @@ def _cmd_plan(site_name: str | None, rig_name: str | None, date_str: str | None)
             target_date.year, target_date.month, target_date.day, 12, 0, tzinfo=local_tz
         )
 
-    evening_start, morning_end = constraints.dark_window(site, now)
-    illumination_pct = moon_illumination(Time(now)) * 100
-    weather = _fetch_weather_summary(site, evening_start, morning_end)
+    plan = planning.plan_night(site, rig, now)
 
     print(f"Nachtlotse — {site.name} ({rig.name})")
     print(
-        f"Dark window: {evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
-        f"{morning_end.astimezone(local_tz):%H:%M %Z}  ·  Moon: {illumination_pct:.0f}% illuminated"
+        f"Dark window: {plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
+        f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}  ·  "
+        f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
     )
-    print(_format_weather_line(weather))
+    print(_format_weather_line(plan.weather))
     print()
 
-    ranked = _rank_targets(site, rig, now)
-    if not ranked:
+    if not plan.ranked:
         print(
             "No catalog target clears altitude/moon/night/horizon/rotation "
             "constraints tonight."
         )
         return 0
 
-    hero_target, _hero_time, hero_pos, _hero_fit = ranked[0]
-    verdict = scoring.verdict_for_target(hero_pos.alt_deg, weather=weather)
-    print(f"Verdict: {verdict.level} — hero target {hero_target.name}")
+    hero = plan.ranked[0]
+    verdict = plan.verdict
+    assert verdict is not None  # a ranked hero always yields a verdict
+    print(f"Verdict: {verdict.level} — hero target {hero.target.name}")
     for reason in verdict.reasons:
         print(f"  {reason}")
     print()
 
     print(f"{'Target':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5}  Best time (local)")
-    for target, best_time, pos, fit in ranked:
+    for target, best_time, pos, fit in plan.ranked:
         label = f"{target.catalog_id} {target.name}"
         local_time = best_time.astimezone(local_tz)
         print(

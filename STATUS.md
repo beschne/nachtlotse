@@ -10,6 +10,7 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - ✅ **M2 — Horizon profiles & multiple sites**, done.
 - ✅ **M3 — Rig scoring, framing & field rotation**, done.
 - ✅ **M4 — Weather & verdict**, done.
+- ✅ **M5 — UI (Streamlit MVP)**, done.
 
 ## `nachtlotse/engine/models.py`
 
@@ -20,6 +21,9 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 ## `nachtlotse/engine/ephemeris.py`
 
 - Altitude/azimuth/transit/max-altitude of a target via `skyfield`.
+- `altitude_series`: altitude/azimuth at N evenly spaced points across a
+  window, vectorized through skyfield rather than looped — the night-long
+  curve the UI plots, not a constraint check.
 
 ## `nachtlotse/engine/constraints.py`
 
@@ -75,6 +79,19 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   in scope, Bortle 2) — the catalog is well within that ceiling today, so
   there's room to go deeper later without hitting it.
 
+## `nachtlotse/planning.py`
+
+- Sits between the pure `engine` core and any UI: `plan_night(site, rig,
+  when)` runs the whole pipeline — dark window, moon illumination, ranked
+  targets (`rank_targets`, rig-aware field-rotation gating included),
+  weather (`fetch_weather_summary`, optional and network-only here), and
+  the hero verdict — into one `NightPlan`. Extracted out of `cli.py` when
+  the Streamlit UI needed the exact same pipeline, so neither front end
+  duplicates it; `cli.py` and `nachtlotse/ui/app.py` both just format a
+  `NightPlan` for their own medium.
+- Not UI code itself — no printing, no framework imports — which is what
+  keeps it shared instead of becoming a third implementation.
+
 ## `nachtlotse/data/store.py`
 
 - Site *and* rig persistence: coordinates, measured/sector-derived horizon,
@@ -109,17 +126,36 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/cli.py`
 
-- `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD]` ranks
-  tonight's (or the given date's) *observable* targets (night + moon +
-  altitude + horizon + rig-aware field rotation) by best altitude within
-  the dark window, with a framing-fit column, a weather summary, and a
+- `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD]` calls
+  `planning.plan_night` and prints the result: dark window, moon
+  illumination, weather summary, a framing-fit column, and a
   GO/MARGINAL/SKIP verdict for the top target; `lotse sites` / `lotse rigs`
   list what's configured.
-- The list is sorted descending by "Max Alt" — the highest altitude each
-  target safely reaches under *all* active constraints, not necessarily its
-  true meridian-transit altitude, so a target whose best window is
-  horizon- or rotation-limited can rank below one with a lower transit but
-  a cleaner shot.
+- The ranked list is sorted descending by "Max Alt" — the highest altitude
+  each target safely reaches under *all* active constraints, not
+  necessarily its true meridian-transit altitude, so a target whose best
+  window is horizon- or rotation-limited can rank below one with a lower
+  transit but a cleaner shot.
+
+## `nachtlotse/ui/app.py`
+
+- The M5 Streamlit MVP: same rule as the CLI — it calls `planning.plan_night`
+  for every number on the page and adds no astronomy of its own. An
+  optional extra (`uv sync --extra ui`), not a core dependency, in keeping
+  with "the UI is deliberately swappable" (CLAUDE.md).
+- Sidebar: site/rig selection (from the same local YAML as the CLI) plus a
+  date picker; `st.cache_data` keys the plan on (site, rig, date) so
+  switching between them doesn't re-run the ephemeris/weather pipeline for
+  a combination already seen this session.
+- Main page, single glance: a colored verdict box (`st.success` /
+  `st.warning` / `st.error` map directly onto GO / MARGINAL / SKIP) with
+  its reasons listed underneath, the hero target's stats, an altitude
+  curve for the hero across the whole dark window (`ephemeris.
+  altitude_series`, with the 20° minimum-useful-altitude line for
+  reference), and a backups table of the next several ranked targets.
+- Missing `sites_local.yaml`/`rigs_local.yaml` shows the same actionable
+  setup hint as the CLI (`store.require_sites`/`require_rigs`) rather than
+  a raw traceback.
 
 ## Tests
 
@@ -137,9 +173,15 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   clear window with a low target yields MARGINAL.
 - The weather client's own tests mock `urllib.request.urlopen` — like the
   rest of the suite, they never touch the real network.
+- The Streamlit UI is tested with streamlit's own `AppTest` harness — runs
+  the real script in a simulated session (no browser) and asserts on its
+  element tree, so a broken import or a bad `st.*` call fails the suite
+  the same way a broken `lotse plan` would. Skips itself (`pytest.
+  importorskip`) when the `ui` extra isn't installed, since streamlit
+  isn't a core dependency.
 
 ## Not yet implemented (by design)
 
 A "best rig for this target" chooser — `lotse plan` scores targets for
-whichever rig you pass, it doesn't yet pick between rigs. Later milestones
-(M5 UI, M6 comfort/prose) are documented in [CLAUDE.md](./CLAUDE.md).
+whichever rig you pass, it doesn't yet pick between rigs. M6 (comfort &
+prose) is documented in [CLAUDE.md](./CLAUDE.md).

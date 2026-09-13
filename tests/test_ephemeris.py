@@ -103,6 +103,25 @@ def test_max_altitude_falls_back_to_window_edge_when_transit_is_excluded() -> No
     assert max_pos.alt_deg < transit_alt_deg
 
 
+def test_altitude_series_matches_transit_altitude_and_spans_the_window() -> None:
+    start = datetime(2026, 9, 12, 0, 0, tzinfo=UTC)
+    end = start + timedelta(days=1)
+    transit_time = ephemeris.find_transit(BAD_HOMBURG, M31, start, end)
+    expected_transit_alt_deg = ephemeris.altaz(BAD_HOMBURG, M31, transit_time).alt_deg
+
+    series = ephemeris.altitude_series(BAD_HOMBURG, M31, start, end, num_samples=49)
+
+    assert len(series) == 49
+    assert series[0][0].timestamp() == pytest.approx(start.timestamp(), abs=1.0), (
+        "first sample should sit at the window start"
+    )
+    assert series[-1][0].timestamp() == pytest.approx(end.timestamp(), abs=1.0), (
+        "last sample should sit at the window end"
+    )
+    sample_alts = [pos.alt_deg for _when, pos in series]
+    assert max(sample_alts) == pytest.approx(expected_transit_alt_deg, abs=0.5)
+
+
 def test_altaz_requires_timezone_aware_datetime() -> None:
     naive = datetime(2026, 9, 12, 22, 0)  # noqa: DTZ001 -- test case for the guard
     with pytest.raises(ValueError):

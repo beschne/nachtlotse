@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 from skyfield import almanac
 from skyfield.api import Loader, Star, wgs84
 from skyfield.timelib import Time
@@ -54,6 +55,29 @@ def altaz(site: Site, target: Target, when: datetime) -> AltAz:
     apparent = observer.at(t).observe(_star(target)).apparent()
     alt, az, distance = apparent.altaz()
     return AltAz(alt_deg=alt.degrees, az_deg=az.degrees, distance_au=distance.au)
+
+
+def altitude_series(
+    site: Site, target: Target, start: datetime, end: datetime, num_samples: int = 49
+) -> list[tuple[datetime, AltAz]]:
+    """Altitude/azimuth at `num_samples` evenly spaced points across
+    [start, end] — an altitude curve for plotting, not a constraint check.
+    """
+    observer = _earth + _topos(site)
+    times = _timescale.tt_jd(np.linspace(_time(start).tt, _time(end).tt, num_samples))
+    apparent = observer.at(times).observe(_star(target)).apparent()
+    alt, az, distance = apparent.altaz()
+    sample_datetimes = times.utc_datetime()
+
+    return [
+        (
+            sample_datetimes[i],
+            AltAz(
+                alt_deg=alt.degrees[i], az_deg=az.degrees[i], distance_au=distance.au[i]
+            ),
+        )
+        for i in range(num_samples)
+    ]
 
 
 def find_transit(

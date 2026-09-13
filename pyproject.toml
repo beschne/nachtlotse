@@ -11,6 +11,14 @@ dependencies = [
     "skyfield>=1.55",
 ]
 
+[project.optional-dependencies]
+# The UI is deliberately swappable (see CLAUDE.md); streamlit is the M5
+# MVP, not a core dependency of the engine/CLI. Install with `uv sync
+# --extra ui` before `uv run streamlit run nachtlotse/ui/app.py`.
+ui = [
+    "streamlit>=1.51.0",
+]
+
 [project.scripts]
 lotse = "nachtlotse.cli:main"
 

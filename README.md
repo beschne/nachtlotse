@@ -30,6 +30,7 @@ is fully backed by `pytest` against known astronomical values.
 - ✅ **M2 — Horizon profiles & multiple sites**, done.
 - ✅ **M3 — Rig scoring, framing & field rotation**, done.
 - ✅ **M4 — Weather & verdict**, done.
+- ✅ **M5 — UI (Streamlit MVP)**, done.
 
 Not yet implemented (by design, later milestones): a "best rig for this
 target" chooser — `lotse plan` scores targets for whichever rig you pass,
@@ -63,6 +64,10 @@ uv run lotse plan --site "Großer Feldberg" --rig S30P
 # forecast horizon (16 days) shows as unavailable; the sky-geometry
 # ranking and verdict still work for any date, past or future:
 uv run lotse plan --site Feldberg --date 2026-11-14
+
+# The Streamlit UI (M5) needs its own extra — it's not a core dependency:
+uv sync --extra ui
+uv run streamlit run nachtlotse/ui/app.py
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment
