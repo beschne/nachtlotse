@@ -20,7 +20,10 @@ and `magnitude` are approximate published values from standard references,
 good for framing/visibility heuristics, not precision use. Kept
 deliberately small and curated (not the full ~7840-entry NGC or
 ~5386-entry IC catalogs) — see CLAUDE.md's own M0 note on a "small core
-catalog".
+catalog". `catalog_id` isn't limited to Messier/NGC/IC — any catalog with
+a real, citable designation (Sharpless, Abell, van den Bergh, …) is fair
+game as long as the object has legitimate coordinates/magnitude/size to go
+with it.
 """
 
 from __future__ import annotations

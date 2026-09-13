@@ -31,6 +31,14 @@
   magnitude: 9.2
   size_arcmin: [0.28, 0.28]
 
+- name: "Wolf's Cave Nebula"
+  catalog_id: "vdB 152"
+  aliases: ["Cederblad 201", "LBN 524"]
+  ra_deg: 333.352
+  dec_deg: 70.251
+  magnitude: 9.29
+  size_arcmin: [62.0, 62.0]
+
 - name: "Leo Triplet — M65"
   catalog_id: "M65"
   aliases: ["NGC 3623"]

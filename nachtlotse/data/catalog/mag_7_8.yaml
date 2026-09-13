@@ -103,6 +103,14 @@
   magnitude: 7.62
   size_arcmin: [25.0, 20.0]
 
+- name: "Cave Nebula"
+  catalog_id: "Caldwell 9"
+  aliases: ["Sh2-155"]
+  ra_deg: 344.321
+  dec_deg: 62.476
+  magnitude: 7.7
+  size_arcmin: [50.0, 30.0]
+
 - name: "Cocoon Nebula"
   catalog_id: "IC 5146"
   ra_deg: 328.370

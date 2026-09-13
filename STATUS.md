@@ -52,30 +52,37 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/data/catalog/`
 
-- Deep-sky catalog: 138 curated objects (54 Messier, 84 NGC/IC — well-known
-  astrophotography targets with no Messier number, e.g. North America
-  Nebula, Veil Nebula, Helix Nebula, Antennae Galaxies).
+- Deep-sky catalog: 142 curated objects (54 Messier, 88 non-Messier —
+  well-known astrophotography targets cataloged under NGC, IC, or another
+  designation entirely, e.g. North America Nebula, Veil Nebula, Helix
+  Nebula, Antennae Galaxies, the Medusa Nebula as Abell 21, Wolf's Cave
+  Nebula as vdB 152, the Cave Nebula as Caldwell 9).
 - Sourced against [OpenNGC](https://github.com/mattiaverga/OpenNGC)
   (CC-BY-SA-4.0) rather than memory alone once objects got obscure enough
   that misremembering a magnitude was a real risk. A second expansion pass
   cross-referenced every target listed in Ruben Kier's *The 100 Best
   Astrophotography Targets* (chapters 1–12) against the catalog and added
-  the ones missing; a handful of the book's targets were left out because
-  they only carry a Sharpless/Abell/van den Bergh designation with no
-  NGC/IC/Messier number (Medusa Nebula, Wolf's Cave, the Cave Nebula) or
-  because no reliably sourced magnitude could be found distinct from a
-  companion object (Angel Nebula NGC 2170, Tadpole Nebula IC 410, Hockey
-  Stick Galaxy NGC 4656).
+  the ones missing; `catalog_id` is not restricted to Messier/NGC/IC — a
+  handful of the added targets only exist in the Sharpless, Abell, van den
+  Bergh, or Caldwell catalogs and were sourced from SIMBAD/Wikipedia
+  instead of OpenNGC once it had nothing for them. Two of the book's
+  targets are still left out because no reliably sourced magnitude exists
+  for the object itself, distinct from a companion object it's often
+  conflated with (Angel Nebula NGC 2170 — no magnitude in OpenNGC, SIMBAD,
+  or Wikipedia; Tadpole Nebula IC 410 — OpenNGC/NED treat it as a duplicate
+  of its embedded cluster NGC 1893's magnitude, not a separate figure).
 - Magnitudes prefer OpenNGC's B-Mag field over V-Mag (an early extraction
   pass that preferred V-Mag whenever present produced silently wrong
   values, e.g. the Sculptor Galaxy's V-Mag=11.11 vs. its correct
   B-Mag≈7.9; fixed with a "prefer B, fall back to V" rule with an anomaly
   guard).
-- Curation stops at objects OpenNGC tags with a real common name — reaching
-  down to ~mag 12.9 (e.g. Little Ghost Nebula); going deeper still would
-  mean pulling in anonymous, rarely imaged galaxies mostly known by
-  catalog number alone, which stretches "well-known target" past what a
-  name-only human curation pass can vouch for.
+- Curation stops at objects with a real common name and a source that
+  vouches for their magnitude — reaching down to ~mag 16 now that
+  non-OpenNGC sources are in play (the Medusa Nebula, mag 15.99, is the
+  faintest entry); going deeper still would mean pulling in anonymous,
+  rarely imaged objects mostly known by catalog number alone, which
+  stretches "well-known target" past what a name-only human curation pass
+  can vouch for.
 - Split into `mag_*.yaml` files by apparent magnitude, not by source
   catalog — a bin file doesn't care whether an object is Messier, NGC, or
   IC, and a site+rig's computed limiting magnitude will eventually be able

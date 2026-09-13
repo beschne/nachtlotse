@@ -21,6 +21,7 @@ _BIN_BOUNDS: dict[str, tuple[float | None, float]] = {
     "mag_11_12.yaml": (11.0, 12.0),
     "mag_12_13.yaml": (12.0, 13.0),
     "mag_13_14.yaml": (13.0, 14.0),
+    "mag_15_16.yaml": (15.0, 16.0),
 }
 
 # Visibility/brightness policy for what belongs in this catalog at all:
@@ -44,7 +45,9 @@ def test_catalog_has_around_140_unique_objects() -> None:
 def test_catalog_ids_are_unique() -> None:
     catalog_ids = [target.catalog_id for target in CATALOG]
     assert len(catalog_ids) == len(set(catalog_ids))
-    assert all(catalog_id.startswith(("M", "NGC", "IC")) for catalog_id in catalog_ids)
+    assert all(catalog_id for catalog_id in catalog_ids), (
+        "every target needs a real, citable catalog_id"
+    )
 
 
 def test_catalog_targets_are_visible_from_40n_and_within_the_rig_ceiling() -> None:

@@ -194,10 +194,11 @@ Ideas for after the MVP, in priority order:
 
 1. Expand the catalog with further typical astrophotography targets, sourced
    from various catalogs beyond Messier/NGC/IC.
-2. Revisit the handful of targets left out of a catalog import for lacking a
-   Messier/NGC/IC designation or a reliably sourced magnitude — worth a
-   fresh look once better data (or a relaxed schema constraint) makes them
-   addable. See STATUS.md's catalog section for the current skip list.
+2. Two targets from the Kier-book catalog import are still on hold: the
+   Angel Nebula (NGC 2170) and the Tadpole Nebula (IC 410) — neither has a
+   magnitude reported anywhere (OpenNGC, SIMBAD, Wikipedia) distinct from a
+   companion object they're routinely conflated with. Revisit if a source
+   ever publishes one. See STATUS.md's catalog section for detail.
 3. Tag catalog objects by type — emission nebula, reflection nebula,
    planetary nebula, dark nebula, galaxy, galaxy group, open cluster,
    globular cluster — so targets can be filtered/searched by category. An

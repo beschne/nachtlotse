@@ -155,6 +155,13 @@
   magnitude: 10.85
   size_arcmin: [5.42, 3.78]
 
+- name: "Hockey Stick Galaxy"
+  catalog_id: "NGC 4656"
+  ra_deg: 190.990
+  dec_deg: 32.170
+  magnitude: 10.96
+  size_arcmin: [9.69, 2.09]
+
 - name: "The Eyes"
   catalog_id: "NGC 4438"
   aliases: ["NGC 4435"]
