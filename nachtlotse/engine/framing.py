@@ -73,6 +73,23 @@ def framing_score(rig: Rig, target: Target) -> float:
     return fill_fraction / _MIN_FILL_FRACTION
 
 
+_MAX_ALTITUDE_DEG = 90.0
+
+
+def target_priority_score(alt_deg: float, fit: float) -> float:
+    """Ranks targets by altitude *and* framing fit together, so a target
+    that barely fits the frame doesn't win purely for sitting high in the
+    sky — see `framing_score`.
+
+    Multiplicative rather than a weighted sum: fit acts as a veto (a fit
+    near 0.0 crushes the score regardless of altitude) instead of needing
+    its own tunable weight next to altitude. Among targets that already
+    fit comfortably (`fit == 1.0`), this reduces to plain altitude —
+    today's ranking is unchanged for the common case.
+    """
+    return (alt_deg / _MAX_ALTITUDE_DEG) * fit
+
+
 def field_rotation_rate_deg_per_min(
     site: Site, target: Target, when: datetime
 ) -> float:

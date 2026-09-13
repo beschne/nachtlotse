@@ -17,6 +17,7 @@ dependencies = [
 # --extra ui` before `uv run streamlit run nachtlotse/ui/app.py`.
 ui = [
     "streamlit>=1.51.0",
+    "altair>=5.0.0",
 ]
 
 [project.scripts]

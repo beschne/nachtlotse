@@ -47,11 +47,15 @@ def test_clear_window_with_a_high_target_is_go() -> None:
     assert verdict.reasons  # always explains itself, even when everything is fine
 
 
-def test_missing_weather_falls_back_to_geometry_only_and_says_so() -> None:
+def test_missing_weather_caps_the_verdict_at_marginal_even_for_a_high_target() -> None:
+    """Without a forecast we can't rule out clouds/wind/dew, so this must
+    never claim GO — an unconfirmed sky is a real uncertainty, not a
+    "clear until proven otherwise" default.
+    """
     high_alt_deg = scoring.MARGINAL_ALTITUDE_DEG + 30.0
     verdict = scoring.verdict_for_target(high_alt_deg, weather=None)
 
-    assert verdict.level == "GO"
+    assert verdict.level == "MARGINAL"
     assert any("weather" in reason.lower() for reason in verdict.reasons)
 
 

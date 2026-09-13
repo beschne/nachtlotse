@@ -184,12 +184,25 @@ core grows before the UI is added.
 - Site/rig selection. Later migration to Qt or FastAPI+web.
 - **DoD:** a single glance is enough to decide, without opening the CLI.
 
-### M6 — Comfort & prose
+### M6 — Current events
+- Well-placed comets, supernova alerts.
+
+### Possible future extensions (not scheduled)
+Ideas kept for later, not committed to a milestone yet:
 - Session log with attached photos; a "30-day rest" for already-shown targets.
-- Current events: well-placed comets, supernova alerts.
-- **Optional** LLM prose (nightly briefing) via the Claude API — numbers strictly
-  from the engine.
-- Optional: export today's pick to a NINA-compatible format.
+- Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+  from the engine, never computed by the LLM.
+- Export today's pick to a NINA-compatible format.
+- Streamlit UI: clicking a backup target shows the same detail panel as the
+  hero (stats + altitude curve) — an M5 follow-on, not tied to any milestone.
+- Streamlit UI: a real RGB/visual image of the hero target (e.g. from an
+  image survey), cached locally rather than refetched on every rerun.
+- Streamlit UI: gray out the sidebar's "Apply" button once its values are
+  applied, re-enabling it only on the next edit. Not solvable with the
+  current `st.form` batching (widgets inside a form don't trigger a rerun
+  when touched, so there's no rerun to notice a value changed and re-enable
+  the button until you already clicked Apply again) — would need giving up
+  batched apply for per-change live reactivity instead. Parked for now.
 
 ### Out of scope for the MVP (deliberately excluded)
 Mount control/session automation, cloud sync, accounts, southern-sky curation,
@@ -208,8 +221,9 @@ mobile apps. Not until M0–M5 are done.
 - **Rule of thumb:** Sonnet 5 as default, switch on Opus 5 as soon as a session
   gets think-heavy instead of type-heavy.
 
-The optional **prose layer in M6** calls the Claude API (e.g. `claude-sonnet-5`) —
-only for phrasing, never for computing.
+The optional **LLM prose extension** (see "Possible future extensions") would
+call the Claude API (e.g. `claude-sonnet-5`) — only for phrasing, never for
+computing.
 
 ---
 

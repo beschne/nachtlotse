@@ -168,6 +168,26 @@ def test_framing_score_treats_unknown_size_as_unconstrained() -> None:
     assert framing.framing_score(ALTAZ_RIG, unknown_size_target) == pytest.approx(1.0)
 
 
+def test_target_priority_score_reduces_to_altitude_when_fit_is_full() -> None:
+    assert framing.target_priority_score(45.0, 1.0) == pytest.approx(45.0 / 90.0)
+    assert framing.target_priority_score(90.0, 1.0) == pytest.approx(1.0)
+
+
+def test_target_priority_score_lets_a_poor_fit_veto_a_high_altitude() -> None:
+    """The real-world case this exists for: a tiny planetary nebula near
+    the zenith (fit ~0.02) must rank below a well-framed target lower in
+    the sky, not above it just for having the higher raw altitude.
+    """
+    tiny_near_zenith = framing.target_priority_score(alt_deg=89.0, fit=0.02)
+    well_framed_lower = framing.target_priority_score(alt_deg=45.0, fit=1.0)
+
+    assert tiny_near_zenith < well_framed_lower
+
+
+def test_target_priority_score_is_zero_for_a_target_that_does_not_fit_at_all() -> None:
+    assert framing.target_priority_score(90.0, 0.0) == pytest.approx(0.0)
+
+
 def test_photographic_limiting_magnitude_matches_hand_calculation_for_30mm() -> None:
     # 2.7 + 5*log10(30) + 7.0 + (7.3 - 6.9) = 17.49 at Bortle 2
     assert framing.photographic_limiting_magnitude(30.0, 2.0) == pytest.approx(

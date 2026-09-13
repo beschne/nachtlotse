@@ -68,28 +68,37 @@ def fetch_hourly(lat_deg: float, lon_deg: float) -> list[HourlyWeather]:
     try:
         payload = json.loads(raw)
         hourly = payload["hourly"]
-        rows = zip(
-            hourly["time"],
-            hourly["cloudcover"],
-            hourly["windspeed_10m"],
-            hourly["relative_humidity_2m"],
-            hourly["dew_point_2m"],
-            hourly["temperature_2m"],
-            strict=True,
-        )
-        return [
-            HourlyWeather(
-                when=datetime.fromisoformat(t).replace(tzinfo=UTC),
-                cloud_cover_pct=float(cloud),
-                wind_speed_kmh=float(wind),
-                humidity_pct=float(humidity),
-                dew_point_c=float(dew_point),
-                temperature_c=float(temperature),
+        rows = list(
+            zip(
+                hourly["time"],
+                hourly["cloudcover"],
+                hourly["windspeed_10m"],
+                hourly["relative_humidity_2m"],
+                hourly["dew_point_2m"],
+                hourly["temperature_2m"],
+                strict=True,
             )
-            for t, cloud, wind, humidity, dew_point, temperature in rows
-        ]
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        )
+    except (json.JSONDecodeError, KeyError, ValueError) as exc:
         raise WeatherUnavailable(f"Open-Meteo response malformed: {exc}") from exc
+
+    # Open-Meteo leaves a handful of hours at the far edge of its forecast
+    # horizon as `null` across every field (observed on the 16-day hourly
+    # forecast) — that's a gap in a few hours, not a malformed response, so
+    # those hours are dropped rather than discarding the whole fetch over
+    # a `float(None)` failure.
+    return [
+        HourlyWeather(
+            when=datetime.fromisoformat(t).replace(tzinfo=UTC),
+            cloud_cover_pct=float(cloud),
+            wind_speed_kmh=float(wind),
+            humidity_pct=float(humidity),
+            dew_point_c=float(dew_point),
+            temperature_c=float(temperature),
+        )
+        for t, cloud, wind, humidity, dew_point, temperature in rows
+        if None not in (cloud, wind, humidity, dew_point, temperature)
+    ]
 
 
 def summarize_window(

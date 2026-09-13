@@ -13,12 +13,13 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
 from nachtlotse import planning
 from nachtlotse.data import store
-from nachtlotse.engine import ephemeris
+from nachtlotse.engine import ephemeris, framing
 
 _VERDICT_BOX = {
     "GO": st.success,
@@ -28,7 +29,10 @@ _VERDICT_BOX = {
 
 _MIN_USEFUL_ALTITUDE_DEG = 20.0  # engine.constraints._DEFAULT_MIN_ALT_DEG
 _ALTITUDE_CURVE_SAMPLES = 97
-_BACKUP_COUNT = 8
+_DEFAULT_BACKUP_COUNT = 16
+_MAX_BACKUP_COUNT = 30
+_TABLE_HEADER_HEIGHT_PX = 38
+_TABLE_ROW_HEIGHT_PX = 35
 
 
 def _format_arcmin(size_arcmin: float) -> str:
@@ -61,7 +65,7 @@ def _cached_plan(site_name: str, rig_name: str, date_key: str) -> planning.Night
     return planning.plan_night(site_record.site, rig_record.rig, when)
 
 
-def _altitude_curve_frame(plan: planning.NightPlan, local_tz: ZoneInfo) -> pd.DataFrame:
+def _altitude_chart(plan: planning.NightPlan, local_tz: ZoneInfo) -> alt.Chart:
     hero = plan.ranked[0]
     series = ephemeris.altitude_series(
         plan.site,
@@ -70,25 +74,44 @@ def _altitude_curve_frame(plan: planning.NightPlan, local_tz: ZoneInfo) -> pd.Da
         plan.morning_end,
         num_samples=_ALTITUDE_CURVE_SAMPLES,
     )
-    return pd.DataFrame(
+    local_times = [when.astimezone(local_tz) for when, _pos in series]
+    hero_label = f"{hero.target.name} altitude"
+
+    # Long-form, two series stacked, so a single mark_line + color encoding
+    # draws both — Altair's own default (not calling .interactive()) has
+    # no pan/zoom, unlike st.line_chart's built-in scroll-zoom.
+    long_form = pd.DataFrame(
         {
-            f"{hero.target.name} altitude": [pos.alt_deg for _when, pos in series],
-            "Min useful altitude": _MIN_USEFUL_ALTITUDE_DEG,
-        },
-        index=pd.DatetimeIndex(
-            [when.astimezone(local_tz) for when, _pos in series], name="Local time"
-        ),
+            "Local time": [*local_times, *local_times],
+            "Altitude (°)": [
+                *(pos.alt_deg for _when, pos in series),
+                *([_MIN_USEFUL_ALTITUDE_DEG] * len(series)),
+            ],
+            "Series": [hero_label] * len(series)
+            + ["Min useful altitude"] * len(series),
+        }
+    )
+    return (
+        alt.Chart(long_form)
+        .mark_line()
+        .encode(x="Local time:T", y="Altitude (°):Q", color="Series:N")
     )
 
 
-def _backups_frame(plan: planning.NightPlan, local_tz: ZoneInfo) -> pd.DataFrame:
-    rows = plan.ranked[1 : 1 + _BACKUP_COUNT]
+def _backups_frame(
+    plan: planning.NightPlan, local_tz: ZoneInfo, backup_count: int
+) -> pd.DataFrame:
+    rows = plan.ranked[1 : 1 + backup_count]
     return pd.DataFrame(
         {
             "Target": [f"{row.target.catalog_id} {row.target.name}" for row in rows],
             "Max Alt (°)": [round(row.pos.alt_deg, 1) for row in rows],
             "Az (°)": [round(row.pos.az_deg, 1) for row in rows],
             "Fit": [round(row.fit, 2) for row in rows],
+            "Score": [
+                round(framing.target_priority_score(row.pos.alt_deg, row.fit), 2)
+                for row in rows
+            ],
             "Best time": [
                 row.best_time.astimezone(local_tz).strftime("%Y-%m-%d %H:%M %Z")
                 for row in rows
@@ -104,11 +127,21 @@ def main() -> None:
 
     _require_configuration()
 
-    with st.sidebar:
+    with st.sidebar, st.form("session_form"):
         st.header("Session")
         site_name = st.selectbox("Site", store.list_site_names())
         rig_name = st.selectbox("Rig", store.list_rig_names())
         planned_date = st.date_input("Night of", value=datetime.now(UTC).date())
+        backup_count = st.slider(
+            "Backups to show",
+            min_value=1,
+            max_value=_MAX_BACKUP_COUNT,
+            value=_DEFAULT_BACKUP_COUNT,
+        )
+        # Widget changes inside a form don't trigger a rerun by themselves —
+        # only this button does, so picking a new site/rig/date/backup count
+        # doesn't replan on every single change, only once you're done.
+        st.form_submit_button("Apply")
 
     plan = _cached_plan(site_name, rig_name, planned_date.isoformat())
     local_tz = ZoneInfo(plan.site.tz)
@@ -150,7 +183,7 @@ def main() -> None:
     for reason in verdict.reasons:
         st.markdown(f"- {reason}")
 
-    st.markdown("### Hero target")
+    st.markdown(f"### Hero target {hero.target.catalog_id} {hero.target.name}")
     hero_cols = st.columns(4)
     hero_cols[0].metric("Max altitude", f"{hero.pos.alt_deg:.0f}°")
     hero_cols[1].metric("Azimuth", f"{hero.pos.az_deg:.0f}°")
@@ -165,11 +198,16 @@ def main() -> None:
     )
 
     st.markdown("### Altitude tonight")
-    st.line_chart(_altitude_curve_frame(plan, local_tz))
+    st.altair_chart(_altitude_chart(plan, local_tz), width="stretch")
 
     if len(plan.ranked) > 1:
         st.markdown("### Backups")
-        st.dataframe(_backups_frame(plan, local_tz), hide_index=True, width="stretch")
+        backups = _backups_frame(plan, local_tz, backup_count)
+        # An explicit height covering every row avoids st.dataframe's own
+        # internal vertical scrollbar, which otherwise kicks in past a
+        # handful of rows regardless of how many backups were requested.
+        table_height = _TABLE_HEADER_HEIGHT_PX + _TABLE_ROW_HEIGHT_PX * len(backups)
+        st.dataframe(backups, hide_index=True, width="stretch", height=table_height)
 
 
 if __name__ == "__main__":

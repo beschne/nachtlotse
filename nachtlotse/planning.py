@@ -71,6 +71,10 @@ def rank_targets(site: Site, rig: Rig, when: datetime) -> list[RankedTarget]:
     zenith (see `engine.constraints.best_time_tonight` / `engine.framing`).
     Each row also carries a framing score (0..1): how well the target's
     angular size fits `rig`'s field of view.
+
+    Ranked by `framing.target_priority_score` (altitude *and* fit), not
+    altitude alone — a target that barely fits the frame no longer wins
+    hero status purely for sitting high in the sky.
     """
     ranked: list[RankedTarget] = []
     for target in CATALOG:
@@ -83,7 +87,10 @@ def rank_targets(site: Site, rig: Rig, when: datetime) -> list[RankedTarget]:
         ranked.append(
             RankedTarget(target, best_time, pos, framing.framing_score(rig, target))
         )
-    ranked.sort(key=lambda row: row.pos.alt_deg, reverse=True)
+    ranked.sort(
+        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit),
+        reverse=True,
+    )
     return ranked
 
 

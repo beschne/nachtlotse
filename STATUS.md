@@ -35,6 +35,11 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 ## `nachtlotse/engine/framing.py`
 
 - Framing score: does the target's angular size fit the rig's field of view?
+- `target_priority_score`: combines altitude and framing score into the
+  actual ranking key `planning.rank_targets` sorts by — multiplicative
+  (`altitude/90 × fit`), so a poor fit vetoes a target regardless of how
+  high it sits, rather than needing a second tunable weight alongside
+  altitude. Reduces to plain altitude for the common case (`fit == 1.0`).
 - Alt-az field-rotation safety: the rate of change of the parallactic angle
   (via `astroplan`) diverges near the zenith, so a target an eq rig can shoot
   right at its peak gets pushed to a lower, rotation-safe moment — or
@@ -123,6 +128,9 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - Cloud cover, wind, dew-point margin, and low altitude can each downgrade
   the verdict, worst-wins; thresholds are named module constants, called
   out as a tunable heuristic rather than physics (per CLAUDE.md's M4 note).
+- A missing forecast (`weather=None`) also caps the verdict at MARGINAL —
+  GO always means "cloud/wind/dew forecast checked and clear", never "sky
+  geometry looked fine and we couldn't check the rest".
 
 ## `nachtlotse/cli.py`
 
@@ -131,11 +139,13 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   illumination, weather summary, a framing-fit column, and a
   GO/MARGINAL/SKIP verdict for the top target; `lotse sites` / `lotse rigs`
   list what's configured.
-- The ranked list is sorted descending by "Max Alt" — the highest altitude
-  each target safely reaches under *all* active constraints, not
-  necessarily its true meridian-transit altitude, so a target whose best
-  window is horizon- or rotation-limited can rank below one with a lower
-  transit but a cleaner shot.
+- The ranked list is sorted by `framing.target_priority_score` (altitude ×
+  framing fit, descending) — the "Max Alt" column alone no longer decides
+  the order. A target whose best window is horizon- or rotation-limited
+  can already rank below one with a lower transit but a cleaner shot; a
+  target that barely fits the frame (e.g. a small planetary nebula on a
+  wide-field rig) is now deprioritized the same way, instead of winning
+  hero status purely for sitting high in the sky.
 
 ## `nachtlotse/ui/app.py`
 

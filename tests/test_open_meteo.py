@@ -84,6 +84,37 @@ def test_fetch_hourly_raises_weather_unavailable_on_invalid_json() -> None:
         open_meteo.fetch_hourly(50.237, 8.551)
 
 
+def test_fetch_hourly_drops_trailing_null_hours_instead_of_failing_entirely() -> None:
+    """Regression test: Open-Meteo's 16-day hourly forecast leaves a
+    handful of hours at the far edge of the horizon `null` across every
+    field. A single `float(None)` there must not discard the whole
+    fetch — tonight's hours are still perfectly valid.
+    """
+    payload_with_trailing_nulls = {
+        "hourly": {
+            "time": [
+                "2026-09-12T20:00",
+                "2026-09-12T21:00",
+                "2026-09-12T22:00",
+            ],
+            "cloudcover": [10.0, 40.0, None],
+            "windspeed_10m": [5.0, 8.0, None],
+            "relative_humidity_2m": [60.0, 65.0, None],
+            "dew_point_2m": [8.0, 7.5, None],
+            "temperature_2m": [15.0, 13.0, None],
+        }
+    }
+    with patch(
+        "urllib.request.urlopen",
+        return_value=_mock_response(payload_with_trailing_nulls),
+    ):
+        hours = open_meteo.fetch_hourly(50.237, 8.551)
+
+    assert len(hours) == 2
+    assert hours[0].when == datetime(2026, 9, 12, 20, 0, tzinfo=UTC)
+    assert hours[1].when == datetime(2026, 9, 12, 21, 0, tzinfo=UTC)
+
+
 def test_fetch_hourly_raises_weather_unavailable_on_missing_field() -> None:
     incomplete_payload = {
         "hourly": {"time": ["2026-09-12T20:00"]}

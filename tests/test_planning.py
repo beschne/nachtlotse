@@ -8,19 +8,70 @@ from astropy.time import Time
 
 from nachtlotse import planning
 from nachtlotse.data import store
+from nachtlotse.engine import framing
 
 
-def test_rank_targets_is_sorted_by_descending_altitude_and_passes_constraints(
+def test_rank_targets_is_sorted_by_descending_priority_score_and_passes_constraints(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
 ) -> None:
     site = store.default_site_record().site
     rig = store.default_rig_record().rig
     ranked = planning.rank_targets(site, rig, datetime.now(UTC))
-    altitudes = [row.pos.alt_deg for row in ranked]
+    scores = [framing.target_priority_score(row.pos.alt_deg, row.fit) for row in ranked]
 
-    assert altitudes == sorted(altitudes, reverse=True)
-    assert all(alt_deg > 0.0 for alt_deg in altitudes)
+    assert scores == sorted(scores, reverse=True)
+    assert all(row.pos.alt_deg > 0.0 for row in ranked)
+
+
+def test_rank_targets_lets_framing_fit_veto_a_high_but_poorly_framed_target(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression test for the real case `target_priority_score` exists for:
+    a tiny planetary nebula transiting near the zenith must rank below a
+    well-framed target lower in the sky, not above it just for having the
+    higher raw altitude (see engine.framing.target_priority_score).
+    """
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Mount, Optics, Rig, Sensor, Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    rig = Rig(
+        name="Wide-Field Test Rig",
+        optics=Optics(name="Test Optics", focal_length_mm=250.0, aperture_mm=50.0),
+        sensor=Sensor(name="Test Sensor", width_px=4000, height_px=3000, pixel_um=3.0),
+        mount=Mount(name="EQ Test Mount", kind="eq"),  # sidesteps rotation gating
+    )
+    fov_width_deg, fov_height_deg = rig.fov_deg
+    fov_short_arcmin = min(fov_width_deg, fov_height_deg) * 60.0
+
+    tiny_near_zenith = Target(
+        name="tiny near-zenith test target",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 0.5,  # transits within ~0.5 deg of the zenith
+        size_arcmin=(fov_short_arcmin * 0.01, fov_short_arcmin * 0.01),  # fit ~0.05
+    )
+    well_framed_lower = Target(
+        name="well-framed lower test target",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 40.0,  # transits well off zenith, still high enough
+        size_arcmin=(fov_short_arcmin * 0.5, fov_short_arcmin * 0.3),  # fit 1.0
+    )
+    monkeypatch.setattr(planning, "CATALOG", [tiny_near_zenith, well_framed_lower])
+
+    ranked = planning.rank_targets(site, rig, night_reference.to_datetime(timezone=UTC))
+
+    assert [row.target.name for row in ranked] == [
+        "well-framed lower test target",
+        "tiny near-zenith test target",
+    ]
 
 
 def test_a_heavily_obstructed_horizon_excludes_targets_a_clear_horizon_admits(

@@ -450,6 +450,7 @@ dependencies = [
 
 [package.optional-dependencies]
 ui = [
+    { name = "altair" },
     { name = "streamlit" },
 ]
 
@@ -461,6 +462,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "altair", marker = "extra == 'ui'", specifier = ">=5.0.0" },
     { name = "astroplan", specifier = ">=0.10.1" },
     { name = "astropy", specifier = ">=8.0.1" },
     { name = "numpy", specifier = ">=2.5.3" },

@@ -60,8 +60,11 @@ def verdict_for_target(
         reasons.append(reason)
 
     if weather is None:
-        reasons.append(
-            "no weather forecast available — verdict based on sky geometry only"
+        # Without a forecast there's no way to rule out cloud cover, wind,
+        # or dew — GO would claim a certainty we don't have, so this caps
+        # at MARGINAL rather than falling through to sky geometry alone.
+        downgrade(
+            "MARGINAL", "no weather forecast available — cannot confirm clear skies"
         )
     else:
         if weather.max_cloud_cover_pct >= SKIP_CLOUD_COVER_PCT:
