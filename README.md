@@ -66,6 +66,11 @@ uv run lotse plan --site "Großer Feldberg" --rig S30P
 # ranking and verdict still work for any date, past or future:
 uv run lotse plan --site Feldberg --date 2026-11-14
 
+# --type keeps only targets of that category (repeatable — matches any
+# one of them): emission_nebula, reflection_nebula, planetary_nebula,
+# dark_nebula, galaxy, galaxy_group, open_cluster, globular_cluster.
+uv run lotse plan --type galaxy --type globular_cluster
+
 # The Streamlit UI (M5) needs its own extra — it's not a core dependency:
 uv sync --extra ui
 uv run streamlit run nachtlotse/ui/app.py

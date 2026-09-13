@@ -7,6 +7,7 @@
   dec_deg: 30.717
   magnitude: 7.0
   size_arcmin: [70.0, 6.0]
+  types: ["emission_nebula"]
 
 - name: "Eastern Veil Nebula"
   catalog_id: "NGC 6992"
@@ -15,6 +16,7 @@
   dec_deg: 31.717
   magnitude: 7.0
   size_arcmin: [60.0, 8.0]
+  types: ["emission_nebula"]
 
 - name: "Running Man Nebula"
   catalog_id: "NGC 1977"
@@ -22,6 +24,7 @@
   dec_deg: -4.844
   magnitude: 7.0
   size_arcmin: [20.0, 10.0]
+  types: ["emission_nebula", "reflection_nebula", "open_cluster"]
 
 - name: "Heart Nebula"
   catalog_id: "IC 1805"
@@ -29,6 +32,7 @@
   dec_deg: 61.457
   magnitude: 7.03
   size_arcmin: [60.0, 60.0]
+  types: ["emission_nebula"]
 
 - name: "Iris Nebula"
   catalog_id: "NGC 7023"
@@ -36,6 +40,7 @@
   dec_deg: 68.170
   magnitude: 7.2
   size_arcmin: [10.0, 8.0]
+  types: ["reflection_nebula"]
 
 - name: "Globular Cluster M5"
   catalog_id: "M5"
@@ -44,6 +49,7 @@
   dec_deg: 2.083
   magnitude: 7.34
   size_arcmin: [15.0, 15.0]
+  types: ["globular_cluster"]
 
 - name: "Crescent Nebula"
   catalog_id: "NGC 6888"
@@ -51,6 +57,7 @@
   dec_deg: 38.350
   magnitude: 7.4
   size_arcmin: [20.0, 10.0]
+  types: ["emission_nebula"]
 
 - name: "Pacman Nebula"
   catalog_id: "NGC 281"
@@ -58,6 +65,7 @@
   dec_deg: 56.617
   magnitude: 7.4
   size_arcmin: [35.0, 30.0]
+  types: ["emission_nebula"]
 
 - name: "Dumbbell Nebula"
   catalog_id: "M27"
@@ -66,6 +74,7 @@
   dec_deg: 22.717
   magnitude: 7.5
   size_arcmin: [8.0, 5.6]
+  types: ["planetary_nebula"]
 
 - name: "Southern Pinwheel Galaxy"
   catalog_id: "M83"
@@ -74,6 +83,7 @@
   dec_deg: -29.867
   magnitude: 7.5
   size_arcmin: [13.0, 12.0]
+  types: ["galaxy"]
 
 - name: "Helix Nebula"
   catalog_id: "NGC 7293"
@@ -81,6 +91,7 @@
   dec_deg: -20.837
   magnitude: 7.5
   size_arcmin: [16.33, 16.33]
+  types: ["planetary_nebula"]
 
 - name: "Ancient Open Cluster M67"
   catalog_id: "M67"
@@ -89,6 +100,7 @@
   dec_deg: 11.812
   magnitude: 7.6
   size_arcmin: [33.0, 33.0]
+  types: ["open_cluster"]
 
 - name: "Caroline's Cluster"
   catalog_id: "NGC 2360"
@@ -96,6 +108,7 @@
   dec_deg: -15.641
   magnitude: 7.62
   size_arcmin: [9.0, 9.0]
+  types: ["open_cluster"]
 
 - name: "Wizard Nebula"
   catalog_id: "NGC 7380"
@@ -103,6 +116,7 @@
   dec_deg: 58.132
   magnitude: 7.62
   size_arcmin: [25.0, 20.0]
+  types: ["emission_nebula", "open_cluster"]
 
 - name: "Cave Nebula"
   catalog_id: "Caldwell 9"
@@ -111,6 +125,7 @@
   dec_deg: 62.476
   magnitude: 7.7
   size_arcmin: [50.0, 30.0]
+  types: ["emission_nebula"]
 
 - name: "Cocoon Nebula"
   catalog_id: "IC 5146"
@@ -118,6 +133,7 @@
   dec_deg: 47.267
   magnitude: 7.82
   size_arcmin: [10.0, 10.0]
+  types: ["emission_nebula", "open_cluster"]
 
 - name: "Pinwheel Galaxy"
   catalog_id: "M101"
@@ -126,6 +142,7 @@
   dec_deg: 54.350
   magnitude: 7.9
   size_arcmin: [29.0, 27.0]
+  types: ["galaxy"]
 
 - name: "Sculptor Galaxy"
   catalog_id: "NGC 253"
@@ -133,3 +150,4 @@
   dec_deg: -25.283
   magnitude: 7.94
   size_arcmin: [27.0, 6.5]
+  types: ["galaxy"]

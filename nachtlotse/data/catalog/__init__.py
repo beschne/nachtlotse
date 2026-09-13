@@ -24,6 +24,12 @@ catalog". `catalog_id` isn't limited to Messier/NGC/IC — any catalog with
 a real, citable designation (Sharpless, Abell, van den Bergh, …) is fair
 game as long as the object has legitimate coordinates/magnitude/size to go
 with it.
+
+Every entry also carries `types` — one or more of `Target.TargetType`
+(emission/reflection/planetary/dark nebula, galaxy, galaxy group, open/
+globular cluster) — so targets can be filtered by category. An object can
+be more than one at once (M42 is both an emission and a reflection
+nebula).
 """
 
 from __future__ import annotations
@@ -48,6 +54,7 @@ def _target_from_dict(raw: dict[str, Any]) -> Target:
         aliases=tuple(raw.get("aliases", [])),
         size_arcmin=(float(size[0]), float(size[1])) if size else (0.0, 0.0),
         magnitude=float(raw["magnitude"]),
+        types=tuple(raw.get("types", [])),
     )
 
 

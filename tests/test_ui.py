@@ -19,6 +19,8 @@ pytest.importorskip("streamlit")
 from streamlit.testing.v1 import AppTest
 
 from nachtlotse.data import store
+from nachtlotse.data.catalog import CATALOG
+from nachtlotse.engine.models import TARGET_TYPE_LABELS
 
 _APP_PATH = str(Path(__file__).resolve().parents[1] / "nachtlotse" / "ui" / "app.py")
 
@@ -61,6 +63,31 @@ def test_app_shows_setup_hint_when_no_rigs_are_configured(
 
     assert not at.exception
     assert any("No rigs configured" in e.value for e in at.error)
+
+
+def test_selecting_an_object_type_filters_the_plan_to_that_type(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+) -> None:
+    assert any("galaxy" in t.types for t in CATALOG)  # sanity: fixture has galaxies
+
+    at = AppTest.from_file(_APP_PATH, default_timeout=60).run()
+    assert len(at.multiselect) == 1
+    # `.options` holds the format_func-rendered labels, not the raw
+    # TargetType values `.select()` takes — hence the label lookup here.
+    assert TARGET_TYPE_LABELS["galaxy"] in at.multiselect[0].options
+
+    at = at.multiselect[0].select("galaxy").run()
+    assert not at.exception
+
+    # Whether anything is observable tonight is real-sky-dependent (same
+    # caveat as the unfiltered smoke test above) — either outcome is valid,
+    # but whichever happens must be internally consistent with the filter.
+    if at.error and any("selected type" in e.value for e in at.error):
+        return
+    assert "Galaxy" in at.caption[-1].value  # hero's caption, not the page tagline
+    if at.dataframe:
+        assert all("Galaxy" in cell for cell in at.dataframe[0].value["Type"])
 
 
 def test_switching_site_replans_without_exceptions(

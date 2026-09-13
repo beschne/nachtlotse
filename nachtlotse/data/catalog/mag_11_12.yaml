@@ -7,6 +7,7 @@
   dec_deg: -2.467
   magnitude: 11.0
   size_arcmin: [90.0, 30.0]
+  types: ["emission_nebula", "dark_nebula"]
 
 - name: "Bubble Nebula"
   catalog_id: "NGC 7635"
@@ -14,6 +15,7 @@
   dec_deg: 61.200
   magnitude: 11.0
   size_arcmin: [15.0, 8.0]
+  types: ["emission_nebula"]
 
 - name: "Splinter Galaxy"
   catalog_id: "NGC 5907"
@@ -22,6 +24,7 @@
   dec_deg: 56.329
   magnitude: 11.07
   size_arcmin: [11.30, 1.75]
+  types: ["galaxy"]
 
 - name: "Bow-Tie Nebula"
   catalog_id: "NGC 40"
@@ -29,6 +32,7 @@
   dec_deg: 72.522
   magnitude: 11.27
   size_arcmin: [0.8, 0.8]
+  types: ["planetary_nebula"]
 
 - name: "Umbrella Galaxy"
   catalog_id: "NGC 4651"
@@ -36,6 +40,7 @@
   dec_deg: 16.393
   magnitude: 11.37
   size_arcmin: [3.87, 2.58]
+  types: ["galaxy"]
 
 - name: "Thor's Helmet"
   catalog_id: "NGC 2359"
@@ -43,6 +48,7 @@
   dec_deg: -13.227
   magnitude: 11.45
   size_arcmin: [9.0, 6.0]
+  types: ["emission_nebula"]
 
 - name: "Galaxy NGC 3718"
   catalog_id: "NGC 3718"
@@ -50,6 +56,7 @@
   dec_deg: 53.068
   magnitude: 11.52
   size_arcmin: [4.70, 2.34]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Owl Nebula"
   catalog_id: "M97"
@@ -58,6 +65,7 @@
   dec_deg: 55.019
   magnitude: 11.60
   size_arcmin: [3.58, 3.58]
+  types: ["planetary_nebula"]
 
 - name: "Siamese Twins Galaxies"
   catalog_id: "NGC 4568"
@@ -66,6 +74,7 @@
   dec_deg: 11.239
   magnitude: 11.62
   size_arcmin: [4.31, 1.87]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Galaxy NGC 3729"
   catalog_id: "NGC 3729"
@@ -73,6 +82,7 @@
   dec_deg: 53.126
   magnitude: 11.72
   size_arcmin: [2.89, 2.09]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Hickson 44 Galaxy Group"
   catalog_id: "NGC 3190"
@@ -81,6 +91,7 @@
   dec_deg: 21.832
   magnitude: 11.88
   size_arcmin: [3.64, 1.22]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Blue Flash Nebula"
   catalog_id: "NGC 6905"
@@ -88,6 +99,7 @@
   dec_deg: 20.105
   magnitude: 11.9
   size_arcmin: [0.67, 0.67]
+  types: ["planetary_nebula"]
 
 - name: "Draco Trio — NGC 5985"
   catalog_id: "NGC 5985"
@@ -95,6 +107,7 @@
   dec_deg: 59.332
   magnitude: 11.95
   size_arcmin: [3.98, 2.01]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Draco Trio — NGC 5982"
   catalog_id: "NGC 5982"
@@ -102,3 +115,4 @@
   dec_deg: 59.356
   magnitude: 11.98
   size_arcmin: [3.07, 2.00]
+  types: ["galaxy", "galaxy_group"]

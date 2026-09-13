@@ -108,6 +108,35 @@ class Rig:
         return fov_width_deg, fov_height_deg
 
 
+# A target can carry more than one — e.g. M42 is both an emission and a
+# reflection nebula, and a Local Group member is both a galaxy and (if
+# catalogued as part of one) a galaxy_group.
+TargetType = Literal[
+    "emission_nebula",
+    "reflection_nebula",
+    "planetary_nebula",
+    "dark_nebula",
+    "galaxy",
+    "galaxy_group",
+    "open_cluster",
+    "globular_cluster",
+]
+
+# Human-readable labels for TargetType, shared by every UI so "emission
+# nebula" isn't spelled out differently in the CLI table vs. the Streamlit
+# page.
+TARGET_TYPE_LABELS: dict[TargetType, str] = {
+    "emission_nebula": "Emission Nebula",
+    "reflection_nebula": "Reflection Nebula",
+    "planetary_nebula": "Planetary Nebula",
+    "dark_nebula": "Dark Nebula",
+    "galaxy": "Galaxy",
+    "galaxy_group": "Galaxy Group",
+    "open_cluster": "Open Cluster",
+    "globular_cluster": "Globular Cluster",
+}
+
+
 @dataclass(frozen=True)
 class Target:
     """A catalog target with a fixed position (J2000 equinox)."""
@@ -127,6 +156,10 @@ class Target:
     # (numerically lower) of its known extremes. 99.0 means "unknown" and
     # sorts/filters as if arbitrarily faint, never as suspiciously bright.
     magnitude: float = 99.0
+    # What kind of object this is, for filtering/search — see TargetType.
+    # Empty only for a target not yet classified; every catalog entry is
+    # expected to carry at least one (enforced by a catalog test).
+    types: tuple[TargetType, ...] = ()
 
 
 @dataclass(frozen=True)

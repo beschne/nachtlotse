@@ -7,6 +7,7 @@
   dec_deg: 8.908
   magnitude: 15.5
   size_arcmin: [16.2, 16.2]
+  types: ["planetary_nebula"]
 
 - name: "Medusa Nebula"
   catalog_id: "Abell 21"
@@ -15,3 +16,4 @@
   dec_deg: 13.247
   magnitude: 15.99
   size_arcmin: [10.25, 10.25]
+  types: ["planetary_nebula"]

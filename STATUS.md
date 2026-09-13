@@ -17,6 +17,11 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - Data model (`Site`, `HorizonProfile`, `Optics`, `Sensor`, `Mount`, `Rig`,
   `Target`, `Verdict`) as immutable dataclasses.
 - `Target.size_arcmin` carries apparent angular size for framing.
+- `Target.types`: one or more of `TargetType` (emission/reflection/
+  planetary/dark nebula, galaxy, galaxy group, open/globular cluster), with
+  a shared `TARGET_TYPE_LABELS` display-name map so the CLI table and the
+  Streamlit multiselect never spell a category differently. An object can
+  carry more than one (M42 is both an emission and a reflection nebula).
 
 ## `nachtlotse/engine/ephemeris.py`
 
@@ -93,6 +98,17 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   rarely imaged objects mostly known by catalog number alone, which
   stretches "well-known target" past what a name-only human curation pass
   can vouch for.
+- Every entry also carries `types` (see `engine/models.py` above), sourced
+  the same evidentiary way as magnitude — SIMBAD's own object-type field
+  per `catalog_id`/alias, not assumed from the common name (e.g. IC 2574
+  "Coddington's Nebula" is, per SIMBAD, actually a galaxy, not a nebula at
+  all; NGC 7380 "Wizard Nebula" is SIMBAD's open cluster NGC 7380 plus the
+  surrounding emission nebula the popular name actually refers to). A
+  `galaxy_group` tag is added only where this catalog's own entry already
+  names the object as part of one (Leo/Draco Trios, Stephan's Quintet,
+  Hickson 44, Antennae Galaxies, Deer Lick Group, Markarian's Chain members
+  M84/M86, the Andromeda companions, etc.) — not researched for every plain
+  galaxy that happens to have neighbors.
 - Split into `mag_*.yaml` files by apparent magnitude, not by source
   catalog — a bin file doesn't care whether an object is Messier, NGC, or
   IC, and a site+rig's computed limiting magnitude will eventually be able

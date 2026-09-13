@@ -8,6 +8,7 @@
   dec_deg: -7.266
   magnitude: 13.0
   size_arcmin: [180.0, 60.0]
+  types: ["reflection_nebula"]
 
 - name: "Stephan's Quintet"
   catalog_id: "NGC 7320"
@@ -15,6 +16,7 @@
   dec_deg: 33.948
   magnitude: 13.21
   size_arcmin: [2.55, 1.40]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Fetus Nebula"
   catalog_id: "NGC 7008"
@@ -22,6 +24,7 @@
   dec_deg: 54.543
   magnitude: 13.3
   size_arcmin: [1.43, 1.43]
+  types: ["planetary_nebula"]
 
 - name: "Ghost of Cassiopeia"
   catalog_id: "IC 63"
@@ -29,6 +32,7 @@
   dec_deg: 60.912
   magnitude: 13.33
   size_arcmin: [10.0, 3.0]
+  types: ["emission_nebula"]
 
 - name: "Draco Trio — NGC 5981"
   catalog_id: "NGC 5981"
@@ -36,3 +40,4 @@
   dec_deg: 59.392
   magnitude: 13.89
   size_arcmin: [2.73, 0.37]
+  types: ["galaxy", "galaxy_group"]

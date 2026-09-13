@@ -11,6 +11,7 @@ altitude curve all come straight from the engine's own output.
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from typing import get_args
 from zoneinfo import ZoneInfo
 
 import altair as alt
@@ -20,12 +21,19 @@ import streamlit as st
 from nachtlotse import planning
 from nachtlotse.data import store
 from nachtlotse.engine import ephemeris, framing
+from nachtlotse.engine.models import TARGET_TYPE_LABELS, TargetType
 
 _VERDICT_BOX = {
     "GO": st.success,
     "MARGINAL": st.warning,
     "SKIP": st.error,
 }
+
+_TARGET_TYPE_CHOICES = sorted(get_args(TargetType))
+
+
+def _format_types(types: tuple[str, ...]) -> str:
+    return "/".join(TARGET_TYPE_LABELS.get(t, t) for t in types)
 
 _MIN_USEFUL_ALTITUDE_DEG = 20.0  # engine.constraints._DEFAULT_MIN_ALT_DEG
 _ALTITUDE_CURVE_SAMPLES = 97
@@ -52,7 +60,9 @@ def _require_configuration() -> None:
 
 
 @st.cache_data(ttl=300, show_spinner="Planning tonight's sky…")
-def _cached_plan(site_name: str, rig_name: str, date_key: str) -> planning.NightPlan:
+def _cached_plan(
+    site_name: str, rig_name: str, date_key: str, types_key: tuple[str, ...]
+) -> planning.NightPlan:
     site_record = store.get_site_record(site_name)
     rig_record = store.get_rig_record(rig_name)
     local_tz = ZoneInfo(site_record.site.tz)
@@ -62,7 +72,8 @@ def _cached_plan(site_name: str, rig_name: str, date_key: str) -> planning.Night
     when = datetime(
         target_date.year, target_date.month, target_date.day, 12, 0, tzinfo=local_tz
     )
-    return planning.plan_night(site_record.site, rig_record.rig, when)
+    types = frozenset(types_key) if types_key else None
+    return planning.plan_night(site_record.site, rig_record.rig, when, types=types)
 
 
 def _altitude_chart(plan: planning.NightPlan, local_tz: ZoneInfo) -> alt.Chart:
@@ -105,6 +116,7 @@ def _backups_frame(
     return pd.DataFrame(
         {
             "Target": [f"{row.target.catalog_id} {row.target.name}" for row in rows],
+            "Type": [_format_types(row.target.types) for row in rows],
             "Max Alt (°)": [round(row.pos.alt_deg, 1) for row in rows],
             "Az (°)": [round(row.pos.az_deg, 1) for row in rows],
             "Fit": [round(row.fit, 2) for row in rows],
@@ -138,12 +150,19 @@ def main() -> None:
             max_value=_MAX_BACKUP_COUNT,
             value=_DEFAULT_BACKUP_COUNT,
         )
+        selected_types = st.multiselect(
+            "Object type",
+            options=_TARGET_TYPE_CHOICES,
+            format_func=lambda t: TARGET_TYPE_LABELS.get(t, t),
+            help="Leave empty for no filter.",
+        )
         # Widget changes inside a form don't trigger a rerun by themselves —
         # only this button does, so picking a new site/rig/date/backup count
         # doesn't replan on every single change, only once you're done.
         st.form_submit_button("Apply")
 
-    plan = _cached_plan(site_name, rig_name, planned_date.isoformat())
+    types_key = tuple(sorted(selected_types))
+    plan = _cached_plan(site_name, rig_name, planned_date.isoformat(), types_key)
     local_tz = ZoneInfo(plan.site.tz)
 
     st.subheader(f"{plan.site.name} — {plan.rig.name}")
@@ -168,9 +187,10 @@ def main() -> None:
         )
 
     if not plan.ranked:
+        suffix = " matching the selected type(s)" if types_key else ""
         st.error(
-            "No catalog target clears altitude/moon/night/horizon/rotation "
-            "constraints tonight."
+            f"No catalog target{suffix} clears altitude/moon/night/horizon/"
+            "rotation constraints tonight."
         )
         return
 
@@ -193,7 +213,8 @@ def main() -> None:
     )
     width_arcmin, height_arcmin = hero.target.size_arcmin
     st.caption(
-        f"{hero.target.catalog_id} · magnitude {hero.target.magnitude:.1f} · "
+        f"{hero.target.catalog_id} · {_format_types(hero.target.types)} · "
+        f"magnitude {hero.target.magnitude:.1f} · "
         f"size {_format_arcmin(width_arcmin)}′ × {_format_arcmin(height_arcmin)}′"
     )
 

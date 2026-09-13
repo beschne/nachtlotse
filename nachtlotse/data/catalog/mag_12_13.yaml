@@ -7,6 +7,7 @@
   dec_deg: 22.532
   magnitude: 12.0
   size_arcmin: [50.0, 40.0]
+  types: ["emission_nebula"]
 
 - name: "Helix Galaxy"
   catalog_id: "NGC 2685"
@@ -14,6 +15,7 @@
   dec_deg: 58.734
   magnitude: 12.16
   size_arcmin: [4.33, 2.31]
+  types: ["galaxy"]
 
 - name: "Little Dumbbell Nebula"
   catalog_id: "M76"
@@ -22,6 +24,7 @@
   dec_deg: 51.575
   magnitude: 12.2
   size_arcmin: [1.12, 1.12]
+  types: ["planetary_nebula"]
 
 - name: "Bear Paw Galaxy"
   catalog_id: "NGC 2537"
@@ -29,6 +32,7 @@
   dec_deg: 45.990
   magnitude: 12.27
   size_arcmin: [2.07, 1.96]
+  types: ["galaxy"]
 
 - name: "Galaxy NGC 255"
   catalog_id: "NGC 255"
@@ -36,6 +40,7 @@
   dec_deg: -11.469
   magnitude: 12.4
   size_arcmin: [2.04, 1.85]
+  types: ["galaxy"]
 
 - name: "Hubble's Variable Nebula"
   catalog_id: "NGC 2261"
@@ -43,6 +48,7 @@
   dec_deg: 8.744
   magnitude: 12.46
   size_arcmin: [2.0, 1.0]
+  types: ["reflection_nebula"]
 
 - name: "Galaxy NGC 4312"
   catalog_id: "NGC 4312"
@@ -50,6 +56,7 @@
   dec_deg: 15.538
   magnitude: 12.48
   size_arcmin: [5.02, 1.15]
+  types: ["galaxy"]
 
 - name: "Red Spider Nebula"
   catalog_id: "NGC 6537"
@@ -57,6 +64,7 @@
   dec_deg: -19.843
   magnitude: 12.5
   size_arcmin: [0.17, 0.17]
+  types: ["planetary_nebula"]
 
 - name: "Perseus A"
   catalog_id: "NGC 1275"
@@ -64,6 +72,7 @@
   dec_deg: 41.512
   magnitude: 12.61
   size_arcmin: [2.16, 1.45]
+  types: ["galaxy"]
 
 - name: "Little Ghost Nebula"
   catalog_id: "NGC 6369"
@@ -71,3 +80,4 @@
   dec_deg: -23.759
   magnitude: 12.9
   size_arcmin: [0.63, 0.63]
+  types: ["planetary_nebula"]

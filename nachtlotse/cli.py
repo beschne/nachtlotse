@@ -10,13 +10,20 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import UTC, date, datetime
+from typing import get_args
 from zoneinfo import ZoneInfo
 
 from nachtlotse import planning
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
-from nachtlotse.engine.models import WeatherSummary
+from nachtlotse.engine.models import TARGET_TYPE_LABELS, TargetType, WeatherSummary
+
+_TARGET_TYPE_CHOICES = sorted(get_args(TargetType))
+
+
+def _format_types(types: tuple[str, ...]) -> str:
+    return "/".join(TARGET_TYPE_LABELS.get(t, t) for t in types)
 
 
 def _format_weather_line(weather: WeatherSummary | None) -> str:
@@ -30,7 +37,12 @@ def _format_weather_line(weather: WeatherSummary | None) -> str:
     )
 
 
-def _cmd_plan(site_name: str | None, rig_name: str | None, date_str: str | None) -> int:
+def _cmd_plan(
+    site_name: str | None,
+    rig_name: str | None,
+    date_str: str | None,
+    types: list[str] | None,
+) -> int:
     try:
         site_record = (
             store.get_site_record(site_name)
@@ -62,7 +74,8 @@ def _cmd_plan(site_name: str | None, rig_name: str | None, date_str: str | None)
             target_date.year, target_date.month, target_date.day, 12, 0, tzinfo=local_tz
         )
 
-    plan = planning.plan_night(site, rig, now)
+    type_filter = frozenset(types) if types else None
+    plan = planning.plan_night(site, rig, now, types=type_filter)
 
     print(f"Nachtlotse — {site.name} ({rig.name})")
     print(
@@ -74,9 +87,10 @@ def _cmd_plan(site_name: str | None, rig_name: str | None, date_str: str | None)
     print()
 
     if not plan.ranked:
+        suffix = " matching --type" if type_filter else ""
         print(
-            "No catalog target clears altitude/moon/night/horizon/rotation "
-            "constraints tonight."
+            f"No catalog target{suffix} clears altitude/moon/night/horizon/"
+            "rotation constraints tonight."
         )
         return 0
 
@@ -88,13 +102,16 @@ def _cmd_plan(site_name: str | None, rig_name: str | None, date_str: str | None)
         print(f"  {reason}")
     print()
 
-    print(f"{'Target':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5}  Best time (local)")
+    print(
+        f"{'Target':<32} {'Type':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5}  "
+        "Best time (local)"
+    )
     for target, best_time, pos, fit in plan.ranked:
         label = f"{target.catalog_id} {target.name}"
         local_time = best_time.astimezone(local_tz)
         print(
-            f"{label:<32} {pos.alt_deg:7.1f}° {pos.az_deg:6.1f}° {fit:5.2f}  "
-            f"{local_time:%Y-%m-%d %H:%M %Z}"
+            f"{label:<32} {_format_types(target.types):<32} {pos.alt_deg:7.1f}° "
+            f"{pos.az_deg:6.1f}° {fit:5.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
         )
     return 0
 
@@ -197,6 +214,17 @@ def main(argv: list[str] | None = None) -> int:
             "as unavailable; the sky-geometry ranking still works for any date."
         ),
     )
+    plan_parser.add_argument(
+        "--type",
+        dest="types",
+        action="append",
+        choices=_TARGET_TYPE_CHOICES,
+        default=None,
+        help=(
+            "Keep only targets of this category (repeatable — matches any "
+            "one of them). Default: no filter."
+        ),
+    )
 
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
@@ -204,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "plan":
-        return _cmd_plan(args.site, args.rig, args.date)
+        return _cmd_plan(args.site, args.rig, args.date, args.types)
     if args.command == "sites":
         return _cmd_sites()
     if args.command == "rigs":

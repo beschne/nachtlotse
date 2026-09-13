@@ -24,6 +24,41 @@ def test_rank_targets_is_sorted_by_descending_priority_score_and_passes_constrai
     assert all(row.pos.alt_deg > 0.0 for row in ranked)
 
 
+def test_rank_targets_types_filter_keeps_only_matching_categories(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    rig = store.default_rig_record().rig
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    a_galaxy = Target(
+        name="test galaxy",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 20.0,
+        types=("galaxy",),
+    )
+    a_cluster = Target(
+        name="test cluster",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 30.0,
+        types=("open_cluster",),
+    )
+    monkeypatch.setattr(planning, "CATALOG", [a_galaxy, a_cluster])
+
+    when = night_reference.to_datetime(timezone=UTC)
+    galaxies_only = planning.rank_targets(site, rig, when, types=frozenset({"galaxy"}))
+
+    assert [row.target.name for row in galaxies_only] == ["test galaxy"]
+
+
 def test_rank_targets_lets_framing_fit_veto_a_high_but_poorly_framed_target(
     template_sites: list[store.SiteRecord],
     monkeypatch: pytest.MonkeyPatch,

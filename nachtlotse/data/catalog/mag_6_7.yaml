@@ -8,6 +8,7 @@
   dec_deg: -24.383
   magnitude: 6.0
   size_arcmin: [90.0, 40.0]
+  types: ["emission_nebula"]
 
 - name: "Omega Nebula"
   catalog_id: "M17"
@@ -16,6 +17,7 @@
   dec_deg: -16.183
   magnitude: 6.0
   size_arcmin: [20.0, 15.0]
+  types: ["emission_nebula"]
 
 - name: "Pinwheel Cluster"
   catalog_id: "M36"
@@ -24,6 +26,7 @@
   dec_deg: 34.133
   magnitude: 6.0
   size_arcmin: [12.0, 12.0]
+  types: ["open_cluster"]
 
 - name: "Pegasus Cluster"
   catalog_id: "M15"
@@ -32,6 +35,7 @@
   dec_deg: 12.167
   magnitude: 6.2
   size_arcmin: [18.0, 18.0]
+  types: ["globular_cluster"]
 
 - name: "Globular Cluster M2"
   catalog_id: "M2"
@@ -40,6 +44,7 @@
   dec_deg: -0.823
   magnitude: 6.25
   size_arcmin: [8.4, 8.4]
+  types: ["globular_cluster"]
 
 - name: "Wild Duck Cluster"
   catalog_id: "M11"
@@ -48,6 +53,7 @@
   dec_deg: -6.267
   magnitude: 6.3
   size_arcmin: [14.0, 14.0]
+  types: ["open_cluster"]
 
 - name: "Trifid Nebula"
   catalog_id: "M20"
@@ -56,6 +62,7 @@
   dec_deg: -23.033
   magnitude: 6.3
   size_arcmin: [28.0, 28.0]
+  types: ["open_cluster", "emission_nebula", "reflection_nebula", "dark_nebula"]
 
 - name: "Great Bird Cluster"
   catalog_id: "NGC 2301"
@@ -63,6 +70,7 @@
   dec_deg: 0.459
   magnitude: 6.3
   size_arcmin: [10.2, 10.2]
+  types: ["open_cluster"]
 
 - name: "Open Cluster M46"
   catalog_id: "M46"
@@ -71,6 +79,7 @@
   dec_deg: -14.810
   magnitude: 6.33
   size_arcmin: [21.0, 21.0]
+  types: ["open_cluster"]
 
 - name: "Globular Cluster M3"
   catalog_id: "M3"
@@ -79,6 +88,7 @@
   dec_deg: 28.375
   magnitude: 6.39
   size_arcmin: [16.2, 16.2]
+  types: ["globular_cluster"]
 
 - name: "Eagle Nebula"
   catalog_id: "M16"
@@ -87,6 +97,7 @@
   dec_deg: -13.783
   magnitude: 6.4
   size_arcmin: [35.0, 28.0]
+  types: ["emission_nebula", "open_cluster"]
 
 - name: "Starfish Cluster"
   catalog_id: "M38"
@@ -95,6 +106,7 @@
   dec_deg: 35.855
   magnitude: 6.69
   size_arcmin: [9.6, 9.6]
+  types: ["open_cluster"]
 
 - name: "Soul Nebula"
   catalog_id: "IC 1848"
@@ -102,6 +114,7 @@
   dec_deg: 60.402
   magnitude: 6.87
   size_arcmin: [40.0, 10.0]
+  types: ["emission_nebula"]
 
 - name: "Bode's Galaxy"
   catalog_id: "M81"
@@ -110,6 +123,7 @@
   dec_deg: 69.067
   magnitude: 6.9
   size_arcmin: [27.0, 14.0]
+  types: ["galaxy"]
 
 - name: "Open Cluster M52"
   catalog_id: "M52"
@@ -118,6 +132,7 @@
   dec_deg: 61.593
   magnitude: 6.9
   size_arcmin: [9.9, 9.9]
+  types: ["open_cluster"]
 
 - name: "Owl Cluster"
   catalog_id: "NGC 457"
@@ -125,3 +140,4 @@
   dec_deg: 58.291
   magnitude: 6.97
   size_arcmin: [7.8, 7.8]
+  types: ["open_cluster"]

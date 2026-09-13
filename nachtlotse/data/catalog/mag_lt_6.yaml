@@ -9,6 +9,7 @@
   dec_deg: 24.117
   magnitude: 1.6
   size_arcmin: [110.0, 110.0]
+  types: ["open_cluster"]
 
 - name: "Orion's Lower Sword"
   catalog_id: "NGC 1980"
@@ -16,6 +17,7 @@
   dec_deg: -5.910
   magnitude: 2.5
   size_arcmin: [9.3, 9.3]
+  types: ["open_cluster", "emission_nebula"]
 
 - name: "Andromeda Galaxy"
   catalog_id: "M31"
@@ -24,6 +26,7 @@
   dec_deg: 41.2692
   magnitude: 3.4
   size_arcmin: [190.0, 60.0]
+  types: ["galaxy"]
 
 - name: "Elephant's Trunk Region"
   catalog_id: "IC 1396"
@@ -31,6 +34,7 @@
   dec_deg: 57.500
   magnitude: 3.5
   size_arcmin: [170.0, 140.0]
+  types: ["emission_nebula", "dark_nebula", "open_cluster"]
 
 - name: "Beehive Cluster"
   catalog_id: "M44"
@@ -39,6 +43,7 @@
   dec_deg: 19.983
   magnitude: 3.7
   size_arcmin: [95.0, 95.0]
+  types: ["open_cluster"]
 
 - name: "Double Cluster (h Persei)"
   catalog_id: "NGC 869"
@@ -46,6 +51,7 @@
   dec_deg: 57.150
   magnitude: 3.7
   size_arcmin: [30.0, 30.0]
+  types: ["open_cluster"]
 
 - name: "Double Cluster (chi Persei)"
   catalog_id: "NGC 884"
@@ -53,6 +59,7 @@
   dec_deg: 57.117
   magnitude: 3.8
   size_arcmin: [30.0, 30.0]
+  types: ["open_cluster"]
 
 - name: "Christmas Tree Cluster"
   catalog_id: "NGC 2264"
@@ -60,6 +67,7 @@
   dec_deg: 9.895
   magnitude: 3.9
   size_arcmin: [11.4, 11.4]
+  types: ["open_cluster", "emission_nebula", "dark_nebula"]
 
 - name: "Orion Nebula"
   catalog_id: "M42"
@@ -68,6 +76,7 @@
   dec_deg: -5.450
   magnitude: 4.0
   size_arcmin: [85.0, 60.0]
+  types: ["emission_nebula", "reflection_nebula"]
 
 - name: "North America Nebula"
   catalog_id: "NGC 7000"
@@ -75,6 +84,7 @@
   dec_deg: 44.333
   magnitude: 4.0
   size_arcmin: [120.0, 100.0]
+  types: ["emission_nebula"]
 
 - name: "Orion's Upper Sword"
   catalog_id: "NGC 1981"
@@ -82,6 +92,7 @@
   dec_deg: -4.425
   magnitude: 4.2
   size_arcmin: [9.0, 9.0]
+  types: ["open_cluster"]
 
 - name: "Open Cluster M47"
   catalog_id: "M47"
@@ -90,6 +101,7 @@
   dec_deg: -14.483
   magnitude: 4.42
   size_arcmin: [19.8, 19.8]
+  types: ["open_cluster"]
 
 - name: "California Nebula"
   catalog_id: "NGC 1499"
@@ -97,6 +109,7 @@
   dec_deg: 36.367
   magnitude: 5.0
   size_arcmin: [160.0, 40.0]
+  types: ["emission_nebula"]
 
 - name: "Sagittarius Cluster"
   catalog_id: "M22"
@@ -105,6 +118,7 @@
   dec_deg: -23.900
   magnitude: 5.1
   size_arcmin: [24.0, 24.0]
+  types: ["globular_cluster"]
 
 - name: "Shoe-Buckle Cluster"
   catalog_id: "M35"
@@ -113,6 +127,7 @@
   dec_deg: 24.350
   magnitude: 5.1
   size_arcmin: [28.0, 28.0]
+  types: ["open_cluster"]
 
 - name: "Rho Ophiuchi Nebula"
   catalog_id: "IC 4604"
@@ -120,6 +135,7 @@
   dec_deg: -23.437
   magnitude: 5.1
   size_arcmin: [60.0, 25.0]
+  types: ["reflection_nebula"]
 
 - name: "Salt-and-Pepper Cluster"
   catalog_id: "M37"
@@ -128,6 +144,7 @@
   dec_deg: 32.550
   magnitude: 5.6
   size_arcmin: [24.0, 24.0]
+  types: ["open_cluster"]
 
 - name: "Triangulum Galaxy"
   catalog_id: "M33"
@@ -136,6 +153,7 @@
   dec_deg: 30.650
   magnitude: 5.7
   size_arcmin: [61.0, 42.0]
+  types: ["galaxy"]
 
 - name: "Hercules Cluster"
   catalog_id: "M13"
@@ -144,3 +162,4 @@
   dec_deg: 36.467
   magnitude: 5.8
   size_arcmin: [20.0, 20.0]
+  types: ["globular_cluster"]

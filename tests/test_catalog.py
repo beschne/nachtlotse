@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import get_args
 
 import pytest
 import yaml
 
 from nachtlotse.data import catalog
 from nachtlotse.data.catalog import CATALOG
+from nachtlotse.engine.models import TargetType
+
+_VALID_TYPES = set(get_args(TargetType))
 
 # Expected (inclusive lower, exclusive upper) magnitude bound per bin file —
 # `None` lower bound means "no floor" (the brightest bin). Update this
@@ -89,6 +93,14 @@ def test_catalog_magnitudes_and_sizes_are_populated() -> None:
         )
 
 
+def test_catalog_targets_carry_at_least_one_valid_type() -> None:
+    for target in CATALOG:
+        assert target.types, f"{target.catalog_id} has no types"
+        assert set(target.types) <= _VALID_TYPES, (
+            f"{target.catalog_id} has an unknown type in {target.types}"
+        )
+
+
 def test_all_bin_files_on_disk_are_covered_by_the_bounds_table() -> None:
     on_disk = {path.name for path in catalog._CATALOG_DIR.glob("mag_*.yaml")}
     assert on_disk == set(_BIN_BOUNDS)
@@ -125,6 +137,7 @@ def test_load_catalog_parses_magnitude_size_and_aliases_from_a_bin_file(
   dec_deg: 20.0
   magnitude: 4.2
   size_arcmin: [5.0, 3.0]
+  types: ["galaxy"]
 """,
         encoding="utf-8",
     )
@@ -138,6 +151,7 @@ def test_load_catalog_parses_magnitude_size_and_aliases_from_a_bin_file(
     assert target.aliases == ("NGC 999",)
     assert target.magnitude == pytest.approx(4.2)
     assert target.size_arcmin == (5.0, 3.0)
+    assert target.types == ("galaxy",)
 
 
 def test_load_catalog_picks_up_any_new_mag_bin_file_automatically(

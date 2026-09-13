@@ -8,6 +8,7 @@
   dec_deg: -11.617
   magnitude: 8.0
   size_arcmin: [9.0, 4.0]
+  types: ["galaxy"]
 
 - name: "Pelican Nebula"
   catalog_id: "IC 5070"
@@ -15,6 +16,7 @@
   dec_deg: 44.350
   magnitude: 8.0
   size_arcmin: [60.0, 50.0]
+  types: ["emission_nebula"]
 
 - name: "Skull Nebula"
   catalog_id: "NGC 246"
@@ -22,6 +24,7 @@
   dec_deg: -11.872
   magnitude: 8.0
   size_arcmin: [4.08, 4.08]
+  types: ["planetary_nebula"]
 
 - name: "Reflection Nebula M78"
   catalog_id: "M78"
@@ -30,6 +33,7 @@
   dec_deg: 0.079
   magnitude: 8.0
   size_arcmin: [4.5, 4.5]
+  types: ["reflection_nebula"]
 
 - name: "Foxhead Cluster"
   catalog_id: "NGC 6819"
@@ -37,6 +41,7 @@
   dec_deg: 40.187
   magnitude: 8.21
   size_arcmin: [6.9, 6.9]
+  types: ["open_cluster"]
 
 - name: "Saturn Nebula"
   catalog_id: "NGC 7009"
@@ -44,6 +49,7 @@
   dec_deg: -11.363
   magnitude: 8.3
   size_arcmin: [0.70, 0.52]
+  types: ["planetary_nebula"]
 
 - name: "Crab Nebula"
   catalog_id: "M1"
@@ -52,6 +58,7 @@
   dec_deg: 22.017
   magnitude: 8.4
   size_arcmin: [6.0, 4.0]
+  types: ["emission_nebula"]
 
 - name: "Whirlpool Galaxy"
   catalog_id: "M51"
@@ -60,6 +67,7 @@
   dec_deg: 47.200
   magnitude: 8.4
   size_arcmin: [11.0, 7.0]
+  types: ["galaxy"]
 
 - name: "Cigar Galaxy"
   catalog_id: "M82"
@@ -68,6 +76,7 @@
   dec_deg: 69.683
   magnitude: 8.4
   size_arcmin: [11.0, 5.0]
+  types: ["galaxy"]
 
 - name: "Black Eye Galaxy"
   catalog_id: "M64"
@@ -76,6 +85,7 @@
   dec_deg: 21.683
   magnitude: 8.5
   size_arcmin: [9.3, 5.4]
+  types: ["galaxy"]
 
 - name: "Globular Cluster M12"
   catalog_id: "M12"
@@ -84,6 +94,7 @@
   dec_deg: -1.948
   magnitude: 8.52
   size_arcmin: [11.1, 11.1]
+  types: ["globular_cluster"]
 
 - name: "Sunflower Galaxy"
   catalog_id: "M63"
@@ -92,6 +103,7 @@
   dec_deg: 42.033
   magnitude: 8.6
   size_arcmin: [10.0, 6.0]
+  types: ["galaxy"]
 
 - name: "Ghost of Jupiter"
   catalog_id: "NGC 3242"
@@ -99,6 +111,7 @@
   dec_deg: -18.642
   magnitude: 8.6
   size_arcmin: [0.42, 0.42]
+  types: ["planetary_nebula"]
 
 - name: "Croc's Eye Galaxy"
   catalog_id: "M94"
@@ -107,6 +120,7 @@
   dec_deg: 41.120
   magnitude: 8.71
   size_arcmin: [7.74, 6.68]
+  types: ["galaxy"]
 
 - name: "Ring Nebula"
   catalog_id: "M57"
@@ -115,6 +129,7 @@
   dec_deg: 33.033
   magnitude: 8.8
   size_arcmin: [1.4, 1.0]
+  types: ["planetary_nebula"]
 
 - name: "Spiral Galaxy NGC 2403"
   catalog_id: "NGC 2403"
@@ -122,6 +137,7 @@
   dec_deg: 65.603
   magnitude: 8.83
   size_arcmin: [19.95, 10.07]
+  types: ["galaxy"]
 
 - name: "Open Cluster NGC 6939"
   catalog_id: "NGC 6939"
@@ -129,6 +145,7 @@
   dec_deg: 60.662
   magnitude: 8.85
   size_arcmin: [12.0, 12.0]
+  types: ["open_cluster"]
 
 - name: "Open Cluster NGC 1907"
   catalog_id: "NGC 1907"
@@ -136,6 +153,7 @@
   dec_deg: 35.326
   magnitude: 8.87
   size_arcmin: [5.4, 5.4]
+  types: ["open_cluster"]
 
 - name: "Andromeda Companion M32"
   catalog_id: "M32"
@@ -144,6 +162,7 @@
   dec_deg: 40.865
   magnitude: 8.89
   size_arcmin: [7.74, 4.86]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Leo Triplet — M66"
   catalog_id: "M66"
@@ -152,6 +171,7 @@
   dec_deg: 12.983
   magnitude: 8.9
   size_arcmin: [9.1, 4.2]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Andromeda Companion M110"
   catalog_id: "M110"
@@ -160,3 +180,4 @@
   dec_deg: 41.685
   magnitude: 8.9
   size_arcmin: [16.22, 9.59]
+  types: ["galaxy", "galaxy_group"]

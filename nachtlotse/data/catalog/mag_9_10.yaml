@@ -7,6 +7,7 @@
   dec_deg: 21.500
   magnitude: 9.0
   size_arcmin: [12.0, 6.0]
+  types: ["galaxy"]
 
 - name: "De Mairan's Nebula"
   catalog_id: "M43"
@@ -15,6 +16,7 @@
   dec_deg: -5.299
   magnitude: 9.0
   size_arcmin: [20.0, 15.0]
+  types: ["emission_nebula"]
 
 - name: "Rosette Nebula"
   catalog_id: "NGC 2237"
@@ -23,6 +25,7 @@
   dec_deg: 4.867
   magnitude: 9.0
   size_arcmin: [80.0, 60.0]
+  types: ["emission_nebula", "open_cluster"]
 
 - name: "Spiral Galaxy M106"
   catalog_id: "M106"
@@ -31,6 +34,7 @@
   dec_deg: 47.304
   magnitude: 9.12
   size_arcmin: [16.98, 7.24]
+  types: ["galaxy"]
 
 - name: "Blue Snowball Nebula"
   catalog_id: "NGC 7662"
@@ -38,6 +42,7 @@
   dec_deg: 42.535
   magnitude: 9.2
   size_arcmin: [0.28, 0.28]
+  types: ["planetary_nebula"]
 
 - name: "Wolf's Cave Nebula"
   catalog_id: "vdB 152"
@@ -46,6 +51,7 @@
   dec_deg: 70.251
   magnitude: 9.29
   size_arcmin: [62.0, 62.0]
+  types: ["reflection_nebula", "dark_nebula"]
 
 - name: "Leo Triplet — M65"
   catalog_id: "M65"
@@ -54,6 +60,7 @@
   dec_deg: 13.083
   magnitude: 9.3
   size_arcmin: [9.8, 2.9]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Barnard's Galaxy"
   catalog_id: "NGC 6822"
@@ -61,6 +68,7 @@
   dec_deg: -14.800
   magnitude: 9.36
   size_arcmin: [15.0, 13.0]
+  types: ["galaxy"]
 
 - name: "Phantom Galaxy"
   catalog_id: "M74"
@@ -69,6 +77,7 @@
   dec_deg: 15.783
   magnitude: 9.4
   size_arcmin: [10.5, 9.5]
+  types: ["galaxy"]
 
 - name: "Whale Galaxy"
   catalog_id: "NGC 4631"
@@ -76,6 +85,7 @@
   dec_deg: 32.541
   magnitude: 9.47
   size_arcmin: [14.45, 2.2]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Open Cluster NGC 2158"
   catalog_id: "NGC 2158"
@@ -83,6 +93,7 @@
   dec_deg: 24.096
   magnitude: 9.49
   size_arcmin: [8.4, 8.4]
+  types: ["open_cluster"]
 
 - name: "Hamburger Galaxy"
   catalog_id: "NGC 3628"
@@ -90,6 +101,7 @@
   dec_deg: 13.583
   magnitude: 9.5
   size_arcmin: [15.0, 3.6]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Deer Lick Group"
   catalog_id: "NGC 7331"
@@ -97,6 +109,7 @@
   dec_deg: 34.417
   magnitude: 9.5
   size_arcmin: [10.0, 4.0]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Fireworks Galaxy"
   catalog_id: "NGC 6946"
@@ -104,6 +117,7 @@
   dec_deg: 60.150
   magnitude: 9.6
   size_arcmin: [11.0, 10.0]
+  types: ["galaxy"]
 
 - name: "Hidden Galaxy"
   catalog_id: "IC 342"
@@ -111,6 +125,7 @@
   dec_deg: 68.096
   magnitude: 9.68
   size_arcmin: [19.77, 18.79]
+  types: ["galaxy"]
 
 - name: "Elliptical Galaxy M86"
   catalog_id: "M86"
@@ -119,6 +134,7 @@
   dec_deg: 12.946
   magnitude: 9.74
   size_arcmin: [11.53, 8.43]
+  types: ["galaxy", "galaxy_group"]
 
 - name: "Spiral Galaxy M77"
   catalog_id: "M77"
@@ -127,6 +143,7 @@
   dec_deg: -0.013
   magnitude: 9.74
   size_arcmin: [6.11, 5.61]
+  types: ["galaxy"]
 
 - name: "Cat's Eye Nebula"
   catalog_id: "NGC 6543"
@@ -134,6 +151,7 @@
   dec_deg: 66.633
   magnitude: 9.79
   size_arcmin: [0.9, 0.9]
+  types: ["planetary_nebula"]
 
 - name: "Little Gem Nebula"
   catalog_id: "NGC 6818"
@@ -141,6 +159,7 @@
   dec_deg: -14.153
   magnitude: 9.9
   size_arcmin: [0.77, 0.77]
+  types: ["planetary_nebula"]
 
 - name: "Bubble Galaxy"
   catalog_id: "NGC 3521"
@@ -148,6 +167,7 @@
   dec_deg: -0.036
   magnitude: 9.90
   size_arcmin: [8.32, 4.47]
+  types: ["galaxy"]
 
 - name: "Ringed Galaxy NGC 4725"
   catalog_id: "NGC 4725"
@@ -155,3 +175,4 @@
   dec_deg: 25.501
   magnitude: 9.92
   size_arcmin: [9.71, 7.10]
+  types: ["galaxy"]

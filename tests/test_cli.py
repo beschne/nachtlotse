@@ -51,6 +51,55 @@ def test_plan_command_accepts_a_rig_by_name_or_alias(
     assert "ZWO Seestar S50 Pro" in output
 
 
+def test_plan_command_passes_selected_types_through_to_planning(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    original_plan_night = planning.plan_night
+
+    def spy_plan_night(site, rig, when, types=None):
+        captured["types"] = types
+        return original_plan_night(site, rig, when, types=types)
+
+    monkeypatch.setattr(planning, "plan_night", spy_plan_night)
+
+    assert cli.main(["plan", "--type", "galaxy", "--type", "open_cluster"]) == 0
+    assert captured["types"] == frozenset({"galaxy", "open_cluster"})
+
+
+def test_plan_command_defaults_to_no_type_filter(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    original_plan_night = planning.plan_night
+
+    def spy_plan_night(site, rig, when, types=None):
+        captured["types"] = types
+        return original_plan_night(site, rig, when, types=types)
+
+    monkeypatch.setattr(planning, "plan_night", spy_plan_night)
+
+    assert cli.main(["plan"]) == 0
+    assert captured["types"] is None
+
+
+def test_plan_command_rejects_an_unknown_type(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # argparse's own `choices` validation calls sys.exit() directly (same as
+    # the unknown-subcommand case below), rather than returning through
+    # cli.main()'s own exit-code convention.
+    with pytest.raises(SystemExit):
+        cli.main(["plan", "--type", "wormhole"])
+    assert "invalid choice" in capsys.readouterr().err
+
+
 def test_plan_command_accepts_a_date_and_uses_that_nights_dark_window(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],

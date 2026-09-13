@@ -19,7 +19,7 @@ from astropy.time import Time
 
 from nachtlotse.data.catalog import CATALOG
 from nachtlotse.engine import constraints, ephemeris, framing, scoring
-from nachtlotse.engine.models import Rig, Site, Target, Verdict, WeatherSummary
+from nachtlotse.engine.models import Rig, Site, Target, TargetType, Verdict, WeatherSummary
 from nachtlotse.weather import open_meteo
 
 
@@ -62,7 +62,12 @@ def _rotation_gate(
     return gate
 
 
-def rank_targets(site: Site, rig: Rig, when: datetime) -> list[RankedTarget]:
+def rank_targets(
+    site: Site,
+    rig: Rig,
+    when: datetime,
+    types: frozenset[TargetType] | None = None,
+) -> list[RankedTarget]:
     """Rank catalog targets by their best moment within tonight's dark window.
 
     A target is dropped unless some moment tonight simultaneously clears
@@ -72,12 +77,17 @@ def rank_targets(site: Site, rig: Rig, when: datetime) -> list[RankedTarget]:
     Each row also carries a framing score (0..1): how well the target's
     angular size fits `rig`'s field of view.
 
+    `types`, if given, keeps only targets carrying at least one of those
+    categories (e.g. `{"galaxy"}`) — None means no filtering.
+
     Ranked by `framing.target_priority_score` (altitude *and* fit), not
     altitude alone — a target that barely fits the frame no longer wins
     hero status purely for sitting high in the sky.
     """
     ranked: list[RankedTarget] = []
     for target in CATALOG:
+        if types is not None and not (set(target.types) & types):
+            continue
         result = constraints.best_time_tonight(
             site, target, when, extra_ok=_rotation_gate(rig, site, target)
         )
@@ -112,12 +122,20 @@ def fetch_weather_summary(
     return open_meteo.summarize_window(hours, evening_start, morning_end)
 
 
-def plan_night(site: Site, rig: Rig, when: datetime) -> NightPlan:
-    """Rank tonight's (or `when`'s night's) observable targets and verdict."""
+def plan_night(
+    site: Site,
+    rig: Rig,
+    when: datetime,
+    types: frozenset[TargetType] | None = None,
+) -> NightPlan:
+    """Rank tonight's (or `when`'s night's) observable targets and verdict.
+
+    `types` is passed straight through to `rank_targets` — see there.
+    """
     evening_start, morning_end = constraints.dark_window(site, when)
     illumination_pct = moon_illumination(Time(when)) * 100
     weather = fetch_weather_summary(site, evening_start, morning_end)
-    ranked = rank_targets(site, rig, when)
+    ranked = rank_targets(site, rig, when, types=types)
 
     verdict = None
     if ranked:
