@@ -62,7 +62,7 @@ uv run lotse plan --site "Großer Feldberg" --rig S30P
 # of tonight — useful for checking ahead. Weather beyond Open-Meteo's
 # forecast horizon (16 days) shows as unavailable; the sky-geometry
 # ranking and verdict still work for any date, past or future:
-uv run lotse plan --site Mönstadt --date 2026-11-14
+uv run lotse plan --site Feldberg --date 2026-11-14
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment
