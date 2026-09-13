@@ -192,31 +192,31 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. Expand the catalog with further typical astrophotography targets, sourced
-   from various catalogs beyond Messier/NGC/IC.
-2. Two targets from the Kier-book catalog import are still on hold: the
-   Angel Nebula (NGC 2170) and the Tadpole Nebula (IC 410) — neither has a
-   magnitude reported anywhere (OpenNGC, SIMBAD, Wikipedia) distinct from a
-   companion object they're routinely conflated with. Revisit if a source
-   ever publishes one. See STATUS.md's catalog section for detail.
-3. Tag catalog objects by type — emission nebula, reflection nebula,
+1. Expand the catalog further: import Charles Bracken's *The Astrophotography
+   Sky Atlas* target list (pp. 90–140) once it's transcribed into `secrets/`
+   the same way as the other two books, and revisit the remaining targets
+   from Kier's and Bracken's *Astrophotography Planner* that couldn't be
+   imported so far (missing/unreliable magnitude data, no formal catalog
+   designation, etc.) in case better-sourced data turns up later — see
+   `secrets/Katalog-Import — ausgelassene Objekte.md` for the current list.
+2. Tag catalog objects by type — emission nebula, reflection nebula,
    planetary nebula, dark nebula, galaxy, galaxy group, open cluster,
    globular cluster — so targets can be filtered/searched by category. An
    object can carry more than one tag (e.g. M42 is both an emission and a
    reflection nebula).
-4. Streamlit UI: clicking a backup target shows the same detail panel as the
+3. Streamlit UI: clicking a backup target shows the same detail panel as the
    hero (stats + altitude curve).
-5. Streamlit UI: a real RGB/visual image of the hero target (e.g. from an
+4. Streamlit UI: a real RGB/visual image of the hero target (e.g. from an
    image survey), cached locally rather than refetched on every rerun.
-6. Current events: well-placed comets, supernova alerts; later also minor
+5. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-7. A "best rig for this target" chooser — `lotse plan` scores targets for
+6. A "best rig for this target" chooser — `lotse plan` scores targets for
    whichever rig you pass, it doesn't yet pick between rigs.
-8. Session log: record what's already been captured, and when — total
+7. Session log: record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-9. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+8. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
    from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)
