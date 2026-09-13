@@ -184,11 +184,12 @@ core grows before the UI is added.
 - Site/rig selection. Later migration to Qt or FastAPI+web.
 - **DoD:** a single glance is enough to decide, without opening the CLI.
 
-### M6 — Current events
-- Well-placed comets, supernova alerts.
-
 ### Possible future extensions (not scheduled)
-Ideas kept for later, not committed to a milestone yet:
+The MVP (M0–M5) is complete. Ideas kept for later, not committed to a
+milestone:
+- A "best rig for this target" chooser — `lotse plan` scores targets for
+  whichever rig you pass, it doesn't yet pick between rigs.
+- Current events: well-placed comets, supernova alerts.
 - Session log with attached photos; a "30-day rest" for already-shown targets.
 - Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
   from the engine, never computed by the LLM.
@@ -206,7 +207,8 @@ Ideas kept for later, not committed to a milestone yet:
 
 ### Out of scope for the MVP (deliberately excluded)
 Mount control/session automation, cloud sync, accounts, southern-sky curation,
-mobile apps. Not until M0–M5 are done.
+mobile apps. Deliberately excluded from the M0–M5 MVP; not reconsidered
+above without a specific reason to.
 
 ---
 

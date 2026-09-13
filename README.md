@@ -25,6 +25,9 @@ is fully backed by `pytest` against known astronomical values.
 
 ## Status
 
+**The MVP is complete** (M0–M5): engine, multi-site/multi-rig support,
+weather, the GO/MARGINAL/SKIP verdict, and the Streamlit UI.
+
 - ✅ **M0 — Scaffolding & engine core**, done.
 - ✅ **M1 — Moon & dark window**, done.
 - ✅ **M2 — Horizon profiles & multiple sites**, done.
@@ -32,9 +35,7 @@ is fully backed by `pytest` against known astronomical values.
 - ✅ **M4 — Weather & verdict**, done.
 - ✅ **M5 — UI (Streamlit MVP)**, done.
 
-Not yet implemented (by design, later milestones): a "best rig for this
-target" chooser — `lotse plan` scores targets for whichever rig you pass,
-it doesn't yet pick between rigs.
+Ideas kept for later (not scheduled) are listed in [CLAUDE.md](./CLAUDE.md).
 
 Module-by-module detail: [STATUS.md](./STATUS.md). Full roadmap and all
 architecture decisions: [CLAUDE.md](./CLAUDE.md).

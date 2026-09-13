@@ -192,6 +192,7 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## Not yet implemented (by design)
 
-A "best rig for this target" chooser — `lotse plan` scores targets for
-whichever rig you pass, it doesn't yet pick between rigs. M6 (comfort &
-prose) is documented in [CLAUDE.md](./CLAUDE.md).
+The MVP (M0–M5) is complete. Ideas kept for later — a "best rig for this
+target" chooser, current-events alerts, and more — are listed in
+[CLAUDE.md](./CLAUDE.md)'s "Possible future extensions", not scheduled to
+any milestone.
