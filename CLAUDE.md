@@ -5,8 +5,8 @@
 
 A deterministic session planner for astrophotography, native on macOS.
 It scores tonight's sky over *your* site against *your* equipment and
-distills the result down to **one** hero target plus a verdict: **GO / MARGINAL / SKIP** —
-with a traceable rationale.
+distills the result down to a short, score-ranked shortlist of targets —
+each with its own verdict: **GO / MARGINAL / SKIP** — and a traceable rationale.
 
 Modeled after [Clear Night Coach](https://clearnightcoach.com) (Windows-only).
 Nachtlotse rebuilds the same core cross-platform — with an open, testable engine.
@@ -37,7 +37,8 @@ At a dark site, the core decision runs **offline** (weather is an optional layer
 - **Weather (from M4):** Open-Meteo (free, no API key)
 - **Tests:** `pytest`
 - **Lint/format:** `ruff`
-- **Type checking:** `mypy` (optional, recommended)
+- **Type checking:** `mypy` (recommended; not currently in `pyproject.toml` —
+  add it before relying on it)
 - **UI:** `streamlit`. The UI layer is deliberately swappable (e.g. a
   **FastAPI + web** front end, if a browser-based UI is ever wanted), but a
   native **PySide6/Qt** app is not planned — see "Possible future
@@ -56,9 +57,13 @@ nachtlotse/
 │   ├── scoring.py       # target ranking + verdict heuristic
 │   └── models.py        # dataclasses: Site, Rig, HorizonProfile, Target, Verdict
 ├── data/            # persistence — sites, rigs, horizons, session log
-│   ├── catalog.py       # object catalog (Messier core → later expanded)
-│   ├── store.py         # SQLite or YAML
-│   └── hrz.py           # .HRZ import (from M2)
+│   ├── catalog/         # object catalog, YAML files banded by magnitude
+│   │                     (mag_lt_6.yaml … mag_15_16.yaml) — Messier core
+│   │                     plus the Kier/Bracken book imports
+│   └── store.py         # sites_local.yaml / rigs_local.yaml (gitignored,
+│                          committed .template.yaml alongside each); horizon
+│                          profiles are azimuth→min-altitude points inline
+│                          in site YAML, no separate .HRZ import
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
 ├── ui/              # swappable — streamlit; a future web/ front end stays open
 ├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs`
@@ -104,10 +109,38 @@ class Rig:
     mount: Mount
     # derived/computed: fov_deg, sampling_arcsec_px
 
+# A target can carry more than one type (M42 is emission + reflection).
+TargetType = Literal[
+    "emission_nebula", "reflection_nebula", "planetary_nebula", "dark_nebula",
+    "galaxy", "galaxy_group", "open_cluster", "globular_cluster",
+]
+TARGET_TYPE_LABELS: dict[TargetType, str]  # shared CLI/UI display labels
+
+@dataclass(frozen=True)
+class Target:
+    name: str
+    ra_deg: float
+    dec_deg: float
+    catalog_id: str = ""
+    aliases: tuple[str, ...] = ()          # other designations, e.g. M31 -> "NGC 224"
+    size_arcmin: tuple[float, float] = (0.0, 0.0)  # (0.0, 0.0) = unknown
+    magnitude: float = 99.0                # 99.0 = unknown, sorts as faintest
+    types: tuple[TargetType, ...] = ()
+
+@dataclass(frozen=True)
+class WeatherSummary:
+    # aggregated over the observing window; optional engine.scoring input —
+    # the engine core never fetches this itself
+    max_cloud_cover_pct: float
+    avg_cloud_cover_pct: float
+    max_wind_kmh: float
+    min_dew_point_spread_c: float
+
 @dataclass(frozen=True)
 class Verdict:
     level: Literal["GO", "MARGINAL", "SKIP"]
     reasons: list[str]         # every number comes from the engine
+    # one Verdict per shortlisted target, not one per night — see roadmap
 ```
 
 **First rig (reference case):** ZWO Seestar S30 Pro — focal length/sensor as
@@ -154,8 +187,9 @@ core grows before the UI is added.
 
 ### M2 — Horizon profiles & multiple sites
 - Custom `HorizonConstraint` (target visible only if `alt > horizon.min_alt(az)`).
-- `.HRZ` import (simple text format). Blocked targets are no longer suggested.
-- Persistence for multiple sites (SQLite/YAML) + CLI `lotse sites`.
+- Horizon profile as azimuth→min-altitude points, inline in site YAML.
+  Blocked targets are no longer suggested.
+- Persistence for multiple sites (YAML) + CLI `lotse sites`.
 - **DoD:** the same sky yields different target lists at two sites with different
   horizons.
 
@@ -194,7 +228,32 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. With all three book imports done (Kier, Bracken's *Astrophotography
+1. Drop the single hero-target framing: `plan_night()` returns a short,
+   score-ranked shortlist (a handful of objects, not one), and each
+   shortlisted object gets its **own** `Verdict` (GO/MARGINAL/SKIP with its
+   own reasons) instead of one verdict borrowed from `ranked[0]`. The UI's
+   "Hero target" section becomes a list of a few cards/rows, each with its
+   own verdict badge. `scoring.verdict_for_target()` already takes a single
+   target's altitude, so this is calling it once per shortlisted target
+   instead of once for the top pick — not a rewrite of the heuristic itself.
+2. New: a polar (alt/az) chart as the entry point into a shortlist —
+   azimuth around the ring, altitude (or zenith distance) as the radius,
+   with **all** shortlisted objects' tracks over the dark window plotted on
+   it together (one line per object, distinguishable by color/label), not
+   one chart per object. The horizon-blocked region is drawn as a
+   grayed-out wedge straight from `HorizonProfile.min_alt(az)` — no new
+   astronomy, just a second, more informative rendering of numbers the
+   engine already produces (today's `_altitude_chart` only plots one
+   target's altitude over time as a line, with no azimuth/horizon context).
+   There is exactly one polar chart — the shortlist overview. The
+   per-object detail view (roadmap item 5) is not polar; it's the existing
+   altitude-over-time line chart, just scoped to whichever object was
+   clicked instead of always the top pick.
+3. Streamlit UI: swap the object-type `st.multiselect` (`app.py`'s
+   `selected_types`, currently empty = no filter) for one checkbox per
+   `TargetType`, all checked by default — filtering out a category becomes
+   an explicit uncheck instead of an opt-in multiselect.
+4. With all three book imports done (Kier, Bracken's *Astrophotography
    Planner*, and his *Astrophotography Sky Atlas*), the accumulated skip
    list is large enough to analyze rather than just carry forward: the
    large majority — diffuse emission/dark nebulae and Abell planetary
@@ -209,20 +268,20 @@ Ideas for after the MVP, in priority order:
    Variable Nebula"), NGC 6874, and Simeis 147. See
    [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
    reasoning behind each exclusion.
-2. Streamlit UI: clicking a backup target shows the same detail panel as the
-   hero (stats + altitude curve).
-3. Streamlit UI: a real RGB/visual image of the hero target (e.g. from an
-   image survey), cached locally rather than refetched on every rerun.
-4. Current events: well-placed comets, supernova alerts; later also minor
+5. Streamlit UI: clicking a shortlisted target shows the same detail panel
+   (stats + altitude-over-time curve) as the top pick.
+6. Streamlit UI: a real RGB/visual image of a shortlisted target (e.g. from
+   an image survey), cached locally rather than refetched on every rerun.
+7. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-5. A "best rig for this target" chooser — `lotse plan` scores targets for
+8. A "best rig for this target" chooser — `lotse plan` scores targets for
    whichever rig you pass, it doesn't yet pick between rigs.
-6. Session log: record what's already been captured, and when — total
+9. Session log: record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-7. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
-   from the engine, never computed by the LLM.
+10. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+    from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)
 - A native **PySide6/Qt** UI. Only ever motivated by shipping a
@@ -269,11 +328,12 @@ computing.
 
 ```bash
 uv sync                       # environment/dependencies
+uv sync --extra ui             # + streamlit, needed for the UI below
 uv run pytest                 # tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
 uv run lotse plan              # tonight's recommendation (from M0)
-uv run streamlit run ui/app.py  # UI (from M5)
+uv run streamlit run nachtlotse/ui/app.py  # UI (from M5)
 ```
 
 ---
