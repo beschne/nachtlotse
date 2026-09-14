@@ -38,8 +38,10 @@ At a dark site, the core decision runs **offline** (weather is an optional layer
 - **Tests:** `pytest`
 - **Lint/format:** `ruff`
 - **Type checking:** `mypy` (optional, recommended)
-- **UI:** MVP with `streamlit` → later migration to **PySide6/Qt** (native app) or
-  **FastAPI + web** (local in-browser). The UI is deliberately swappable.
+- **UI:** `streamlit`. The UI layer is deliberately swappable (e.g. a
+  **FastAPI + web** front end, if a browser-based UI is ever wanted), but a
+  native **PySide6/Qt** app is not planned — see "Possible future
+  extensions (not scheduled)".
 
 ---
 
@@ -58,7 +60,7 @@ nachtlotse/
 │   ├── store.py         # SQLite or YAML
 │   └── hrz.py           # .HRZ import (from M2)
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
-├── ui/              # swappable — streamlit (MVP), later qt/ or web/
+├── ui/              # swappable — streamlit; a future web/ front end stays open
 ├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs`
 └── tests/
 ```
@@ -181,7 +183,7 @@ core grows before the UI is added.
 
 ### M5 — UI (Streamlit MVP)
 - Verdict light, hero target + backups, altitude curve over the night, rationale.
-- Site/rig selection. Later migration to Qt or FastAPI+web.
+- Site/rig selection.
 - **DoD:** a single glance is enough to decide, without opening the CLI.
 
 The MVP (M0–M5) is complete.
@@ -223,6 +225,10 @@ Ideas for after the MVP, in priority order:
    from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)
+- A native **PySide6/Qt** UI. Only ever motivated by shipping a
+  distributable native app; Nachtlotse is a personal tool + portfolio
+  project rather than a product, so that motivation doesn't apply, and
+  `streamlit` stays the UI. Revisit only if that framing changes.
 - Export today's pick to a NINA-compatible format.
 - Streamlit UI: gray out the sidebar's "Apply" button once its values are
   applied, re-enabling it only on the next edit. Not solvable with the
