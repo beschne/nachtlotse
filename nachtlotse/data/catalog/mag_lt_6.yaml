@@ -103,6 +103,15 @@
   size_arcmin: [19.8, 19.8]
   types: ["open_cluster"]
 
+- name: "Open Cluster M39"
+  catalog_id: "M39"
+  aliases: ["NGC 7092"]
+  ra_deg: 322.951
+  dec_deg: 48.438
+  magnitude: 4.66
+  size_arcmin: [30.0, 30.0]
+  types: ["open_cluster"]
+
 - name: "California Nebula"
   catalog_id: "NGC 1499"
   ra_deg: 60.810
@@ -163,3 +172,11 @@
   magnitude: 5.8
   size_arcmin: [20.0, 20.0]
   types: ["globular_cluster"]
+
+- name: "37 Cluster"
+  catalog_id: "NGC 2169"
+  ra_deg: 92.101
+  dec_deg: 13.965
+  magnitude: 5.99
+  size_arcmin: [6.0, 6.0]
+  types: ["open_cluster"]

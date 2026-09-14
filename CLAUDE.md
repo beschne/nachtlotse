@@ -192,13 +192,21 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. Expand the catalog further: import Charles Bracken's *The Astrophotography
-   Sky Atlas* target list (pp. 90–140) once its object list is available,
-   the same way as the other two books, and revisit the remaining targets
-   from Kier's and Bracken's *Astrophotography Planner* that couldn't be
-   imported so far (missing/unreliable magnitude data, no formal catalog
-   designation, etc.) in case better-sourced data turns up later — see
-   STATUS.md's catalog section for the current skip list.
+1. With all three book imports done (Kier, Bracken's *Astrophotography
+   Planner*, and his *Astrophotography Sky Atlas*), the accumulated skip
+   list is large enough to analyze rather than just carry forward: the
+   large majority — diffuse emission/dark nebulae and Abell planetary
+   nebulae without a published integrated magnitude, and cases where the
+   only found magnitude belongs to an illuminating star or a sub-feature
+   rather than the pictured object — is a structural gap in what ever gets
+   photometered at the object level, not a temporary data-search gap, and
+   isn't expected to resolve with more searching. Worth revisiting only
+   the handful of cases where the *designation itself*, not just its
+   magnitude, is in question and a future SIMBAD/NED correction could
+   settle it: IC 4606 ("Antares Nebula"), IC 1316, NGC 1555 ("Hind's
+   Variable Nebula"), NGC 6874, and Simeis 147. See
+   [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
+   reasoning behind each exclusion.
 2. Streamlit UI: clicking a backup target shows the same detail panel as the
    hero (stats + altitude curve).
 3. Streamlit UI: a real RGB/visual image of the hero target (e.g. from an

@@ -181,3 +181,12 @@
   magnitude: 8.9
   size_arcmin: [16.22, 9.59]
   types: ["galaxy", "galaxy_group"]
+
+- name: "Asterism M73"
+  catalog_id: "M73"
+  aliases: ["NGC 6994"]
+  ra_deg: 314.733
+  dec_deg: -12.636
+  magnitude: 8.9
+  size_arcmin: [1.0, 1.0]
+  types: ["open_cluster"]

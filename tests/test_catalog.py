@@ -42,8 +42,8 @@ _MIN_DEC_DEG_FOR_40N_VISIBILITY = -30.0
 _MAX_CATALOG_MAGNITUDE = 18.6
 
 
-def test_catalog_has_around_150_unique_objects() -> None:
-    assert 140 <= len(CATALOG) <= 160
+def test_catalog_has_around_185_unique_objects() -> None:
+    assert 175 <= len(CATALOG) <= 200
 
 
 def test_catalog_ids_are_unique() -> None:

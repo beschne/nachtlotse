@@ -26,6 +26,22 @@
   size_arcmin: [11.30, 1.75]
   types: ["galaxy"]
 
+- name: "Spiral Galaxy NGC 488"
+  catalog_id: "NGC 488"
+  ra_deg: 20.445
+  dec_deg: 5.257
+  magnitude: 11.13
+  size_arcmin: [5.05, 3.66]
+  types: ["galaxy"]
+
+- name: "Mirach's Ghost"
+  catalog_id: "NGC 404"
+  ra_deg: 17.363
+  dec_deg: 35.718
+  magnitude: 11.19
+  size_arcmin: [3.4, 3.37]
+  types: ["galaxy"]
+
 - name: "Bow-Tie Nebula"
   catalog_id: "NGC 40"
   ra_deg: 3.254
@@ -58,6 +74,31 @@
   size_arcmin: [4.70, 2.34]
   types: ["galaxy", "galaxy_group"]
 
+- name: "Seyfert Galaxy NGC 3227"
+  catalog_id: "NGC 3227"
+  ra_deg: 155.877
+  dec_deg: 19.865
+  magnitude: 11.55
+  size_arcmin: [3.98, 1.86]
+  types: ["galaxy"]
+
+- name: "Spiral Galaxy NGC 1367"
+  catalog_id: "NGC 1367"
+  aliases: ["NGC 1371"]
+  ra_deg: 53.756
+  dec_deg: -24.933
+  magnitude: 11.59
+  size_arcmin: [4.88, 3.26]
+  types: ["galaxy"]
+
+- name: "Spiral Galaxy NGC 4647"
+  catalog_id: "NGC 4647"
+  ra_deg: 190.885
+  dec_deg: 11.582
+  magnitude: 11.6
+  size_arcmin: [2.75, 2.36]
+  types: ["galaxy"]
+
 - name: "Owl Nebula"
   catalog_id: "M97"
   aliases: ["NGC 3587"]
@@ -66,6 +107,14 @@
   magnitude: 11.60
   size_arcmin: [3.58, 3.58]
   types: ["planetary_nebula"]
+
+- name: "Spiral Galaxy NGC 7640"
+  catalog_id: "NGC 7640"
+  ra_deg: 350.527
+  dec_deg: 40.845
+  magnitude: 11.61
+  size_arcmin: [8.09, 1.67]
+  types: ["galaxy"]
 
 - name: "Siamese Twins Galaxies"
   catalog_id: "NGC 4568"
@@ -76,6 +125,14 @@
   size_arcmin: [4.31, 1.87]
   types: ["galaxy", "galaxy_group"]
 
+- name: "Lenticular Galaxy NGC 2217"
+  catalog_id: "NGC 2217"
+  ra_deg: 95.416
+  dec_deg: -27.234
+  magnitude: 11.63
+  size_arcmin: [4.63, 4.12]
+  types: ["galaxy"]
+
 - name: "Galaxy NGC 3729"
   catalog_id: "NGC 3729"
   ra_deg: 173.456
@@ -83,6 +140,22 @@
   magnitude: 11.72
   size_arcmin: [2.89, 2.09]
   types: ["galaxy", "galaxy_group"]
+
+- name: "Barred Spiral Galaxy NGC 7479"
+  catalog_id: "NGC 7479"
+  ra_deg: 346.236
+  dec_deg: 12.323
+  magnitude: 11.73
+  size_arcmin: [3.65, 2.72]
+  types: ["galaxy"]
+
+- name: "Starburst Galaxy IC 10"
+  catalog_id: "IC 10"
+  ra_deg: 5.072
+  dec_deg: 59.304
+  magnitude: 11.78
+  size_arcmin: [6.76, 6.03]
+  types: ["galaxy"]
 
 - name: "Hickson 44 Galaxy Group"
   catalog_id: "NGC 3190"

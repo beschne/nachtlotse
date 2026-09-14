@@ -59,6 +59,14 @@
   size_arcmin: [16.0, 2.8]
   types: ["galaxy"]
 
+- name: "Barred Spiral Galaxy NGC 4236"
+  catalog_id: "NGC 4236"
+  ra_deg: 184.175
+  dec_deg: 69.463
+  magnitude: 10.06
+  size_arcmin: [23.5, 6.85]
+  types: ["galaxy"]
+
 - name: "Spindle Galaxy"
   catalog_id: "NGC 3115"
   ra_deg: 151.308
@@ -84,6 +92,14 @@
   size_arcmin: [4.8, 4.8]
   types: ["open_cluster", "emission_nebula"]
 
+- name: "Planetary Nebula NGC 2438"
+  catalog_id: "NGC 2438"
+  ra_deg: 115.460
+  dec_deg: -14.736
+  magnitude: 10.1
+  size_arcmin: [1.2, 1.1]
+  types: ["planetary_nebula"]
+
 - name: "Eskimo Nebula"
   catalog_id: "NGC 2392"
   ra_deg: 112.295
@@ -91,6 +107,23 @@
   magnitude: 10.12
   size_arcmin: [0.86, 0.86]
   types: ["planetary_nebula"]
+
+- name: "Dwarf Elliptical Galaxy NGC 185"
+  catalog_id: "NGC 185"
+  ra_deg: 9.742
+  dec_deg: 48.337
+  magnitude: 10.15
+  size_arcmin: [12.94, 10.76]
+  types: ["galaxy"]
+
+- name: "Spiral Galaxy M61"
+  catalog_id: "M61"
+  aliases: ["NGC 4303"]
+  ra_deg: 185.479
+  dec_deg: 4.474
+  magnitude: 10.16
+  size_arcmin: [6.89, 6.56]
+  types: ["galaxy"]
 
 - name: "Little Pinwheel Galaxy"
   catalog_id: "NGC 3184"
@@ -108,6 +141,15 @@
   size_arcmin: [16.22, 7.24]
   types: ["galaxy"]
 
+- name: "Spiral Galaxy M58"
+  catalog_id: "M58"
+  aliases: ["NGC 4579"]
+  ra_deg: 189.431
+  dec_deg: 11.818
+  magnitude: 10.44
+  size_arcmin: [5.01, 3.84]
+  types: ["galaxy"]
+
 - name: "Spiral Galaxy M109"
   catalog_id: "M109"
   aliases: ["NGC 3992"]
@@ -115,6 +157,15 @@
   dec_deg: 53.375
   magnitude: 10.48
   size_arcmin: [8.07, 5.64]
+  types: ["galaxy"]
+
+- name: "Spiral Galaxy M59"
+  catalog_id: "M59"
+  aliases: ["NGC 4621"]
+  ra_deg: 190.509
+  dec_deg: 11.647
+  magnitude: 10.57
+  size_arcmin: [4.55, 3.21]
   types: ["galaxy"]
 
 - name: "Barred Spiral Galaxy M95"
@@ -132,6 +183,14 @@
   dec_deg: 33.579
   magnitude: 10.59
   size_arcmin: [10.72, 5.75]
+  types: ["galaxy"]
+
+- name: "Dwarf Elliptical Galaxy NGC 147"
+  catalog_id: "NGC 147"
+  ra_deg: 8.300
+  dec_deg: 48.509
+  magnitude: 10.6
+  size_arcmin: [9.4, 5.41]
   types: ["galaxy"]
 
 - name: "Surfboard Galaxy"
@@ -183,6 +242,14 @@
   magnitude: 10.85
   size_arcmin: [5.42, 3.78]
   types: ["galaxy", "galaxy_group"]
+
+- name: "Lenticular Galaxy NGC 3384"
+  catalog_id: "NGC 3384"
+  ra_deg: 162.070
+  dec_deg: 12.629
+  magnitude: 10.89
+  size_arcmin: [5.24, 2.37]
+  types: ["galaxy"]
 
 - name: "Hockey Stick Galaxy"
   catalog_id: "NGC 4656"

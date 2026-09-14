@@ -118,6 +118,14 @@
   size_arcmin: [25.0, 20.0]
   types: ["emission_nebula", "open_cluster"]
 
+- name: "Reflection Nebula IC 447"
+  catalog_id: "IC 447"
+  ra_deg: 97.751
+  dec_deg: 9.897
+  magnitude: 7.7
+  size_arcmin: [25.0, 20.0]
+  types: ["emission_nebula", "reflection_nebula"]
+
 - name: "Cave Nebula"
   catalog_id: "Caldwell 9"
   aliases: ["Sh2-155"]
@@ -143,6 +151,15 @@
   magnitude: 7.9
   size_arcmin: [29.0, 27.0]
   types: ["galaxy"]
+
+- name: "Globular Cluster M71"
+  catalog_id: "M71"
+  aliases: ["NGC 6838"]
+  ra_deg: 298.442
+  dec_deg: 18.778
+  magnitude: 7.91
+  size_arcmin: [7.0, 7.0]
+  types: ["globular_cluster"]
 
 - name: "Sculptor Galaxy"
   catalog_id: "NGC 253"

@@ -62,6 +62,15 @@
   size_arcmin: [9.8, 2.9]
   types: ["galaxy", "galaxy_group"]
 
+- name: "Elliptical Galaxy M49"
+  catalog_id: "M49"
+  aliases: ["NGC 4472"]
+  ra_deg: 187.445
+  dec_deg: 8.000
+  magnitude: 9.35
+  size_arcmin: [10.21, 8.38]
+  types: ["galaxy"]
+
 - name: "Barnard's Galaxy"
   catalog_id: "NGC 6822"
   ra_deg: 296.225
@@ -111,12 +120,44 @@
   size_arcmin: [10.0, 4.0]
   types: ["galaxy", "galaxy_group"]
 
+- name: "Reflection Nebula NGC 1999"
+  catalog_id: "NGC 1999"
+  ra_deg: 84.106
+  dec_deg: -6.716
+  magnitude: 9.5
+  size_arcmin: [2.0, 2.0]
+  types: ["reflection_nebula"]
+
+- name: "Open Cluster NGC 146"
+  catalog_id: "NGC 146"
+  ra_deg: 8.266
+  dec_deg: 63.309
+  magnitude: 9.59
+  size_arcmin: [6.0, 6.0]
+  types: ["open_cluster"]
+
 - name: "Fireworks Galaxy"
   catalog_id: "NGC 6946"
   ra_deg: 308.700
   dec_deg: 60.150
   magnitude: 9.6
   size_arcmin: [11.0, 10.0]
+  types: ["galaxy"]
+
+- name: "Robin's Egg Nebula"
+  catalog_id: "NGC 1360"
+  ra_deg: 53.311
+  dec_deg: -25.872
+  magnitude: 9.6
+  size_arcmin: [11.0, 8.0]
+  types: ["planetary_nebula"]
+
+- name: "Barred Spiral Galaxy NGC 247"
+  catalog_id: "NGC 247"
+  ra_deg: 11.786
+  dec_deg: -20.760
+  magnitude: 9.67
+  size_arcmin: [19.68, 5.55]
   types: ["galaxy"]
 
 - name: "Hidden Galaxy"
@@ -153,6 +194,15 @@
   size_arcmin: [0.9, 0.9]
   types: ["planetary_nebula"]
 
+- name: "Elliptical Galaxy M60"
+  catalog_id: "M60"
+  aliases: ["NGC 4649"]
+  ra_deg: 190.917
+  dec_deg: 11.553
+  magnitude: 9.79
+  size_arcmin: [6.78, 5.45]
+  types: ["galaxy"]
+
 - name: "Little Gem Nebula"
   catalog_id: "NGC 6818"
   ra_deg: 295.991
@@ -175,4 +225,12 @@
   dec_deg: 25.501
   magnitude: 9.92
   size_arcmin: [9.71, 7.10]
+  types: ["galaxy"]
+
+- name: "UFO Galaxy"
+  catalog_id: "NGC 2683"
+  ra_deg: 133.172
+  dec_deg: 33.422
+  magnitude: 9.99
+  size_arcmin: [9.48, 2.7]
   types: ["galaxy"]

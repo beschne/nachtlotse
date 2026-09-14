@@ -9,6 +9,14 @@
   size_arcmin: [50.0, 40.0]
   types: ["emission_nebula"]
 
+- name: "Interacting Spiral Galaxy NGC 2207"
+  catalog_id: "NGC 2207"
+  ra_deg: 94.092
+  dec_deg: -21.373
+  magnitude: 12.13
+  size_arcmin: [4.86, 2.71]
+  types: ["galaxy"]
+
 - name: "Helix Galaxy"
   catalog_id: "NGC 2685"
   ra_deg: 133.895
@@ -72,6 +80,38 @@
   dec_deg: 41.512
   magnitude: 12.61
   size_arcmin: [2.16, 1.45]
+  types: ["galaxy"]
+
+- name: "Spiral Galaxy NGC 7817"
+  catalog_id: "NGC 7817"
+  ra_deg: 0.995
+  dec_deg: 20.752
+  magnitude: 12.67
+  size_arcmin: [3.29, 0.73]
+  types: ["galaxy"]
+
+- name: "Reflection Nebula NGC 1985"
+  catalog_id: "NGC 1985"
+  ra_deg: 84.449
+  dec_deg: 31.989
+  magnitude: 12.7
+  size_arcmin: [0.68, 0.68]
+  types: ["reflection_nebula"]
+
+- name: "Edge-on Spiral Galaxy NGC 5529"
+  catalog_id: "NGC 5529"
+  ra_deg: 213.892
+  dec_deg: 36.227
+  magnitude: 12.76
+  size_arcmin: [5.79, 0.68]
+  types: ["galaxy"]
+
+- name: "Barred Spiral Galaxy NGC 1292"
+  catalog_id: "NGC 1292"
+  ra_deg: 49.562
+  dec_deg: -27.610
+  magnitude: 12.82
+  size_arcmin: [2.93, 1.2]
   types: ["galaxy"]
 
 - name: "Little Ghost Nebula"

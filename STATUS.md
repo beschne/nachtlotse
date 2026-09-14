@@ -57,7 +57,7 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/data/catalog/`
 
-- Deep-sky catalog: 150 curated objects (55 Messier, 95 non-Messier —
+- Deep-sky catalog: 185 curated objects (63 Messier, 122 non-Messier —
   well-known astrophotography targets cataloged under NGC, IC, or another
   designation entirely, e.g. North America Nebula, Veil Nebula, Helix
   Nebula, Antennae Galaxies, the Medusa Nebula as Abell 21, Wolf's Cave
@@ -86,6 +86,76 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   Scarlet Letter/Dolphin/Propeller/Gamma Cygni nebulae, the Snake/Pipe/
   Barnard's E/Dark Shark dark nebulae, and the Squid Nebula (OU4, no formal
   catalog designation at all) are left out on that basis.
+- A third expansion pass cross-referenced Charles Bracken's *The
+  Astrophotography Sky Atlas* Object Index (pp. 90–140, OCR'd via Claude
+  Haiku from page scans) — 1,683 real object rows once "(see X)"
+  cross-references are excluded, far broader than Kier's or the *Planner*'s
+  curated lists since it's a full plate-atlas index, not a "best of."
+  The atlas marks its own "highlight" objects in bold on the page, but the
+  OCR pass preserved that bold formatting for only 2 of the 1,683 rows (a
+  spot-check against unmistakable highlights like M31 and the Horsehead
+  Nebula confirmed the signal was lost, not that they weren't highlighted)
+  — so bold couldn't be used as a curation filter from the transcript, and
+  won't be unless a fresh OCR pass explicitly preserves it. In its absence,
+  candidates were filtered to rows with dec ≥ −30°, a Bracken editorial
+  comment (his prose is selective — a proxy for "worth a note", present on
+  only ~9% of rows), and object types outside the already-established
+  no-magnitude categories (dark nebulae, galaxy groups/clusters, Abell
+  planetary nebulae), narrowing 1,683 rows to 72 candidates, each then
+  checked against a local pull of OpenNGC's `NGC.csv` + `addendum.csv` (and
+  SIMBAD for the handful OpenNGC didn't cover). One filtering bug surfaced
+  along the way: matching only against existing `catalog_id`/`aliases`
+  missed that the Rosette Nebula and Little Gem Nebula were already in the
+  catalog under different designations than the atlas uses (NGC 2237/2244
+  vs. the atlas's NGC 2238; both already-present) — caught by also matching
+  against existing `name` fields before finalizing, otherwise both would
+  have been added as duplicate physical objects. 35 objects survived to be
+  added: 8 fill genuine gaps in Messier coverage (M39, M49, M58, M59, M60,
+  M61, M71, M73 — M73 is kept as `types: ["open_cluster"]` for lack of a
+  better bucket even though it's named "Asterism M73" here, since modern
+  data shows it's just four unrelated stars, not a real cluster), the rest
+  are non-Messier well-known targets the catalog was missing outright —
+  Mirach's Ghost (NGC 404), the UFO Galaxy (NGC 2683), the 37 Cluster (NGC
+  2169), the Robin's Egg Nebula (NGC 1360), both Andromeda dwarf-spheroidal
+  companions (NGC 147, NGC 185), and 21 further galaxies/nebulae/clusters
+  in the mag 7–13.2 range. A live OCR bug turned up mid-pass and is worth
+  naming: the atlas's own comment column had at least one row-shift, where
+  NGC 147's comment ("Faint dwarf spheroidal galaxy" — correct, NGC 147 is
+  one) had shifted up onto the NGC 146 row (an open cluster, for which that
+  comment makes no sense) — caught by cross-checking comment text against
+  OpenNGC's own object type before trusting it, not by the comment-presence
+  filter itself, which had already dropped NGC 147 as a false negative from
+  the shift; both ended up added on their own (correct) merits regardless.
+  Of the 37 initially-plausible candidates that made it to OpenNGC/SIMBAD
+  lookup, 2 turned out to already be in the catalog (above) and 35 were
+  new; the remaining candidates and the reasons they were skipped are in
+  [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) —
+  new cases beyond the already-documented star/nebula-magnitude-conflation
+  and Sharpless/Abell/Barnard patterns: NGC 6820's B-Mag=15 describes a
+  0.5′ knot inside the 30′ nebula Sh2-86 actually is, not the nebula itself
+  (same conflation shape as the star cases, just with a sub-feature instead
+  of a star); OpenNGC/NED flag both IC 4606 ("Antares Nebula") and IC 1316
+  as "nothing here, nominal position" — the designations themselves don't
+  reliably resolve to the pictured object; and NED's note on NGC 1555
+  ("Hind's Variable Nebula") cites Strauss et al. 1992 identifying the
+  position as a star, not a confirmed extant nebula, which is a step
+  further than an unreliable magnitude — the object's own physical reality
+  is in dispute; NGC 6874 has the same flavor of problem one level down —
+  OpenNGC types it a stellar association (no photometric magnitude at all)
+  rather than the open cluster Bracken lists it as, tangled up in the same
+  NGC 6874/6882/6885 duplicate-designation confusion NED flags as "not
+  certain" for its neighbors.
+- With all three books' skip lists combined (see
+  [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full, per-object list),
+  the accumulated exclusions are overwhelmingly structural
+  rather than a temporary research gap: diffuse emission nebulae, dark
+  nebulae, and Abell planetary nebulae essentially never get a published
+  per-object integrated magnitude at all — that's a fact about what gets
+  photometered, not a gap more searching closes. The exceptions worth an
+  actual future revisit are the small "designation itself is disputed"
+  set — IC 4606, IC 1316, NGC 1555, NGC 6874, and Simeis 147 — where a
+  future SIMBAD/NED correction, not a deeper search, is what could change
+  the answer.
 - Magnitudes prefer OpenNGC's B-Mag field over V-Mag (an early extraction
   pass that preferred V-Mag whenever present produced silently wrong
   values, e.g. the Sculptor Galaxy's V-Mag=11.11 vs. its correct

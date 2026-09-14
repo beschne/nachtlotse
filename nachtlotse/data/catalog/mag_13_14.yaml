@@ -10,6 +10,14 @@
   size_arcmin: [180.0, 60.0]
   types: ["reflection_nebula"]
 
+- name: "Lenticular Galaxy NGC 4169"
+  catalog_id: "NGC 4169"
+  ra_deg: 183.078
+  dec_deg: 29.179
+  magnitude: 13.15
+  size_arcmin: [1.64, 0.81]
+  types: ["galaxy"]
+
 - name: "Stephan's Quintet"
   catalog_id: "NGC 7320"
   ra_deg: 339.014
