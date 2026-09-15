@@ -1,10 +1,10 @@
 """Night planning — orchestrates engine, data, and weather into one result.
 
-Sits between the pure `engine` core and any UI. `cli.py` and `ui/app.py`
-both call `plan_night()` instead of duplicating this pipeline; neither the
-ranking logic nor the weather fetch should live twice just because there
-are two front ends. This module itself is not UI: no printing, no
-framework imports — that's what keeps it shared.
+Sits between the pure `engine` core and any UI. `cli.py` calls
+`plan_night()` instead of duplicating this pipeline — a future UI would
+do the same, rather than the ranking logic or weather fetch living
+twice. This module itself is not UI: no printing, no framework imports
+— that's what keeps it shared.
 """
 
 from __future__ import annotations

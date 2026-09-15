@@ -37,10 +37,12 @@ At a dark site, the core decision runs **offline** (weather is an optional layer
 - **Lint/format:** `ruff`
 - **Type checking:** `mypy` (recommended; not currently in `pyproject.toml` —
   add it before relying on it)
-- **UI:** `streamlit`. The UI layer is deliberately swappable (e.g. a
-  **FastAPI + web** front end, if a browser-based UI is ever wanted), but a
-  native **PySide6/Qt** app is not planned — see "Possible future
-  extensions (not scheduled)".
+- **UI:** the CLI is the only front end for now. A Streamlit MVP (M5) was
+  built and later retired — maintaining two front ends against the same
+  engine wasn't worth it while the CLI is still the active focus. The
+  longer-term goal is a **native macOS app, in Python** (Swift is
+  explicitly out of scope; exact toolkit — e.g. PySide6/Qt — not yet
+  decided) — see "Roadmap".
 
 ---
 
@@ -63,14 +65,15 @@ nachtlotse/
 │                          profiles are azimuth→min-altitude points inline
 │                          in site YAML, no separate .HRZ import
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
-├── ui/              # swappable — streamlit; a future web/ front end stays open
-├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs`
+├── charting.py      # shared polar-chart geometry, no charting-library dependency
+├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
+├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs` — the only front end
 └── tests/
 ```
 
-**Dependency direction:** `ui` → `engine`/`data`. The `engine` core imports
-*nothing* from `ui`, `data`, or `weather`. This is the most important rule in the
-project.
+**Dependency direction:** `cli.py` → `engine`/`data`. The `engine` core imports
+*nothing* from `cli.py`, `data`, or `weather`. This is the most important rule in
+the project — whatever front end comes next (see "Roadmap") plugs in the same way.
 
 ---
 
@@ -217,6 +220,14 @@ core grows before the UI is added.
 - Verdict light, hero target + backups, altitude curve over the night, rationale.
 - Site/rig selection.
 - **DoD:** a single glance is enough to decide, without opening the CLI.
+- *Later retired:* once the shortlist replaced the single hero target, the
+  UI needed its own copy of every new rendering (e.g. the polar chart got
+  built twice — once in Altair for Streamlit, once in matplotlib for the
+  CLI's `--chart`) just to keep two front ends in sync. With Nachtlotse
+  staying a personal/portfolio project and a native macOS app the real
+  long-term goal (Python, not Swift — see "Roadmap"), that double
+  maintenance wasn't worth it, so the Streamlit UI was removed and the CLI
+  is the only front end again.
 
 The MVP (M0–M5) is complete.
 
@@ -226,24 +237,7 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. New: a polar (alt/az) chart as the entry point into a shortlist —
-   azimuth around the ring, altitude (or zenith distance) as the radius,
-   with **all** shortlisted objects' tracks over the dark window plotted on
-   it together (one line per object, distinguishable by color/label), not
-   one chart per object. The horizon-blocked region is drawn as a
-   grayed-out wedge straight from `HorizonProfile.min_alt(az)` — no new
-   astronomy, just a second, more informative rendering of numbers the
-   engine already produces (today's `_altitude_chart` only plots one
-   shortlisted target's altitude over time as a line, with no azimuth/
-   horizon context). There is exactly one polar chart — the shortlist
-   overview. The per-object detail view (roadmap item 5) is not polar;
-   it's the existing altitude-over-time line chart, just scoped to
-   whichever object was clicked instead of always the top pick.
-2. Streamlit UI: swap the object-type `st.multiselect` (`app.py`'s
-   `selected_types`, currently empty = no filter) for one checkbox per
-   `TargetType`, all checked by default — filtering out a category becomes
-   an explicit uncheck instead of an opt-in multiselect.
-3. With all three book imports done (Kier, Bracken's *Astrophotography
+1. With all three book imports done (Kier, Bracken's *Astrophotography
    Planner*, and his *Astrophotography Sky Atlas*), the accumulated skip
    list is large enough to analyze rather than just carry forward: the
    large majority — diffuse emission/dark nebulae and Abell planetary
@@ -258,9 +252,9 @@ Ideas for after the MVP, in priority order:
    Variable Nebula"), NGC 6874, and Simeis 147. See
    [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
    reasoning behind each exclusion.
-4. Decide how to handle visually attractive objects that don't have a
+2. Decide how to handle visually attractive objects that don't have a
    clear, published integrated magnitude — the structural gap identified
-   in item #3's skip-list review, but a design question of its own rather
+   in item #1's skip-list review, but a design question of its own rather
    than more data-searching. Right now `Target.magnitude` defaults to 99.0,
    which sorts/filters an unknown-magnitude object as if arbitrarily faint,
    so a real showpiece can drop out of contention entirely just for lacking
@@ -268,36 +262,44 @@ Ideas for after the MVP, in priority order:
    curated subset with an editorial best-estimate magnitude, add a
    framing/size-only ranking path that never needs magnitude, or accept the
    exclusion as-is for objects with no reliable number at all.
-5. Streamlit UI: clicking a shortlisted target shows the same detail panel
-   (stats + altitude-over-time curve) as the top pick.
-6. Streamlit UI: a real RGB/visual image of a shortlisted target (e.g. from
-   an image survey), cached locally rather than refetched on every rerun.
-7. Current events: well-placed comets, supernova alerts; later also minor
+3. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-8. A "best rig for this target" chooser — `lotse plan` scores targets for
+4. A "best rig for this target" chooser — `lotse plan` scores targets for
    whichever rig you pass, it doesn't yet pick between rigs.
-9. Session log: record what's already been captured, and when — total
+5. Session log: record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-10. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
-    from the engine, never computed by the LLM.
+6. Structured `lotse plan --json` output, alongside the existing
+   human-readable table (not replacing it) — the interface a future native
+   app, or any other tooling, consumes instead of parsing text output.
+   Straightforward: `NightPlan`/`ShortlistEntry`/`RankedTarget` are already
+   plain dataclasses/NamedTuples, so this is a serializer in `cli.py`, not
+   an engine change.
+7. A native macOS app — the long-term UI goal now that Nachtlotse's GitHub
+   presence is explicitly a portfolio piece, not just a personal tool.
+   Python throughout (Swift is deliberately out of scope); exact toolkit
+   undecided (PySide6/Qt is the leading candidate) — to be designed once
+   the CLI's own feature set (items above) has matured further. Whatever
+   it consumes — `--json` output, or the engine/`planning` layer directly
+   if it's Python-native — the same `cli.py` → `engine`/`data` dependency
+   direction applies; see the Streamlit MVP's retirement (M5, above) for
+   why this project doesn't maintain two front ends at once.
+8. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+   from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)
-- A native **PySide6/Qt** UI. Only ever motivated by shipping a
-  distributable native app; Nachtlotse is a personal tool + portfolio
-  project rather than a product, so that motivation doesn't apply, and
-  `streamlit` stays the UI. Revisit only if that framing changes.
 - Export today's pick to a NINA-compatible format.
-- Streamlit UI: gray out the sidebar's "Apply" button once its values are
-  applied, re-enabling it only on the next edit. Not solvable with the
-  current `st.form` batching (widgets inside a form don't trigger a rerun
-  when touched, so there's no rerun to notice a value changed and re-enable
-  the button until you already clicked Apply again) — would need giving up
-  batched apply for per-change live reactivity instead. Parked for now.
 - Multilingual UI/CLI text (at minimum German and English). Everything
   user-facing is English-only for now; this stays parked until there's a
   reason to localize.
+- "Where's the best sky?": given one of your configured sites as a
+  reference point and an optional maximum distance, check the weather
+  forecast across the sites within that radius and surface whichever has
+  the clearest night — without a distance, check all configured sites.
+  `Site.lat_deg`/`lon_deg` already carry what's needed for the distance
+  filter; this is a cross-site weather comparison, not a new constraint
+  or scoring rule in the engine.
 
 ### Out of scope (deliberately excluded)
 - Mount control / session automation
@@ -331,12 +333,12 @@ computing.
 
 ```bash
 uv sync                       # environment/dependencies
-uv sync --extra ui             # + streamlit, needed for the UI below
+uv sync --extra charts         # + matplotlib, needed for `lotse plan --chart`
 uv run pytest                 # tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
 uv run lotse plan              # tonight's recommendation (from M0)
-uv run streamlit run nachtlotse/ui/app.py  # UI (from M5)
+uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 ```
 
 ---

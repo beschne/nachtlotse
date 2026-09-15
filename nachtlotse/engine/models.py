@@ -122,9 +122,8 @@ TargetType = Literal[
     "globular_cluster",
 ]
 
-# Human-readable labels for TargetType, shared by every UI so "emission
-# nebula" isn't spelled out differently in the CLI table vs. the Streamlit
-# page.
+# Human-readable labels for TargetType, shared by every front end so
+# "emission nebula" isn't spelled out differently in one place vs. another.
 TARGET_TYPE_LABELS: dict[TargetType, str] = {
     "emission_nebula": "Emission Nebula",
     "reflection_nebula": "Reflection Nebula",

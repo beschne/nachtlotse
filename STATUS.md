@@ -10,7 +10,8 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - ✅ **M2 — Horizon profiles & multiple sites**, done.
 - ✅ **M3 — Rig scoring, framing & field rotation**, done.
 - ✅ **M4 — Weather & verdict**, done.
-- ✅ **M5 — UI (Streamlit MVP)**, done.
+- ✅ **M5 — UI (Streamlit MVP)**, done, later retired — see CLAUDE.md's M5
+  note and "Roadmap" (native macOS app, Python-only).
 
 ## `nachtlotse/engine/models.py`
 
@@ -19,16 +20,16 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - `Target.size_arcmin` carries apparent angular size for framing.
 - `Target.types`: one or more of `TargetType` (emission/reflection/
   planetary/dark nebula, galaxy, galaxy group, open/globular cluster), with
-  a shared `TARGET_TYPE_LABELS` display-name map so the CLI table and the
-  Streamlit multiselect never spell a category differently. An object can
-  carry more than one (M42 is both an emission and a reflection nebula).
+  a shared `TARGET_TYPE_LABELS` display-name map so every front end spells
+  a category the same way. An object can carry more than one (M42 is both
+  an emission and a reflection nebula).
 
 ## `nachtlotse/engine/ephemeris.py`
 
 - Altitude/azimuth/transit/max-altitude of a target via `skyfield`.
 - `altitude_series`: altitude/azimuth at N evenly spaced points across a
   window, vectorized through skyfield rather than looped — the night-long
-  curve the UI plots, not a constraint check.
+  curve `charting.shortlist_tracks` plots, not a constraint check.
 
 ## `nachtlotse/engine/constraints.py`
 
@@ -205,12 +206,12 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   `verdict_for_target` call — into one `NightPlan`. There is no single hero
   target or single verdict for the night; two shortlisted targets at
   different altitudes can land on different GO/MARGINAL/SKIP levels.
-  Extracted out of `cli.py` when the Streamlit UI needed the exact same
-  pipeline, so neither front end duplicates it; `cli.py` and
-  `nachtlotse/ui/app.py` both just format a `NightPlan` for their own
-  medium.
+  Kept separate from `cli.py` (the current front end) so a future one
+  reuses the same pipeline instead of duplicating it — this is exactly
+  what happened with the now-retired Streamlit UI, which called the same
+  `plan_night()` cli.py does.
 - Not UI code itself — no printing, no framework imports — which is what
-  keeps it shared instead of becoming a third implementation.
+  keeps it shared instead of becoming a second implementation.
 
 ## `nachtlotse/data/store.py`
 
@@ -262,27 +263,34 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   target that barely fits the frame (e.g. a small planetary nebula on a
   wide-field rig) is now deprioritized the same way, instead of winning
   hero status purely for sitting high in the sky.
+- `--chart [PATH]`: writes the shortlist's alt/az polar overview as a PNG
+  (`chart_export.save_shortlist_chart`) — `nargs="?"` so the bare flag
+  writes to `chart_export.DEFAULT_CHART_FILENAME` in the current
+  directory (overwriting any existing file there) and a value picks a
+  different path. Lazily imports matplotlib (`uv sync --extra charts`) so
+  plain `lotse plan` never needs it; a missing install turns into an
+  actionable stderr message and exit code 2, not a traceback.
 
-## `nachtlotse/ui/app.py`
+## `nachtlotse/charting.py` and `nachtlotse/chart_export.py`
 
-- The M5 Streamlit MVP: same rule as the CLI — it calls `planning.plan_night`
-  for every number on the page and adds no astronomy of its own. An
-  optional extra (`uv sync --extra ui`), not a core dependency, in keeping
-  with "the UI is deliberately swappable" (CLAUDE.md).
-- Sidebar: site/rig selection (from the same local YAML as the CLI) plus a
-  date picker; `st.cache_data` keys the plan on (site, rig, date) so
-  switching between them doesn't re-run the ephemeris/weather pipeline for
-  a combination already seen this session.
-- Main page: a "Shortlist" section with one card per shortlisted target,
-  each its own colored verdict box (`st.success` / `st.warning` /
-  `st.error` map directly onto GO / MARGINAL / SKIP) with its own reasons
-  and stats — no single verdict or hero target for the night. An altitude
-  curve (`ephemeris.altitude_series`, with the 20° minimum-useful-altitude
-  line for reference) for the top-ranked shortlist pick, and a backups
-  table of the next several ranked targets beyond the shortlist.
-- Missing `sites_local.yaml`/`rigs_local.yaml` shows the same actionable
-  setup hint as the CLI (`store.require_sites`/`require_rigs`) rather than
-  a raw traceback.
+- `charting.py`: pure alt/az → (x, y) polar-projection geometry — zenith
+  at the center, the true horizon at the rim, azimuth clockwise from north
+  at the top. No charting-library dependency of its own (not even
+  matplotlib), so it's just as usable from a future UI as from the CLI.
+  Produces `Track` (a shortlisted target's path, split into segments so an
+  object that dips below the horizon mid-window doesn't get its two
+  above-horizon arcs joined through the ground), the horizon-blocked wedge
+  polygon straight from `HorizonProfile.min_alt(az)`, grid-ring points, and
+  a validated CVD-safe categorical palette (`SHORTLIST_PALETTE`, 5 slots —
+  matches `planning.SHORTLIST_SIZE`).
+- `chart_export.py`: the CLI's actual PNG renderer, built on matplotlib
+  (`Agg` backend, no display needed) — lazily imported behind
+  `_import_matplotlib()` so tests can force the "not installed" path
+  without needing to actually uninstall it.
+- This split exists because a Streamlit UI once rendered the same overview
+  in Altair — `charting.py` is what stayed reusable once that UI was
+  retired (see CLAUDE.md's M5 note); the projection math and horizon-wedge
+  geometry never had to be duplicated for `chart_export.py`.
 
 ## Tests
 
@@ -300,16 +308,16 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   clear window with a low target yields MARGINAL.
 - The weather client's own tests mock `urllib.request.urlopen` — like the
   rest of the suite, they never touch the real network.
-- The Streamlit UI is tested with streamlit's own `AppTest` harness — runs
-  the real script in a simulated session (no browser) and asserts on its
-  element tree, so a broken import or a bad `st.*` call fails the suite
-  the same way a broken `lotse plan` would. Skips itself (`pytest.
-  importorskip`) when the `ui` extra isn't installed, since streamlit
-  isn't a core dependency.
+- `charting.py`'s geometry is tested without any charting library at all
+  (known projection points, ring/wedge shapes, segment-splitting on a
+  monkeypatched altitude series) — `chart_export.py`'s PNG rendering skips
+  itself (`pytest.importorskip("matplotlib")`) when the `charts` extra
+  isn't installed, but its "matplotlib missing" error path is tested
+  unconditionally by forcing the `_import_matplotlib` seam to raise.
 
 ## Not yet implemented (by design)
 
 The MVP (M0–M5) is complete. Ideas kept for later — a "best rig for this
-target" chooser, current-events alerts, and more — are listed in
-[CLAUDE.md](./CLAUDE.md)'s "Possible future extensions", not scheduled to
-any milestone.
+target" chooser, current-events alerts, a native macOS app, and more —
+are listed in [CLAUDE.md](./CLAUDE.md)'s "Roadmap" and "Possible future
+extensions", not scheduled to any milestone.

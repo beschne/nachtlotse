@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from nachtlotse import cli, planning
+from nachtlotse import chart_export, cli, planning
 from nachtlotse.data import store
 
 
@@ -261,6 +261,61 @@ def test_plan_command_falls_back_gracefully_when_weather_is_unavailable(
     assert "Weather: unavailable" in output
     assert "Verdict:" in output  # still produced, from sky geometry alone
     assert "Best time (local)" in output  # the ranked table still printed
+
+
+def test_plan_command_chart_writes_the_default_png_and_overwrites_it(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path,
+) -> None:
+    pytest.importorskip("matplotlib")
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(["plan", "--chart"]) == 0
+    default_path = tmp_path / chart_export.DEFAULT_CHART_FILENAME
+    assert default_path.exists()
+    assert f"Chart written to {chart_export.DEFAULT_CHART_FILENAME}" in capsys.readouterr().out
+    first_mtime = default_path.stat().st_mtime_ns
+
+    assert cli.main(["plan", "--chart"]) == 0
+    assert default_path.stat().st_mtime_ns >= first_mtime  # overwritten, not errored on
+
+
+def test_plan_command_chart_accepts_a_custom_filename(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    tmp_path,
+) -> None:
+    pytest.importorskip("matplotlib")
+
+    custom_path = tmp_path / "mychart.png"
+    assert cli.main(["plan", "--chart", str(custom_path)]) == 0
+    assert custom_path.exists()
+    # The default filename must not also appear alongside it.
+    assert not (tmp_path / chart_export.DEFAULT_CHART_FILENAME).exists()
+
+
+def test_plan_command_reports_the_setup_hint_when_matplotlib_is_missing(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path,
+) -> None:
+    def _unavailable(plan, path):
+        raise chart_export.ChartExportUnavailable(
+            "PNG export needs matplotlib, which isn't installed — run "
+            "`uv sync --extra charts` and try again."
+        )
+
+    monkeypatch.setattr(chart_export, "save_shortlist_chart", _unavailable)
+
+    exit_code = cli.main(["plan", "--chart", str(tmp_path / "out.png")])
+
+    assert exit_code == 2
+    assert "uv sync --extra charts" in capsys.readouterr().err
 
 
 def test_unknown_command_is_rejected() -> None:

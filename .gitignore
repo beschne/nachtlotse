@@ -1,3 +1,6 @@
+# macOS Finder metadata
+.DS_Store
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -20,3 +23,7 @@ rigs_local.yaml
 
 # Local secrets — never committed.
 secrets/
+
+# `lotse plan --chart`'s default PNG output — generated on demand into
+# whatever directory you run it from, never a build artifact to commit.
+nachtlotse-shortlist.png

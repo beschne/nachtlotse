@@ -10,10 +10,11 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import get_args
 from zoneinfo import ZoneInfo
 
-from nachtlotse import planning
+from nachtlotse import chart_export, planning
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
@@ -42,6 +43,7 @@ def _cmd_plan(
     rig_name: str | None,
     date_str: str | None,
     types: list[str] | None,
+    chart_path: str | None,
 ) -> int:
     try:
         site_record = (
@@ -113,6 +115,14 @@ def _cmd_plan(
             f"{label:<32} {_format_types(target.types):<32} {pos.alt_deg:7.1f}° "
             f"{pos.az_deg:6.1f}° {fit:5.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
         )
+
+    if chart_path is not None:
+        try:
+            chart_export.save_shortlist_chart(plan, Path(chart_path))
+        except chart_export.ChartExportUnavailable as exc:
+            print(f"\n{exc}", file=sys.stderr)
+            return 2
+        print(f"\nChart written to {chart_path}")
     return 0
 
 
@@ -225,6 +235,20 @@ def main(argv: list[str] | None = None) -> int:
             "one of them). Default: no filter."
         ),
     )
+    plan_parser.add_argument(
+        "--chart",
+        dest="chart_path",
+        nargs="?",
+        const=chart_export.DEFAULT_CHART_FILENAME,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Write the shortlist's alt/az polar chart as a PNG to PATH "
+            f"(default: {chart_export.DEFAULT_CHART_FILENAME} in the "
+            "current directory), overwriting any existing file at that "
+            "path. Needs `uv sync --extra charts`."
+        ),
+    )
 
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
@@ -232,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "plan":
-        return _cmd_plan(args.site, args.rig, args.date, args.types)
+        return _cmd_plan(args.site, args.rig, args.date, args.types, args.chart_path)
     if args.command == "sites":
         return _cmd_sites()
     if args.command == "rigs":

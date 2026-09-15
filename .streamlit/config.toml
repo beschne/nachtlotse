@@ -1,4 +1,0 @@
-# Committed so anyone cloning the repo skips Streamlit's first-run email
-# prompt and doesn't send usage telemetry. See nachtlotse/ui/app.py.
-[browser]
-gatherUsageStats = false

@@ -24,14 +24,15 @@ is fully backed by `pytest` against known astronomical values.
 ## Status
 
 **The MVP is complete** (M0–M5): engine, multi-site/multi-rig support,
-weather, the GO/MARGINAL/SKIP verdict, and the Streamlit UI.
+weather, and the GO/MARGINAL/SKIP verdict.
 
 - ✅ **M0 — Scaffolding & engine core**, done.
 - ✅ **M1 — Moon & dark window**, done.
 - ✅ **M2 — Horizon profiles & multiple sites**, done.
 - ✅ **M3 — Rig scoring, framing & field rotation**, done.
 - ✅ **M4 — Weather & verdict**, done.
-- ✅ **M5 — UI (Streamlit MVP)**, done.
+- ✅ **M5 — UI (Streamlit MVP)**, done, later retired — the CLI is the only
+  front end for now, ahead of a native macOS app; see [CLAUDE.md](./CLAUDE.md).
 
 Ideas kept for later (not scheduled) are listed in [CLAUDE.md](./CLAUDE.md).
 
@@ -69,9 +70,12 @@ uv run lotse plan --site Feldberg --date 2026-11-14
 # dark_nebula, galaxy, galaxy_group, open_cluster, globular_cluster.
 uv run lotse plan --type galaxy --type globular_cluster
 
-# The Streamlit UI (M5) needs its own extra — it's not a core dependency:
-uv sync --extra ui
-uv run streamlit run nachtlotse/ui/app.py
+# --chart writes the shortlist's alt/az polar overview as a PNG (default
+# filename: nachtlotse-shortlist.png in the current directory, overwriting
+# any existing file there) — or pick your own path. Needs its own extra:
+uv sync --extra charts
+uv run lotse plan --chart
+uv run lotse plan --chart my-plan.png
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment
@@ -92,11 +96,14 @@ nachtlotse/
 ├── engine/     # pure, deterministic, testable — no I/O, no network
 ├── data/       # persistence — sites, rigs, horizons, session log
 ├── weather/    # optional layer (from M4) — Open-Meteo
-└── ui/         # swappable — Streamlit MVP, later Qt or web
+├── charting.py # shared chart geometry, library-agnostic
+├── chart_export.py  # CLI's --chart PNG export (matplotlib)
+└── cli.py      # the only front end for now — a native macOS app is
+                #   planned later, kept Python-only (see CLAUDE.md)
 ```
 
-Dependency direction: `ui` → `engine`/`data`. The `engine` core imports nothing
-from `ui`, `data`, or `weather`.
+Dependency direction: `cli.py` → `engine`/`data`. The `engine` core imports
+nothing from `cli.py`, `data`, or `weather`.
 
 ## Tech stack
 
