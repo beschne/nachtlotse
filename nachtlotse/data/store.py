@@ -17,10 +17,18 @@ visible-azimuth arc (no point-by-point survey yet) — [start_deg, end_deg]
 altitude for the open arc as a third element (default 0°); everything
 outside that arc becomes a 90° wall via `_sector_to_points`. Neither key
 means an unrestricted 360° view.
+
+Sky darkness: `bortle` stays a free-text field for display (e.g. "3-4
+(moderately light-polluted)") but is also parsed into `Site.bortle_class`
+(see `_parse_bortle_class`). `zenith_sky_brightness_mag_arcsec2` is an
+optional real SQM measurement (zenith, new moon) that overrides the
+Bortle-derived estimate for that site — see `engine.framing.
+sky_brightness_mag_arcsec2`. Both are optional and independent.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -69,6 +77,21 @@ def _sector_to_points(
     ]
 
 
+def _parse_bortle_class(bortle_text: str) -> float | None:
+    """Extract a numeric Bortle class from the free-text `bortle` field
+    (e.g. "4", "3-4", "4–5 (light-polluted; forest cover helps to the
+    south)") — one number as-is, two averaged to a midpoint ("3-4" ->
+    3.5), regardless of which dash separates them; no number found (or no
+    `bortle` documented at all) -> None, unconstrained rather than guessed.
+    """
+    numbers = [float(n) for n in re.findall(r"\d+", bortle_text)]
+    if not numbers:
+        return None
+    if len(numbers) == 1:
+        return numbers[0]
+    return (numbers[0] + numbers[1]) / 2.0
+
+
 def _site_record_from_dict(raw: dict[str, Any]) -> SiteRecord:
     if "horizon_points" in raw:
         points = [(float(az), float(alt)) for az, alt in raw["horizon_points"]]
@@ -79,6 +102,9 @@ def _site_record_from_dict(raw: dict[str, Any]) -> SiteRecord:
     else:
         points = []
 
+    zenith_sky_brightness = raw.get("zenith_sky_brightness_mag_arcsec2")
+    bortle_text = raw.get("bortle", "")
+
     return SiteRecord(
         site=Site(
             name=raw["name"],
@@ -87,9 +113,15 @@ def _site_record_from_dict(raw: dict[str, Any]) -> SiteRecord:
             elevation_m=float(raw["elevation_m"]),
             tz=raw.get("tz", "Europe/Berlin"),
             horizon=HorizonProfile(points=points),
+            bortle_class=_parse_bortle_class(bortle_text),
+            zenith_sky_brightness_mag_arcsec2=(
+                float(zenith_sky_brightness)
+                if zenith_sky_brightness is not None
+                else None
+            ),
         ),
         region=raw.get("region", ""),
-        bortle=raw.get("bortle", ""),
+        bortle=bortle_text,
         address=raw.get("address", ""),
         aliases=tuple(raw.get("aliases", [])),
     )

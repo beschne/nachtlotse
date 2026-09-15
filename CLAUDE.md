@@ -115,7 +115,7 @@ TargetType = Literal[
     "emission_nebula", "reflection_nebula", "planetary_nebula", "dark_nebula",
     "galaxy", "galaxy_group", "open_cluster", "globular_cluster",
 ]
-TARGET_TYPE_LABELS: dict[TargetType, str]  # shared CLI/UI display labels
+TARGET_TYPE_LABELS: dict[TargetType, str]  # shared display labels
 
 @dataclass(frozen=True)
 class Target:
@@ -125,7 +125,7 @@ class Target:
     catalog_id: str = ""
     aliases: tuple[str, ...] = ()          # other designations, e.g. M31 -> "NGC 224"
     size_arcmin: tuple[float, float] = (0.0, 0.0)  # (0.0, 0.0) = unknown
-    magnitude: float = 99.0                # 99.0 = unknown, sorts as faintest
+    magnitude: float | None = None         # None = no reliably sourced value
     types: tuple[TargetType, ...] = ()
 
 @dataclass(frozen=True)
@@ -160,6 +160,18 @@ presets, **alt-az mount** ⇒ field rotation is real and gets scored.
   only at the UI boundary.
 - Every new constraint / scoring rule ships **with a test** against a known value.
 - Small, thematic commits; one milestone = one branch.
+- **Catalog data sourcing:** when looking up SIMBAD/NED for catalog entries,
+  query sequentially, not in parallel — parallel requests reliably time out.
+  Be skeptical of an AI-summarized page when it contradicts prior research
+  or general astronomical knowledge (a SIMBAD fetch once claimed "IC 1316 =
+  NGC 6901, a barred spiral galaxy", fabricated by the summarizing step —
+  NED, checked directly, still showed "nothing here, nominal position" as
+  it always had); cross-check surprising findings against a second source
+  before trusting them. When two sourced values for the same object
+  disagree by **less than 1.0 mag**, that's not a blocker — note both
+  values as a comment next to the entry, with their sources, and use the
+  better-sourced one as the actual field value. A gap of 1.0 mag or more is
+  a real conflict to resolve or flag explicitly, not just document.
 
 ---
 
@@ -237,31 +249,61 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. With all three book imports done (Kier, Bracken's *Astrophotography
-   Planner*, and his *Astrophotography Sky Atlas*), the accumulated skip
-   list is large enough to analyze rather than just carry forward: the
-   large majority — diffuse emission/dark nebulae and Abell planetary
-   nebulae without a published integrated magnitude, and cases where the
-   only found magnitude belongs to an illuminating star or a sub-feature
-   rather than the pictured object — is a structural gap in what ever gets
-   photometered at the object level, not a temporary data-search gap, and
-   isn't expected to resolve with more searching. Worth revisiting only
-   the handful of cases where the *designation itself*, not just its
-   magnitude, is in question and a future SIMBAD/NED correction could
-   settle it: IC 4606 ("Antares Nebula"), IC 1316, NGC 1555 ("Hind's
-   Variable Nebula"), NGC 6874, and Simeis 147. See
-   [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
-   reasoning behind each exclusion.
-2. Decide how to handle visually attractive objects that don't have a
-   clear, published integrated magnitude — the structural gap identified
-   in item #1's skip-list review, but a design question of its own rather
-   than more data-searching. Right now `Target.magnitude` defaults to 99.0,
-   which sorts/filters an unknown-magnitude object as if arbitrarily faint,
-   so a real showpiece can drop out of contention entirely just for lacking
-   a number, not for being unsuitable. Not decided yet: whether to admit a
-   curated subset with an editorial best-estimate magnitude, add a
-   framing/size-only ranking path that never needs magnitude, or accept the
-   exclusion as-is for objects with no reliable number at all.
+1. Decided, in progress: no fake magnitude for visually attractive objects
+   that don't have a clear, published integrated magnitude — the
+   structural gap identified while reviewing the accumulated skip list
+   after all three book imports (Kier, Bracken's *Astrophotography
+   Planner*, and his *Astrophotography Sky Atlas*): the large majority —
+   diffuse emission/dark nebulae and Abell planetary nebulae without a
+   published integrated magnitude, and cases where the only found
+   magnitude belongs to an illuminating star or a sub-feature rather than
+   the pictured object — is structural, not a temporary data-search gap
+   (see [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
+   reasoning). An editorial best-estimate magnitude was rejected: it's
+   exactly the "fabricated fact" the Guiding Principle rules out, and
+   later indistinguishable from a sourced value. Instead: `Target.magnitude`
+   is `float | None` — `None` means no reliably sourced integrated
+   magnitude exists at all (not "arbitrarily faint"), the same convention
+   `size_arcmin == (0.0, 0.0)` already uses for unknown size. Mechanism
+   landed: a new `mag_unknown.yaml` bin (empty for now — see its header)
+   holds these; admission still requires a real, citable `catalog_id` and
+   a real `size_arcmin`, since that's what framing actually scores on.
+   The five designation-doubtful cases (the only ones worth revisiting
+   without more searching resolving anything) were rechecked against
+   SIMBAD/NED on 2026-09-15: IC 4606, NGC 1555, and Simeis 147 (as
+   Sh2-240) resolved to real, catalogable objects and are now
+   `mag_unknown.yaml` candidates pending a sourced size; IC 1316 and NGC
+   6874 remain excluded, still no real position/data at all. Remaining,
+   in order: (a) source and add real OpenNGC/SIMBAD-sourced coordinates
+   and sizes for these and the ~50 other already-identified candidates
+   from SKIPPED-OBJECTS.md — not fabricated, the same rigor as every
+   other catalog entry; (b) `rank_targets` doesn't use magnitude at all
+   today, and integrated magnitude is the wrong signal for extended
+   objects anyway — M57 (mag 8.8, 1.4′×1.0′) packs far more light per
+   pixel than NGC 7000 (mag 4.0, 120′×100′) despite "losing" on magnitude
+   by 4.8 mag, because the light is smeared over ~6000× the area. The
+   real signal is surface brightness, derivable from magnitude + size
+   (μ = m + 2.5·log₁₀(π·(a/2)·(b/2)·3600), arcsec) — a `reach` factor in
+   `target_priority_score`, multiplicative like `fit`, comparing it
+   against the site's sky brightness (see item #2 below) plus a tunable
+   stacking margin (a real one: many showpiece nebulae compute fainter
+   than the sky background yet are routinely imaged — the margin is a
+   frankly subjective constant, tuned like `DEFAULT_INTEGRATION_GAIN_MAG`,
+   not physics). Unknown magnitude *or* unknown size means `reach = 1.0`
+   (unconstrained) — downgrades a target, never excludes one outright,
+   since the estimate carries real (~1-2 mag) uncertainty.
+2. `Site.bortle_class: float | None` (parsed from the existing free-text
+   `bortle` field on `SiteRecord`, e.g. `"3–4"` → `3.5`) plus
+   `Site.zenith_sky_brightness_mag_arcsec2: float | None` for a real
+   measured new-moon zenith SQM reading, when you have one — it overrides
+   the Bortle-derived estimate for that site, no code change needed to
+   start using it. Both `None` (no Bortle documented, no measurement) means
+   sky brightness is unconstrained for that site, same convention as
+   everywhere else. Prerequisite for item #1(b)'s `reach` factor; doesn't
+   by itself correct for altitude or moon phase — the measurement is
+   zenith-at-new-moon by definition, and today's target might be at 35°
+   under a 60% moon. That correction is a separate future refinement, not
+   bundled in here.
 3. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
 4. A "best rig for this target" chooser — `lotse plan` scores targets for

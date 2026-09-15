@@ -18,6 +18,14 @@ sky darkness — see `photographic_limiting_magnitude`. Meant to eventually
 bound which catalog magnitude bins (see `data/catalog/`) are worth loading
 for a given site+rig, instead of curating "interesting" NGC/IC objects by
 hand.
+
+Sky brightness: `sky_brightness_mag_arcsec2` resolves a site's zenith,
+new-moon sky darkness — a real SQM measurement if the site has one,
+otherwise a Bortle-class estimate, otherwise `None` (unconstrained). Feeds
+the not-yet-built surface-brightness `reach` factor in `target_priority_score`
+(see CLAUDE.md's Roadmap): extended objects rank on light per pixel, not
+integrated magnitude, which favors a small bright planetary nebula over a
+large faint one at the same total brightness.
 """
 
 from __future__ import annotations
@@ -154,17 +162,60 @@ _NELM_FORMULA_REFERENCE = 6.9
 DEFAULT_INTEGRATION_GAIN_MAG = 7.0
 
 
-def _naked_eye_limiting_magnitude(bortle_class: float) -> float:
-    """NELM at a (possibly fractional) Bortle class, via linear
-    interpolation between the standard scale's integer classes."""
+def _interpolate_by_bortle_class(table: dict[float, float], bortle_class: float) -> float:
+    """Linear interpolation over a Bortle-class-keyed table (a site
+    documented as "4-5" -> 4.5), clamped to the standard scale's 1-9
+    range."""
     lower = min(max(math.floor(bortle_class), 1), 9)
     upper = min(max(math.ceil(bortle_class), 1), 9)
     if lower == upper:
-        return _NELM_BY_BORTLE[float(lower)]
+        return table[float(lower)]
     fraction = bortle_class - lower
-    return _NELM_BY_BORTLE[float(lower)] + fraction * (
-        _NELM_BY_BORTLE[float(upper)] - _NELM_BY_BORTLE[float(lower)]
-    )
+    return table[float(lower)] + fraction * (table[float(upper)] - table[float(lower)])
+
+
+def _naked_eye_limiting_magnitude(bortle_class: float) -> float:
+    """NELM at a (possibly fractional) Bortle class, via linear
+    interpolation between the standard scale's integer classes."""
+    return _interpolate_by_bortle_class(_NELM_BY_BORTLE, bortle_class)
+
+
+# Zenith sky brightness (mag/arcsec², SQM-equivalent) by Bortle dark-sky
+# class — commonly cited approximate midpoints for John Bortle's 2001
+# scale, the SQM-reading counterpart to _NELM_BY_BORTLE above. A starting
+# heuristic, not a calibrated instrument reading — see
+# sky_brightness_mag_arcsec2(), which prefers a real measurement when a
+# site has one.
+_SKY_BRIGHTNESS_BY_BORTLE: dict[float, float] = {
+    1.0: 21.85,
+    2.0: 21.7,
+    3.0: 21.5,
+    4.0: 21.0,
+    5.0: 19.75,
+    6.0: 18.5,
+    7.0: 18.0,
+    8.0: 17.5,
+    9.0: 17.0,
+}
+
+
+def sky_brightness_mag_arcsec2(site: Site) -> float | None:
+    """Zenith, new-moon sky brightness for `site`, mag/arcsec² (SQM scale).
+
+    A real measurement (`site.zenith_sky_brightness_mag_arcsec2`) always
+    wins; otherwise estimated from `site.bortle_class`; `None` if neither
+    is documented — unconstrained, not a worst-case guess, the same
+    convention as `Target.magnitude`/`size_arcmin`. Doesn't correct for
+    the target's actual altitude or tonight's moon phase — a real
+    measurement is zenith-at-new-moon by definition, and the estimate
+    inherits the same reference point; that correction is a separate,
+    not-yet-built refinement (see CLAUDE.md's Roadmap).
+    """
+    if site.zenith_sky_brightness_mag_arcsec2 is not None:
+        return site.zenith_sky_brightness_mag_arcsec2
+    if site.bortle_class is not None:
+        return _interpolate_by_bortle_class(_SKY_BRIGHTNESS_BY_BORTLE, site.bortle_class)
+    return None
 
 
 def photographic_limiting_magnitude(

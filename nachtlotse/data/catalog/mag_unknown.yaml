@@ -1,0 +1,16 @@
+# Objects with no reliably sourced integrated magnitude at all — see
+# SKIPPED-OBJECTS.md for the researched, per-object reasoning (mostly
+# diffuse emission/dark nebulae and Abell planetary nebulae, which
+# essentially never get one published). See catalog/__init__.py for the
+# schema; unlike every other mag_*.yaml file, entries here omit
+# `magnitude` entirely rather than bounding it to a numeric range —
+# `size_arcmin` is mandatory instead, since that's what framing actually
+# needs and magnitude can't provide here.
+#
+# Empty for now: this file establishes the mechanism (data model +
+# loader + catalog policy tests all accept `magnitude: None`), pending a
+# follow-up pass that sources real, citable coordinates and sizes for
+# the roughly 50 candidates already identified in SKIPPED-OBJECTS.md —
+# not fabricated from memory, the same OpenNGC/SIMBAD rigor as every
+# other entry in this catalog.
+[]

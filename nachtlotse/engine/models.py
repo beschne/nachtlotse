@@ -58,6 +58,15 @@ class Site:
     elevation_m: float
     tz: str  # IANA timezone, e.g. "Europe/Berlin"
     horizon: HorizonProfile
+    # Sky-darkness inputs for engine.framing's surface-brightness reach
+    # factor. Both optional and independent of each other; None means
+    # "not documented", not a worst-case guess — same convention as
+    # Target.magnitude/size_arcmin. When both are given,
+    # framing.sky_brightness_mag_arcsec2 prefers the real measurement over
+    # the Bortle-derived estimate.
+    bortle_class: float | None = None  # e.g. 4.5, parsed from "4-5"/"4–5"
+    # Measured zenith sky brightness at new moon (SQM reading).
+    zenith_sky_brightness_mag_arcsec2: float | None = None
 
 
 @dataclass(frozen=True)
@@ -152,9 +161,13 @@ class Target:
     # framing scoring treats that as unconstrained, not "infinitely small".
     size_arcmin: tuple[float, float] = (0.0, 0.0)
     # Apparent visual magnitude — for variable objects, the brighter
-    # (numerically lower) of its known extremes. 99.0 means "unknown" and
-    # sorts/filters as if arbitrarily faint, never as suspiciously bright.
-    magnitude: float = 99.0
+    # (numerically lower) of its known extremes. None means no reliably
+    # sourced integrated magnitude exists for this object at all (true for
+    # most diffuse emission/dark nebulae and Abell planetary nebulae — see
+    # SKIPPED-OBJECTS.md) — treated as unconstrained by anything that
+    # filters/ranks on brightness, the same convention as size_arcmin ==
+    # (0.0, 0.0) for unknown size. Never a stand-in for "very faint".
+    magnitude: float | None = None
     # What kind of object this is, for filtering/search — see TargetType.
     # Empty only for a target not yet classified; every catalog entry is
     # expected to carry at least one (enforced by a catalog test).

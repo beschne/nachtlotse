@@ -44,7 +44,13 @@ Individually verified:
 - Sh2-157 (Lobster Claw Nebula)
 - Sh2-276 (Barnard's Loop)
 - CTB 1 / Abell 85 (Garlic Nebula)
-- Simeis 147 (not resolvable in SIMBAD)
+- Simeis 147 — not resolvable in SIMBAD under that name, but **resolves
+  cleanly under its Sharpless alias, Sh 2-240** (2026-09-15 SIMBAD
+  recheck): real coordinates (05 41 06.0 +28 05 00), classified HII
+  Region, no magnitude/flux listed. No longer a designation question —
+  a `mag_unknown.yaml` candidate (catalog_id "Sh2-240", alias "Simeis
+  147") once a sourced size is found; see the "designation is doubtful"
+  section below for the other 2026-09-15 recheck findings.
 
 Skipped by the same confirmed pattern, without a fresh individual lookup:
 - Sh2-206
@@ -81,19 +87,49 @@ Skipped by the same confirmed pattern, without a fresh individual lookup:
 ## The catalog designation itself is doubtful (Sky Atlas pass)
 Beyond a missing magnitude: OpenNGC/NED doubt that the designation reliably
 points to the intended object at all.
-- IC 4606 ("Antares Nebula") — OpenNGC/NED note: "Nothing here; nominal
-  position. IC 4606 may be the globular NGC 6144." No solid magnitude for
-  the large reflection-nebula complex around Antares.
-- IC 1316 — OpenNGC/NED note: "Nothing here; nominal position."
-- NGC 1555 (Hind's Variable Nebula) — NED cites Strauss et al. (1992)
-  identifying the position as a star, not a confirmed extant nebula; here
-  it's not just the magnitude but the object's physical existence at this
-  position that's in question.
-- NGC 6874 — OpenNGC lists the type as "*Ass" (stellar association, no
-  photometric magnitude) rather than the open cluster Bracken lists it as;
-  on top of that, an unresolved identification tangle among NGC
-  6874/6882/6885 (NED: "Identification as NGC 6682 is not certain" on the
-  related entries).
+
+**Rechecked 2026-09-15 against current SIMBAD/NED** (roadmap item #1 — the
+only reason this small set was worth a future revisit at all): 3 of the 4
+below have since resolved to a real, catalogable object and moved out of
+this section — the designation dispute is settled, they're just still
+missing a magnitude (candidates for `mag_unknown.yaml` once a sourced size
+is found, alongside Simeis 147 above). The other one (NGC 6874) is
+unchanged. See `catalog_sourcing_policy` in CLAUDE.md's Coding conventions
+for the sequential-query/conflicting-value rules this recheck followed.
+
+- **NGC 6874** — still unresolved. Current SIMBAD: "Object of Unknown
+  Nature", no coordinates at all. Same tangle as before (NED:
+  "Identification as NGC 6682 is not certain" on the related NGC
+  6874/6882/6885 entries). Remains excluded.
+- **IC 1316** — still unresolved. Current NED: still "Nothing here;
+  nominal position" (RA 20h22m26s, Dec +06°30'06", 150″ uncertainty
+  ellipse), unchanged from the original finding. (A SIMBAD-page summary
+  during this recheck briefly claimed "IC 1316 = NGC 6901, a barred
+  spiral galaxy" — cross-checked directly against NED and rejected; that
+  claim was fabricated by the page-summarization step, not something NED
+  actually says. Noted here, and in CLAUDE.md's sourcing policy, as a
+  reminder to verify surprising findings against a second source.)
+  Remains excluded.
+
+Resolved, moved to "no magnitude" status:
+- **IC 4606 ("Antares Nebula")** — current SIMBAD classifies it as a real
+  HII Region (aliases LBN 1107, LBN 351.76+15.00), 7 references spanning
+  1850–2026, coordinates 16h29m00s −26°36'00" (quality flag E, ≥10″
+  uncertain — still well inside this project's ~1′ precision need). No
+  mention of "nothing here" or NGC 6144 confusion in the current record.
+  Still no magnitude/flux listed.
+- **NGC 1555 (Hind's Variable Nebula)** — current SIMBAD treats it as a
+  real object: 9 identifiers (incl. HH 155, Sh2-238, Ced 32b), classified
+  Herbig-Haro Object, cross-referenced to the T Tauri variable star it's
+  illuminated by. This matches its own name and well-documented history —
+  a nebula that genuinely brightens and fades with its illuminating star,
+  observed and lost repeatedly since 1852 (see also the neighboring
+  Struve's Lost Nebula, NGC 1554, same phenomenon). The original "Strauss
+  et al. (1992): just a star" note could not be independently
+  re-confirmed this pass (NED timed out repeatedly on this object), but
+  current SIMBAD data and multiple independent sources describe a real,
+  historically documented variable nebula, not a misidentified star. No
+  magnitude/flux listed in SIMBAD.
 
 ## Closed out from the Kier import (no longer a roadmap item)
 - NGC 2170 (Angel Nebula) — no solid magnitude in OpenNGC, SIMBAD, or
@@ -105,8 +141,14 @@ points to the intended object at all.
 ## Conclusion after three book imports
 Most of this list is a structural outcome (diffuse emission/dark nebulae and
 Abell planetary nebulae essentially never get a published object magnitude),
-not a temporary research gap — more searching won't change it. Only the
-cases where the catalog designation itself is doubtful (section above) are
-worth an actual revisit: IC 4606, IC 1316, NGC 1555, NGC 6874, Simeis 147 —
-there, a future SIMBAD/NED correction could change the answer, not further
-lookups.
+not a temporary research gap — more searching won't change it.
+
+The five designation-doubtful cases were rechecked on 2026-09-15 (roadmap
+item #1). Three resolved — IC 4606, NGC 1555, and Simeis 147 (as Sh2-240)
+are now confirmed real, catalogable objects; the "designation doubtful"
+question is settled, all that's left is a missing magnitude, which
+`Target.magnitude: float | None` + `mag_unknown.yaml` (roadmap item #2) can
+now hold without inventing a number — they're candidates for that file once
+someone sources a real size for each. Two remain excluded on their original
+grounds: IC 1316 and NGC 6874 still have no real position/data at all in
+NED/SIMBAD. No further lookups are expected to change either of those two.

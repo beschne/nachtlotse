@@ -28,6 +28,10 @@ _BIN_BOUNDS: dict[str, tuple[float | None, float]] = {
     "mag_15_16.yaml": (15.0, 16.0),
 }
 
+# The one bin file that isn't a numeric magnitude range: objects with no
+# reliably sourced integrated magnitude at all (see SKIPPED-OBJECTS.md).
+_UNKNOWN_MAGNITUDE_BIN_FILENAME = "mag_unknown.yaml"
+
 # Visibility/brightness policy for what belongs in this catalog at all:
 # - Reach at least 20 deg altitude (this project's usual observability
 #   floor, see engine.constraints) for an observer as far south as 40N —
@@ -60,10 +64,14 @@ def test_catalog_targets_are_visible_from_40n_and_within_the_rig_ceiling() -> No
             f"{target.catalog_id} at dec {target.dec_deg} never gets high enough "
             "from 40N+"
         )
-        assert target.magnitude <= _MAX_CATALOG_MAGNITUDE, (
-            f"{target.catalog_id} (mag {target.magnitude}) is fainter than any "
-            "rig in scope can reach"
-        )
+        # A target with no known magnitude (mag_unknown.yaml) can't be
+        # checked against the ceiling — that's exactly what's unknown
+        # about it — so it's exempt rather than assumed too faint.
+        if target.magnitude is not None:
+            assert target.magnitude <= _MAX_CATALOG_MAGNITUDE, (
+                f"{target.catalog_id} (mag {target.magnitude}) is fainter than any "
+                "rig in scope can reach"
+            )
 
 
 def test_no_alias_collides_with_another_targets_catalog_id_or_alias() -> None:
@@ -85,9 +93,11 @@ def test_catalog_coordinates_are_within_valid_ranges() -> None:
         assert target.name
 
 
-def test_catalog_magnitudes_and_sizes_are_populated() -> None:
+def test_catalog_sizes_are_always_populated() -> None:
+    """Unlike magnitude, size is never optional: it's what framing scores
+    on, and it's the admission requirement for mag_unknown.yaml entries
+    that have no magnitude to be checked against at all."""
     for target in CATALOG:
-        assert target.magnitude < 99.0, f"{target.catalog_id} has no real magnitude"
         assert target.size_arcmin != (0.0, 0.0), (
             f"{target.catalog_id} has no known size"
         )
@@ -103,7 +113,36 @@ def test_catalog_targets_carry_at_least_one_valid_type() -> None:
 
 def test_all_bin_files_on_disk_are_covered_by_the_bounds_table() -> None:
     on_disk = {path.name for path in catalog._CATALOG_DIR.glob("mag_*.yaml")}
-    assert on_disk == set(_BIN_BOUNDS)
+    assert on_disk == set(_BIN_BOUNDS) | {_UNKNOWN_MAGNITUDE_BIN_FILENAME}
+
+
+def test_only_the_unknown_bin_file_omits_magnitude() -> None:
+    """Bounds-checked bin files (mag_lt_6.yaml, etc.) always carry a real
+    magnitude; mag_unknown.yaml is the one deliberate exception — this
+    keeps "no magnitude" from silently sneaking into the wrong file."""
+    for filename in _BIN_BOUNDS:
+        raw_targets = yaml.safe_load(
+            (catalog._CATALOG_DIR / filename).read_text(encoding="utf-8")
+        )
+        for raw in raw_targets:
+            assert raw.get("magnitude") is not None, (
+                f"{raw['catalog_id']} in {filename} has no magnitude — belongs in "
+                f"{_UNKNOWN_MAGNITUDE_BIN_FILENAME} instead"
+            )
+
+    unknown_raw_targets = (
+        yaml.safe_load(
+            (catalog._CATALOG_DIR / _UNKNOWN_MAGNITUDE_BIN_FILENAME).read_text(
+                encoding="utf-8"
+            )
+        )
+        or []
+    )
+    for raw in unknown_raw_targets:
+        assert raw.get("magnitude") is None, (
+            f"{raw['catalog_id']} in {_UNKNOWN_MAGNITUDE_BIN_FILENAME} has a real "
+            "magnitude — belongs in a numeric mag_*.yaml bin instead"
+        )
 
 
 @pytest.mark.parametrize("filename", list(_BIN_BOUNDS))
@@ -152,6 +191,28 @@ def test_load_catalog_parses_magnitude_size_and_aliases_from_a_bin_file(
     assert target.magnitude == pytest.approx(4.2)
     assert target.size_arcmin == (5.0, 3.0)
     assert target.types == ("galaxy",)
+
+
+def test_load_catalog_parses_an_omitted_magnitude_as_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "mag_unknown.yaml").write_text(
+        """
+- name: "Test Nebula"
+  catalog_id: "Sh2-999"
+  ra_deg: 10.0
+  dec_deg: 20.0
+  size_arcmin: [30.0, 20.0]
+  types: ["emission_nebula"]
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(catalog, "_CATALOG_DIR", tmp_path)
+
+    (target,) = catalog._load_catalog()
+
+    assert target.magnitude is None
+    assert target.size_arcmin == (30.0, 20.0)
 
 
 def test_load_catalog_picks_up_any_new_mag_bin_file_automatically(

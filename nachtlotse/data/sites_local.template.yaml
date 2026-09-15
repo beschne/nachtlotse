@@ -13,7 +13,15 @@
 # Fields:
 #   name, lat_deg, lon_deg, elevation_m   required
 #   tz                                    optional, default "Europe/Berlin"
-#   region, bortle, address, aliases      optional, for `lotse sites` display
+#   region, address, aliases              optional, for `lotse sites` display
+#   bortle                                optional free text (e.g. "3-4
+#     (moderately light-polluted)") — also parsed into a numeric Bortle
+#     class (one number as-is, two averaged: "3-4" -> 3.5) for the
+#     surface-brightness ranking factor; leave it out if truly unknown.
+#   zenith_sky_brightness_mag_arcsec2     optional: a real SQM meter
+#     reading at the zenith, at or near new moon. Overrides the
+#     Bortle-derived estimate for this site when present — leave it out
+#     unless you've actually measured it.
 #   horizon_points: [[az_deg, alt_deg], ...]
 #     Measured horizon — minimum altitude by azimuth, linearly interpolated
 #     (wraps at 360°/0°). Use this if you've actually surveyed the site.
@@ -29,6 +37,7 @@
   elevation_m: 316.0
   region: "Taunus"
   bortle: "5 (heavily light-polluted, urban fringe)"
+  # zenith_sky_brightness_mag_arcsec2: 18.23  # example: an SQM reading, if you have one
   address: "Elisabethenschneise 2, 61350 Bad Homburg vor der Höhe"
   aliases: ["Sternwarte", "Kuppel"]
   horizon_points:

@@ -170,6 +170,70 @@ def test_load_local_sites_parses_horizon_points_and_sector_shorthand(
     assert sector_horizon.min_alt(0.0) == pytest.approx(90.0)  # outside it
 
 
+@pytest.mark.parametrize(
+    "bortle_text,expected_class",
+    [
+        ("4", 4.0),
+        ("5 (heavily light-polluted, urban fringe)", 5.0),
+        ("3-4", 3.5),  # hyphen
+        ("3–4", 3.5),  # en dash
+        ("4–5 (light-polluted; forest cover helps to the south)", 4.5),
+        ("", None),
+    ],
+)
+def test_parse_bortle_class_extracts_a_numeric_class_from_free_text(
+    bortle_text: str, expected_class: float | None
+) -> None:
+    result = store._parse_bortle_class(bortle_text)
+    if expected_class is None:
+        assert result is None
+    else:
+        assert result == pytest.approx(expected_class)
+
+
+def test_load_local_sites_parses_bortle_class_and_measured_sky_brightness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yaml_path = tmp_path / "sites_local.yaml"
+    yaml_path.write_text(
+        """
+- name: "Measured Site"
+  lat_deg: 50.1
+  lon_deg: 8.1
+  elevation_m: 200.0
+  bortle: "4-5 (light-polluted; forest cover helps to the south)"
+  zenith_sky_brightness_mag_arcsec2: 18.23
+- name: "Estimate-Only Site"
+  lat_deg: 50.2
+  lon_deg: 8.2
+  elevation_m: 300.0
+  bortle: "2"
+- name: "No-Bortle Site"
+  lat_deg: 50.3
+  lon_deg: 8.3
+  elevation_m: 400.0
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(store, "_LOCAL_SITES_PATH", yaml_path)
+
+    by_name = {
+        record.site.name: record.site for record in store._load_local_sites()
+    }
+
+    measured = by_name["Measured Site"]
+    assert measured.bortle_class == pytest.approx(4.5)
+    assert measured.zenith_sky_brightness_mag_arcsec2 == pytest.approx(18.23)
+
+    estimate_only = by_name["Estimate-Only Site"]
+    assert estimate_only.bortle_class == pytest.approx(2.0)
+    assert estimate_only.zenith_sky_brightness_mag_arcsec2 is None
+
+    no_bortle = by_name["No-Bortle Site"]
+    assert no_bortle.bortle_class is None
+    assert no_bortle.zenith_sky_brightness_mag_arcsec2 is None
+
+
 def test_template_file_parses_into_four_distinct_named_rigs(
     template_rigs: list[store.RigRecord],
 ) -> None:

@@ -18,6 +18,13 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - Data model (`Site`, `HorizonProfile`, `Optics`, `Sensor`, `Mount`, `Rig`,
   `Target`, `Verdict`) as immutable dataclasses.
 - `Target.size_arcmin` carries apparent angular size for framing.
+- `Target.magnitude: float | None` — `None` means no reliably sourced
+  integrated magnitude exists for the object at all (most diffuse
+  emission/dark nebulae and Abell planetary nebulae never get one; see
+  SKIPPED-OBJECTS.md), not "arbitrarily faint". Same convention as
+  `size_arcmin == (0.0, 0.0)` for unknown size — an editorial guessed
+  magnitude was rejected as exactly the "fabricated fact" the Guiding
+  Principle rules out.
 - `Target.types`: one or more of `TargetType` (emission/reflection/
   planetary/dark nebula, galaxy, galaxy group, open/globular cluster), with
   a shared `TARGET_TYPE_LABELS` display-name map so every front end spells
@@ -183,7 +190,12 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - Split into `mag_*.yaml` files by apparent magnitude, not by source
   catalog — a bin file doesn't care whether an object is Messier, NGC, or
   IC, and a site+rig's computed limiting magnitude will eventually be able
-  to load only the bins it needs.
+  to load only the bins it needs. One exception: `mag_unknown.yaml` (empty
+  for now) holds objects with no reliably sourced integrated magnitude at
+  all — admission there still requires a real `catalog_id` and
+  `size_arcmin`, just not a magnitude. A dedicated policy test
+  (`test_only_the_unknown_bin_file_omits_magnitude`) keeps "no magnitude"
+  from silently landing in the wrong file.
 - Every physical object gets exactly one `Target` entry regardless of how
   many catalogs list it — `Target.aliases` carries the others (e.g. M31's
   `aliases=("NGC 224",)`; M16's Eagle Nebula carries both `NGC 6611` and
@@ -191,10 +203,12 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   up twice under two different names.
 - Two policy tests keep every entry within scope: declination ≥ −30°
   (reaches ≥20° altitude from any "40°N or further north" site — M83 at
-  −29.87° is the existing edge case that pins this boundary) and magnitude
-  ≤ 18.6 (this project's widest aperture, Redcat 51, under its darkest sky
-  in scope, Bortle 2) — the catalog is well within that ceiling today, so
-  there's room to go deeper later without hitting it.
+  −29.87° is the existing edge case that pins this boundary) and, for
+  entries with a known magnitude, ≤ 18.6 (this project's widest aperture,
+  Redcat 51, under its darkest sky in scope, Bortle 2) — the catalog is
+  well within that ceiling today, so there's room to go deeper later
+  without hitting it. `mag_unknown.yaml` entries are exempt from the
+  magnitude ceiling — there's nothing to check it against.
 
 ## `nachtlotse/planning.py`
 

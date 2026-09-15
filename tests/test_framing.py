@@ -9,6 +9,7 @@ than one 30° away, at this project's latitudes.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -231,3 +232,39 @@ def test_photographic_limiting_magnitude_clamps_bortle_class_to_the_valid_range(
     assert framing.photographic_limiting_magnitude(50.0, 12.0) == pytest.approx(
         framing.photographic_limiting_magnitude(50.0, 9.0)
     )
+
+
+def test_sky_brightness_prefers_a_real_measurement_over_the_bortle_estimate() -> None:
+    site = replace(SITE, bortle_class=8.0, zenith_sky_brightness_mag_arcsec2=21.2)
+    assert framing.sky_brightness_mag_arcsec2(site) == pytest.approx(21.2)
+
+
+def test_sky_brightness_falls_back_to_the_bortle_estimate_without_a_measurement() -> (
+    None
+):
+    site = replace(SITE, bortle_class=4.0, zenith_sky_brightness_mag_arcsec2=None)
+    assert framing.sky_brightness_mag_arcsec2(site) == pytest.approx(21.0)
+
+
+def test_sky_brightness_is_none_without_either_a_measurement_or_a_bortle_class() -> (
+    None
+):
+    site = replace(SITE, bortle_class=None, zenith_sky_brightness_mag_arcsec2=None)
+    assert framing.sky_brightness_mag_arcsec2(site) is None
+
+
+def test_sky_brightness_interpolates_fractional_bortle_classes() -> None:
+    at_four = framing.sky_brightness_mag_arcsec2(replace(SITE, bortle_class=4.0))
+    at_five = framing.sky_brightness_mag_arcsec2(replace(SITE, bortle_class=5.0))
+    at_four_and_a_half = framing.sky_brightness_mag_arcsec2(
+        replace(SITE, bortle_class=4.5)
+    )
+
+    assert at_five < at_four_and_a_half < at_four
+
+
+def test_sky_brightness_decreases_at_higher_bortle_classes() -> None:
+    """Higher Bortle number = brighter sky = lower (worse) mag/arcsec²."""
+    dark = framing.sky_brightness_mag_arcsec2(replace(SITE, bortle_class=1.0))
+    bright = framing.sky_brightness_mag_arcsec2(replace(SITE, bortle_class=9.0))
+    assert dark > bright
