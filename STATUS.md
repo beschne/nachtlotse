@@ -1,7 +1,7 @@
 # Status
 
-Detailed implementation status, module by module. For the milestone overview
-and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
+Milestone overview and detailed implementation status, module by module.
+For the full roadmap, see [CLAUDE.md](./CLAUDE.md).
 
 ## Milestones
 
@@ -48,11 +48,31 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 ## `nachtlotse/engine/framing.py`
 
 - Framing score: does the target's angular size fit the rig's field of view?
-- `target_priority_score`: combines altitude and framing score into the
-  actual ranking key `planning.rank_targets` sorts by — multiplicative
-  (`altitude/90 × fit`), so a poor fit vetoes a target regardless of how
-  high it sits, rather than needing a second tunable weight alongside
-  altitude. Reduces to plain altitude for the common case (`fit == 1.0`).
+- `surface_brightness_mag_arcsec2`: a target's integrated magnitude spread
+  over its actual angular area (μ = m + 2.5·log₁₀(area_arcsec²)) — checked
+  against hand calculations for M57 (~17.79, published ~18.1) and NGC 7000
+  (~22.83, published ~22). The real signal for ranking extended objects:
+  a small bright planetary nebula packs far more light per pixel than a
+  much larger, fainter-per-pixel object at the same integrated magnitude.
+- `reach_factor`: compares a target's surface brightness against
+  `sky_brightness_mag_arcsec2` (below) plus a tunable stacking margin
+  (`DEFAULT_STACKING_MARGIN_MAG`) — 1.0 (unconstrained) when magnitude,
+  size, or the site's sky brightness isn't known, fading toward (never
+  fully to) a floor otherwise. Downgrades, never excludes outright — the
+  estimate carries real uncertainty of its own.
+- `sky_brightness_mag_arcsec2`: a site's zenith, new-moon sky darkness — a
+  real SQM measurement (`Site.zenith_sky_brightness_mag_arcsec2`) if
+  documented, otherwise a Bortle-class estimate (`Site.bortle_class`,
+  interpolated the same way as `photographic_limiting_magnitude`'s NELM
+  table), otherwise `None`.
+- `target_priority_score`: combines altitude, framing score, and reach
+  into the actual ranking key `planning.rank_targets` sorts by —
+  multiplicative (`altitude/90 × fit × reach`), so a poor fit or a
+  too-diffuse target for the site's sky vetoes/downgrades regardless of
+  how high it sits, rather than needing tunable weights alongside
+  altitude. Reduces to plain altitude for the common case
+  (`fit == reach == 1.0`); `reach` defaults to 1.0 for any caller not yet
+  passing one.
 - Alt-az field-rotation safety: the rate of change of the parallactic angle
   (via `astroplan`) diverges near the zenith, so a target an eq rig can shoot
   right at its peak gets pushed to a lower, rotation-safe moment — or
@@ -268,15 +288,18 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD]` calls
   `planning.plan_night` and prints the result: dark window, moon
   illumination, weather summary, a numbered shortlist with its own
-  GO/MARGINAL/SKIP verdict per target, and the full ranked table with a
-  framing-fit column; `lotse sites` / `lotse rigs` list what's configured.
+  GO/MARGINAL/SKIP verdict per target, and the full ranked table with
+  framing-fit and surface-brightness-reach columns; `lotse sites` /
+  `lotse rigs` list what's configured.
 - The ranked list is sorted by `framing.target_priority_score` (altitude ×
-  framing fit, descending) — the "Max Alt" column alone no longer decides
-  the order. A target whose best window is horizon- or rotation-limited
-  can already rank below one with a lower transit but a cleaner shot; a
-  target that barely fits the frame (e.g. a small planetary nebula on a
-  wide-field rig) is now deprioritized the same way, instead of winning
-  hero status purely for sitting high in the sky.
+  framing fit × reach, descending) — the "Max Alt" column alone no longer
+  decides the order. A target whose best window is horizon- or
+  rotation-limited can already rank below one with a lower transit but a
+  cleaner shot; a target that barely fits the frame (e.g. a small
+  planetary nebula on a wide-field rig), or is too diffuse for the site's
+  sky darkness (e.g. a large faint nebula from a bright site), is now
+  deprioritized the same way, instead of winning hero status purely for
+  sitting high in the sky.
 - `--chart [PATH]`: writes the shortlist's alt/az polar overview as a PNG
   (`chart_export.save_shortlist_chart`) — `nargs="?"` so the bare flag
   writes to `chart_export.DEFAULT_CHART_FILENAME` in the current

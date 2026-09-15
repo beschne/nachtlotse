@@ -189,6 +189,19 @@ def test_target_priority_score_is_zero_for_a_target_that_does_not_fit_at_all() -
     assert framing.target_priority_score(90.0, 0.0) == pytest.approx(0.0)
 
 
+def test_target_priority_score_defaults_reach_to_unconstrained() -> None:
+    assert framing.target_priority_score(45.0, 1.0) == pytest.approx(
+        framing.target_priority_score(45.0, 1.0, 1.0)
+    )
+
+
+def test_target_priority_score_lets_a_poor_reach_downgrade_a_high_altitude() -> None:
+    diffuse_but_high = framing.target_priority_score(alt_deg=89.0, fit=1.0, reach=0.2)
+    well_reached_lower = framing.target_priority_score(alt_deg=45.0, fit=1.0, reach=1.0)
+
+    assert diffuse_but_high < well_reached_lower
+
+
 def test_photographic_limiting_magnitude_matches_hand_calculation_for_30mm() -> None:
     # 2.7 + 5*log10(30) + 7.0 + (7.3 - 6.9) = 17.49 at Bortle 2
     assert framing.photographic_limiting_magnitude(30.0, 2.0) == pytest.approx(
@@ -268,3 +281,76 @@ def test_sky_brightness_decreases_at_higher_bortle_classes() -> None:
     dark = framing.sky_brightness_mag_arcsec2(replace(SITE, bortle_class=1.0))
     bright = framing.sky_brightness_mag_arcsec2(replace(SITE, bortle_class=9.0))
     assert dark > bright
+
+
+def test_surface_brightness_matches_hand_calculation_for_m57() -> None:
+    # mu = 8.8 + 2.5*log10(pi * 0.7 * 0.5 * 3600) ~= 17.79 (published ~18.1)
+    assert framing.surface_brightness_mag_arcsec2(8.8, (1.4, 1.0)) == pytest.approx(
+        17.79, abs=0.01
+    )
+
+
+def test_surface_brightness_matches_hand_calculation_for_ngc7000() -> None:
+    # mu = 4.0 + 2.5*log10(pi * 60 * 50 * 3600) ~= 22.83 (published ~22)
+    assert framing.surface_brightness_mag_arcsec2(4.0, (120.0, 100.0)) == pytest.approx(
+        22.83, abs=0.01
+    )
+
+
+def test_surface_brightness_is_fainter_for_a_larger_object_at_the_same_magnitude() -> (
+    None
+):
+    """The whole point of surface brightness over integrated magnitude:
+    smearing the same total light over more area reads as fainter per
+    pixel, even though the integrated magnitude is identical."""
+    small = framing.surface_brightness_mag_arcsec2(8.0, (2.0, 2.0))
+    large = framing.surface_brightness_mag_arcsec2(8.0, (20.0, 20.0))
+    assert large > small
+
+
+def test_reach_factor_is_unconstrained_without_a_magnitude() -> None:
+    site = replace(SITE, bortle_class=8.0)
+    assert framing.reach_factor(site, None, (30.0, 20.0)) == pytest.approx(1.0)
+
+
+def test_reach_factor_is_unconstrained_without_a_known_size() -> None:
+    site = replace(SITE, bortle_class=8.0)
+    assert framing.reach_factor(site, 15.0, (0.0, 0.0)) == pytest.approx(1.0)
+
+
+def test_reach_factor_is_unconstrained_without_documented_sky_brightness() -> None:
+    site = replace(SITE, bortle_class=None, zenith_sky_brightness_mag_arcsec2=None)
+    assert framing.reach_factor(site, 15.0, (200.0, 200.0)) == pytest.approx(1.0)
+
+
+def test_reach_factor_is_full_for_a_compact_bright_target_at_any_site() -> None:
+    """M57: small and bright enough that surface brightness never
+    approaches even a bright site's reachable limit."""
+    bright_site = replace(SITE, bortle_class=9.0)
+    assert framing.reach_factor(bright_site, 8.8, (1.4, 1.0)) == pytest.approx(1.0)
+
+
+def test_reach_factor_downgrades_a_diffuse_target_under_a_bright_sky() -> None:
+    """NGC 7000 at Bortle 8 (~17.5 mag/arcsec² estimated sky brightness):
+    a real, partial downgrade — neither unconstrained nor at the floor."""
+    bright_site = replace(SITE, bortle_class=8.0)
+    reach = framing.reach_factor(bright_site, 4.0, (120.0, 100.0))
+    assert framing._REACH_FLOOR < reach < 1.0
+
+
+def test_reach_factor_never_drops_below_its_floor() -> None:
+    """A deliberately absurd case (very faint, very large) still never
+    hits zero — reach downgrades, it never excludes outright."""
+    bright_site = replace(SITE, bortle_class=9.0)
+    reach = framing.reach_factor(bright_site, 15.0, (200.0, 200.0))
+    assert reach == pytest.approx(framing._REACH_FLOOR)
+
+
+def test_reach_factor_improves_at_a_darker_site() -> None:
+    target_magnitude, target_size = 4.0, (120.0, 100.0)
+    dark_site = replace(SITE, bortle_class=2.0)
+    bright_site = replace(SITE, bortle_class=8.0)
+
+    dark_reach = framing.reach_factor(dark_site, target_magnitude, target_size)
+    bright_reach = framing.reach_factor(bright_site, target_magnitude, target_size)
+    assert dark_reach > bright_reach

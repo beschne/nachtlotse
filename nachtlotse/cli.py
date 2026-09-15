@@ -105,15 +105,15 @@ def _cmd_plan(
     print()
 
     print(
-        f"{'Target':<32} {'Type':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5}  "
+        f"{'Target':<32} {'Type':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5} {'Reach':>6}  "
         "Best time (local)"
     )
-    for target, best_time, pos, fit in plan.ranked:
+    for target, best_time, pos, fit, reach in plan.ranked:
         label = f"{target.catalog_id} {target.name}"
         local_time = best_time.astimezone(local_tz)
         print(
             f"{label:<32} {_format_types(target.types):<32} {pos.alt_deg:7.1f}° "
-            f"{pos.az_deg:6.1f}° {fit:5.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
+            f"{pos.az_deg:6.1f}° {fit:5.2f} {reach:6.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
         )
 
     if chart_path is not None:

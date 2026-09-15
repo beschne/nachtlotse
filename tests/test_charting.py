@@ -109,7 +109,11 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
     )
 
     ranked = planning.RankedTarget(
-        target=target, best_time=base, pos=ephemeris.AltAz(10.0, 40.0, 1.0), fit=1.0
+        target=target,
+        best_time=base,
+        pos=ephemeris.AltAz(10.0, 40.0, 1.0),
+        fit=1.0,
+        reach=1.0,
     )
     entry = planning.ShortlistEntry(ranked=ranked, verdict=Verdict(level="GO", reasons=[]))
     plan = planning.NightPlan(

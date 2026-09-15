@@ -22,10 +22,11 @@ hand.
 Sky brightness: `sky_brightness_mag_arcsec2` resolves a site's zenith,
 new-moon sky darkness — a real SQM measurement if the site has one,
 otherwise a Bortle-class estimate, otherwise `None` (unconstrained). Feeds
-the not-yet-built surface-brightness `reach` factor in `target_priority_score`
-(see CLAUDE.md's Roadmap): extended objects rank on light per pixel, not
-integrated magnitude, which favors a small bright planetary nebula over a
-large faint one at the same total brightness.
+`reach_factor`, the surface-brightness term in `target_priority_score`:
+extended objects rank on light per pixel (`surface_brightness_mag_arcsec2`),
+not integrated magnitude, which favors a small bright planetary nebula
+over a much larger, fainter-per-pixel object at the same (or even a
+brighter) total magnitude.
 """
 
 from __future__ import annotations
@@ -84,18 +85,85 @@ def framing_score(rig: Rig, target: Target) -> float:
 _MAX_ALTITUDE_DEG = 90.0
 
 
-def target_priority_score(alt_deg: float, fit: float) -> float:
-    """Ranks targets by altitude *and* framing fit together, so a target
-    that barely fits the frame doesn't win purely for sitting high in the
-    sky — see `framing_score`.
+def target_priority_score(alt_deg: float, fit: float, reach: float = 1.0) -> float:
+    """Ranks targets by altitude, framing fit, and surface-brightness
+    reach together, so a target doesn't win purely for sitting high in the
+    sky — see `framing_score` (fit) and `reach_factor` (reach).
 
-    Multiplicative rather than a weighted sum: fit acts as a veto (a fit
-    near 0.0 crushes the score regardless of altitude) instead of needing
-    its own tunable weight next to altitude. Among targets that already
-    fit comfortably (`fit == 1.0`), this reduces to plain altitude —
-    today's ranking is unchanged for the common case.
+    Multiplicative rather than a weighted sum: each factor acts as its own
+    veto (any of them near 0.0 crushes the score) instead of needing its
+    own tunable weight next to altitude. Among targets that already fit
+    comfortably and reach the sky easily (`fit == reach == 1.0`), this
+    reduces to plain altitude — today's ranking is unchanged for the
+    common case, and `reach` defaults to 1.0 for any caller not yet
+    passing one.
     """
-    return (alt_deg / _MAX_ALTITUDE_DEG) * fit
+    return (alt_deg / _MAX_ALTITUDE_DEG) * fit * reach
+
+
+# Surface brightness -> reach heuristic. The stacking margin is a starting
+# heuristic like DEFAULT_INTEGRATION_GAIN_MAG above, deliberately generous:
+# many showpiece nebulae compute fainter than the raw sky background yet
+# are routinely imaged, so this isn't a measured limit, just a tunable
+# starting point (per CLAUDE.md's M4 note).
+DEFAULT_STACKING_MARGIN_MAG = 3.0
+
+# How many magnitudes beyond the reachable limit `reach_factor` fades from
+# 1.0 down to its floor, and the floor itself — reach downgrades a target,
+# it never excludes one outright, since the surface-brightness estimate
+# carries real (~1-2 mag) uncertainty of its own.
+_REACH_FADE_RANGE_MAG = 3.0
+_REACH_FLOOR = 0.2
+
+
+def surface_brightness_mag_arcsec2(
+    magnitude: float, size_arcmin: tuple[float, float]
+) -> float:
+    """Surface brightness (mag/arcsec²) of a target with a given integrated
+    magnitude and apparent (major, minor) angular size — its light spread
+    over its actual area, rather than treated as a point source.
+
+    The real signal for ranking extended objects: a small bright planetary
+    nebula can pack far more light per pixel than a much larger object at
+    the same (or even a brighter) integrated magnitude — see
+    `reach_factor`, which uses this.
+    """
+    major_arcmin, minor_arcmin = size_arcmin
+    area_arcsec2 = math.pi * (major_arcmin / 2.0) * (minor_arcmin / 2.0) * 3600.0
+    return magnitude + 2.5 * math.log10(area_arcsec2)
+
+
+def reach_factor(
+    site: Site,
+    magnitude: float | None,
+    size_arcmin: tuple[float, float],
+    *,
+    stacking_margin_mag: float = DEFAULT_STACKING_MARGIN_MAG,
+) -> float:
+    """How reachable a target's surface brightness is at `site`'s sky
+    darkness, for `target_priority_score`.
+
+    1.0 (unconstrained) when magnitude or size is unknown, or when the
+    site's sky brightness isn't documented at all — an absent input is
+    never treated as a worst case, the same convention used everywhere
+    else in this project. Otherwise fades toward (never all the way to)
+    `_REACH_FLOOR` the further the target's surface brightness sits below
+    the site's estimated reachable limit (sky brightness + stacking
+    margin).
+    """
+    if magnitude is None or size_arcmin == (0.0, 0.0):
+        return 1.0
+    sky_brightness = sky_brightness_mag_arcsec2(site)
+    if sky_brightness is None:
+        return 1.0
+
+    surface_brightness = surface_brightness_mag_arcsec2(magnitude, size_arcmin)
+    reachable_limit = sky_brightness + stacking_margin_mag
+    excess_mag = surface_brightness - reachable_limit
+    if excess_mag <= 0.0:
+        return 1.0
+    fraction = min(excess_mag / _REACH_FADE_RANGE_MAG, 1.0)
+    return 1.0 - fraction * (1.0 - _REACH_FLOOR)
 
 
 def field_rotation_rate_deg_per_min(

@@ -273,25 +273,27 @@ Ideas for after the MVP, in priority order:
    SIMBAD/NED on 2026-09-15: IC 4606, NGC 1555, and Simeis 147 (as
    Sh2-240) resolved to real, catalogable objects and are now
    `mag_unknown.yaml` candidates pending a sourced size; IC 1316 and NGC
-   6874 remain excluded, still no real position/data at all. Remaining,
-   in order: (a) source and add real OpenNGC/SIMBAD-sourced coordinates
-   and sizes for these and the ~50 other already-identified candidates
-   from SKIPPED-OBJECTS.md — not fabricated, the same rigor as every
-   other catalog entry; (b) `rank_targets` doesn't use magnitude at all
-   today, and integrated magnitude is the wrong signal for extended
-   objects anyway — M57 (mag 8.8, 1.4′×1.0′) packs far more light per
-   pixel than NGC 7000 (mag 4.0, 120′×100′) despite "losing" on magnitude
-   by 4.8 mag, because the light is smeared over ~6000× the area. The
-   real signal is surface brightness, derivable from magnitude + size
-   (μ = m + 2.5·log₁₀(π·(a/2)·(b/2)·3600), arcsec) — a `reach` factor in
-   `target_priority_score`, multiplicative like `fit`, comparing it
-   against the site's sky brightness (see item #2 below) plus a tunable
+   6874 remain excluded, still no real position/data at all. The surface-
+   brightness `reach` factor also landed: integrated magnitude was the
+   wrong signal for extended objects anyway — M57 (mag 8.8, 1.4′×1.0′)
+   packs far more light per pixel than NGC 7000 (mag 4.0, 120′×100′)
+   despite "losing" on magnitude by 4.8 mag, because the light is smeared
+   over ~6000× the area. `engine.framing.surface_brightness_mag_arcsec2`
+   derives the real signal from magnitude + size
+   (μ = m + 2.5·log₁₀(π·(a/2)·(b/2)·3600), arcsec) and `reach_factor`
+   compares it against the site's sky brightness (item #2) plus a tunable
    stacking margin (a real one: many showpiece nebulae compute fainter
    than the sky background yet are routinely imaged — the margin is a
    frankly subjective constant, tuned like `DEFAULT_INTEGRATION_GAIN_MAG`,
-   not physics). Unknown magnitude *or* unknown size means `reach = 1.0`
-   (unconstrained) — downgrades a target, never excludes one outright,
-   since the estimate carries real (~1-2 mag) uncertainty.
+   not physics), feeding `target_priority_score` as a third multiplicative
+   factor alongside `fit`. Unknown magnitude *or* unknown size means
+   `reach = 1.0` (unconstrained); an over-the-limit target fades toward,
+   never all the way to, a floor — it downgrades, it doesn't exclude,
+   since the estimate carries real (~1-2 mag) uncertainty. Remaining:
+   source and add real OpenNGC/SIMBAD-sourced coordinates and sizes for
+   the ~50 already-identified `mag_unknown.yaml` candidates from
+   SKIPPED-OBJECTS.md — not fabricated, the same rigor as every other
+   catalog entry.
 2. `Site.bortle_class: float | None` (parsed from the existing free-text
    `bortle` field on `SiteRecord`, e.g. `"3–4"` → `3.5`) plus
    `Site.zenith_sky_brightness_mag_arcsec2: float | None` for a real

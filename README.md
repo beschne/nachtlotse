@@ -24,19 +24,8 @@ is fully backed by `pytest` against known astronomical values.
 ## Status
 
 **The MVP is complete** (M0–M5): engine, multi-site/multi-rig support,
-weather, and the GO/MARGINAL/SKIP verdict.
-
-- ✅ **M0 — Scaffolding & engine core**, done.
-- ✅ **M1 — Moon & dark window**, done.
-- ✅ **M2 — Horizon profiles & multiple sites**, done.
-- ✅ **M3 — Rig scoring, framing & field rotation**, done.
-- ✅ **M4 — Weather & verdict**, done.
-- ✅ **M5 — UI (Streamlit MVP)**, done, later retired — the CLI is the only
-  front end for now, ahead of a native macOS app; see [CLAUDE.md](./CLAUDE.md).
-
-Ideas kept for later (not scheduled) are listed in [CLAUDE.md](./CLAUDE.md).
-
-Module-by-module detail: [STATUS.md](./STATUS.md). Full roadmap and all
+weather, and the GO/MARGINAL/SKIP verdict. Milestone-by-milestone and
+module-by-module detail: [STATUS.md](./STATUS.md). Full roadmap and all
 architecture decisions: [CLAUDE.md](./CLAUDE.md).
 
 ## Quickstart

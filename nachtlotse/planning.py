@@ -31,12 +31,14 @@ from nachtlotse.weather import open_meteo
 
 
 class RankedTarget(NamedTuple):
-    """One catalog target's best moment tonight, plus how well it frames."""
+    """One catalog target's best moment tonight, how well it frames, and
+    how reachable its surface brightness is at this site."""
 
     target: Target
     best_time: datetime
     pos: ephemeris.AltAz
     fit: float
+    reach: float
 
 
 class ShortlistEntry(NamedTuple):
@@ -105,9 +107,10 @@ def rank_targets(
     `types`, if given, keeps only targets carrying at least one of those
     categories (e.g. `{"galaxy"}`) — None means no filtering.
 
-    Ranked by `framing.target_priority_score` (altitude *and* fit), not
-    altitude alone — a target that barely fits the frame no longer wins
-    hero status purely for sitting high in the sky.
+    Ranked by `framing.target_priority_score` (altitude, fit, and
+    surface-brightness reach together), not altitude alone — a target
+    that barely fits the frame, or is too diffuse for this site's sky
+    darkness, no longer wins purely for sitting high in the sky.
     """
     ranked: list[RankedTarget] = []
     for target in CATALOG:
@@ -119,11 +122,14 @@ def rank_targets(
         if result is None:
             continue
         best_time, pos = result
+        reach = framing.reach_factor(site, target.magnitude, target.size_arcmin)
         ranked.append(
-            RankedTarget(target, best_time, pos, framing.framing_score(rig, target))
+            RankedTarget(
+                target, best_time, pos, framing.framing_score(rig, target), reach
+            )
         )
     ranked.sort(
-        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit),
+        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
         reverse=True,
     )
     return ranked

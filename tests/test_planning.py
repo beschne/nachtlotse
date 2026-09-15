@@ -18,7 +18,10 @@ def test_rank_targets_is_sorted_by_descending_priority_score_and_passes_constrai
     site = store.default_site_record().site
     rig = store.default_rig_record().rig
     ranked = planning.rank_targets(site, rig, datetime.now(UTC))
-    scores = [framing.target_priority_score(row.pos.alt_deg, row.fit) for row in ranked]
+    scores = [
+        framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach)
+        for row in ranked
+    ]
 
     assert scores == sorted(scores, reverse=True)
     assert all(row.pos.alt_deg > 0.0 for row in ranked)
