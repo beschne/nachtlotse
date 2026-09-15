@@ -263,6 +263,41 @@ def test_plan_command_falls_back_gracefully_when_weather_is_unavailable(
     assert "Best time (local)" in output  # the ranked table still printed
 
 
+def test_best_sky_command_lists_every_configured_site_without_a_radius(
+    template_sites: list[store.SiteRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["best-sky"]) == 0
+    output = capsys.readouterr().out
+
+    for record in template_sites:
+        assert record.site.name in output
+
+
+def test_best_sky_command_respects_radius_km(
+    template_sites: list[store.SiteRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The template's two sites are ~5 km apart — a 1 km radius keeps only
+    the reference site itself."""
+    reference_name = template_sites[0].site.name
+    other_name = template_sites[1].site.name
+
+    assert cli.main(["best-sky", "--site", reference_name, "--radius-km", "1"]) == 0
+    output = capsys.readouterr().out
+
+    assert reference_name in output
+    assert other_name not in output
+
+
+def test_best_sky_command_rejects_an_invalid_date(
+    template_sites: list[store.SiteRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["best-sky", "--date", "not-a-date"]) == 2
+    assert "Invalid --date" in capsys.readouterr().err
+
+
 def test_plan_command_chart_writes_the_default_png_and_overwrites_it(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],

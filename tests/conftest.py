@@ -1,11 +1,31 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
 from nachtlotse.data import store
 from nachtlotse.weather import open_meteo
+
+
+@pytest.fixture(autouse=True)
+def _isolated_weather_cache(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Every test gets its own empty Open-Meteo cache directory.
+
+    `planning.fetch_weather_summary` goes through `fetch_hourly_cached`,
+    which would otherwise share one real `.cache/open_meteo/` across the
+    whole suite (and across runs) — two tests using the same site's
+    coordinates but different monkeypatched weather would then leak a
+    stale forecast from whichever ran first, keyed by nothing but bad
+    luck in execution order. Skipped for test_open_meteo.py, which tests
+    the cache mechanism itself and manages its own `tmp_path` explicitly.
+    """
+    if request.module.__name__.rsplit(".", 1)[-1] == "test_open_meteo":
+        return
+    monkeypatch.setattr(open_meteo, "DEFAULT_CACHE_DIR", tmp_path / "open_meteo_cache")
 
 
 @pytest.fixture(autouse=True)

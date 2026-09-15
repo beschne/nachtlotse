@@ -12,7 +12,8 @@ wheels/
 # Virtual environments
 .venv
 
-# Skyfield ephemeris cache (large binary, re-downloadable)
+# Skyfield ephemeris cache, Open-Meteo forecast cache — both
+# re-downloadable, neither committed.
 .cache/
 
 # Your local observing-site and rig lists — never committed. Copy the

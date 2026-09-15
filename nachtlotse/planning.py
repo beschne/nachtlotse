@@ -147,7 +147,7 @@ def fetch_weather_summary(
     alone.
     """
     try:
-        hours = open_meteo.fetch_hourly(site.lat_deg, site.lon_deg)
+        hours = open_meteo.fetch_hourly_cached(site.lat_deg, site.lon_deg)
     except open_meteo.WeatherUnavailable:
         return None
     return open_meteo.summarize_window(hours, evening_start, morning_end)

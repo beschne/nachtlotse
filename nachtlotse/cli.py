@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import get_args
 from zoneinfo import ZoneInfo
 
-from nachtlotse import chart_export, planning
+from nachtlotse import best_sky, chart_export, planning
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
@@ -35,6 +35,26 @@ def _format_weather_line(weather: WeatherSummary | None) -> str:
         f"(avg {weather.avg_cloud_cover_pct:.0f}%) · "
         f"wind up to {weather.max_wind_kmh:.0f} km/h · "
         f"dew margin {weather.min_dew_point_spread_c:.1f}°C"
+    )
+
+
+class _InvalidDate(Exception):
+    """`--date` wasn't a valid YYYY-MM-DD string."""
+
+
+def _resolve_when(date_str: str | None, local_tz: ZoneInfo) -> datetime:
+    """UTC-aware moment to plan for: now, or noon local time on `date_str`
+    — unambiguously daytime, so `dark_window` picks the night starting
+    that evening. Raises `_InvalidDate` if `date_str` doesn't parse.
+    """
+    if date_str is None:
+        return datetime.now(UTC)
+    try:
+        target_date = date.fromisoformat(date_str)
+    except ValueError:
+        raise _InvalidDate(date_str) from None
+    return datetime(
+        target_date.year, target_date.month, target_date.day, 12, 0, tzinfo=local_tz
     )
 
 
@@ -62,19 +82,11 @@ def _cmd_plan(
     rig = rig_record.rig
     local_tz = ZoneInfo(site.tz)
 
-    if date_str is None:
-        now = datetime.now(UTC)
-    else:
-        try:
-            target_date = date.fromisoformat(date_str)
-        except ValueError:
-            print(f"Invalid --date {date_str!r}, expected YYYY-MM-DD", file=sys.stderr)
-            return 2
-        # Noon local time on that date: unambiguously daytime, so
-        # dark_window picks the night starting that evening.
-        now = datetime(
-            target_date.year, target_date.month, target_date.day, 12, 0, tzinfo=local_tz
-        )
+    try:
+        now = _resolve_when(date_str, local_tz)
+    except _InvalidDate:
+        print(f"Invalid --date {date_str!r}, expected YYYY-MM-DD", file=sys.stderr)
+        return 2
 
     type_filter = frozenset(types) if types else None
     plan = planning.plan_night(site, rig, now, types=type_filter)
@@ -194,6 +206,55 @@ def _cmd_rigs() -> int:
     return 0
 
 
+def _format_site_sky_line(rank: int, report: best_sky.SiteSkyReport) -> str:
+    site = report.site
+    if report.weather is None:
+        weather_part = "weather: unavailable"
+    else:
+        weather_part = (
+            f"clouds up to {report.weather.max_cloud_cover_pct:.0f}% "
+            f"(avg {report.weather.avg_cloud_cover_pct:.0f}%)"
+        )
+    return f"  {rank}. {site.name} — {report.distance_km:.0f} km — {weather_part}"
+
+
+def _cmd_best_sky(
+    site_name: str | None, radius_km: float | None, date_str: str | None
+) -> int:
+    try:
+        reference_record = (
+            store.get_site_record(site_name)
+            if site_name
+            else store.default_site_record()
+        )
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
+    reference = reference_record.site
+    local_tz = ZoneInfo(reference.tz)
+
+    try:
+        now = _resolve_when(date_str, local_tz)
+    except _InvalidDate:
+        print(f"Invalid --date {date_str!r}, expected YYYY-MM-DD", file=sys.stderr)
+        return 2
+
+    reports = best_sky.compare_sites(
+        reference, store.load_sites(), now, max_distance_km=radius_km
+    )
+
+    radius_note = f" within {radius_km:.0f} km" if radius_km is not None else ""
+    print(f"Nachtlotse — best sky near {reference.name}{radius_note}")
+    print()
+    if not reports:
+        print("No configured site matches.")
+        return 0
+    for rank, report in enumerate(reports, start=1):
+        print(_format_site_sky_line(rank, report))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lotse",
@@ -253,6 +314,38 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
 
+    best_sky_parser = subparsers.add_parser(
+        "best-sky",
+        help="Compare configured sites' forecast cloud cover for the clearest night",
+    )
+    best_sky_parser.add_argument(
+        "--site",
+        default=None,
+        help=(
+            "Reference site name or alias (default: the first site in "
+            "your local site list)"
+        ),
+    )
+    best_sky_parser.add_argument(
+        "--radius-km",
+        type=float,
+        default=None,
+        metavar="KM",
+        help=(
+            "Only compare sites within this distance of --site (default: "
+            "all configured sites)"
+        ),
+    )
+    best_sky_parser.add_argument(
+        "--date",
+        default=None,
+        help=(
+            "Date to compare, YYYY-MM-DD, local to --site (default: "
+            "tonight). Weather beyond Open-Meteo's forecast horizon shows "
+            "as unavailable."
+        ),
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "plan":
@@ -261,6 +354,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_sites()
     if args.command == "rigs":
         return _cmd_rigs()
+    if args.command == "best-sky":
+        return _cmd_best_sky(args.site, args.radius_km, args.date)
     parser.error(f"unknown command: {args.command}")
     return 2
 

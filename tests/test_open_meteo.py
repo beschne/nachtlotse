@@ -6,7 +6,8 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.parse
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -151,3 +152,64 @@ def test_summarize_window_returns_none_when_window_is_outside_the_forecast() -> 
     far_future_start = datetime(2030, 1, 1, 0, 0, tzinfo=UTC)
     far_future_end = datetime(2030, 1, 1, 6, 0, tzinfo=UTC)
     assert open_meteo.summarize_window(hours, far_future_start, far_future_end) is None
+
+
+def test_fetch_hourly_cached_serves_a_fresh_cache_entry_without_a_network_call(
+    tmp_path: Path,
+) -> None:
+    with patch(
+        "urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)
+    ) as mock_urlopen:
+        first = open_meteo.fetch_hourly_cached(50.237, 8.551, cache_dir=tmp_path)
+        second = open_meteo.fetch_hourly_cached(50.237, 8.551, cache_dir=tmp_path)
+
+    assert mock_urlopen.call_count == 1
+    assert second == first
+
+
+def test_fetch_hourly_cached_refetches_once_the_cache_entry_expires(
+    tmp_path: Path,
+) -> None:
+    with patch("urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)):
+        open_meteo.fetch_hourly_cached(50.237, 8.551, cache_dir=tmp_path)
+
+    cache_file = next(tmp_path.iterdir())
+    payload = json.loads(cache_file.read_text())
+    stale_fetched_at = datetime.now(UTC) - timedelta(
+        hours=open_meteo.CACHE_TTL_HOURS, minutes=1
+    )
+    payload["fetched_at"] = stale_fetched_at.isoformat()
+    cache_file.write_text(json.dumps(payload))
+
+    with patch(
+        "urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)
+    ) as mock_urlopen:
+        open_meteo.fetch_hourly_cached(50.237, 8.551, cache_dir=tmp_path)
+
+    assert mock_urlopen.call_count == 1
+
+
+def test_fetch_hourly_cached_treats_a_corrupt_cache_file_as_a_miss(
+    tmp_path: Path,
+) -> None:
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / "50.237_8.551.json").write_text("not json")
+
+    with patch(
+        "urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)
+    ) as mock_urlopen:
+        hours = open_meteo.fetch_hourly_cached(50.237, 8.551, cache_dir=tmp_path)
+
+    assert mock_urlopen.call_count == 1
+    assert len(hours) == 3
+
+
+def test_fetch_hourly_cached_keys_the_cache_by_coordinates(tmp_path: Path) -> None:
+    with patch(
+        "urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)
+    ) as mock_urlopen:
+        open_meteo.fetch_hourly_cached(50.237, 8.551, cache_dir=tmp_path)
+        open_meteo.fetch_hourly_cached(48.137, 11.575, cache_dir=tmp_path)
+
+    assert mock_urlopen.call_count == 2
+    assert len(list(tmp_path.iterdir())) == 2

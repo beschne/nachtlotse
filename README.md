@@ -43,6 +43,7 @@ uv run ruff format .   # format
 uv run lotse plan      # rank tonight's targets for your first site + rig
 uv run lotse sites     # list all configured observing sites
 uv run lotse rigs      # list all configured rigs
+uv run lotse best-sky  # compare all configured sites' forecast cloud cover tonight
 
 # --site and --rig accept a name or alias (or a unique substring of one),
 # and can be combined; either defaults to the first entry in its file:
@@ -65,6 +66,13 @@ uv run lotse plan --type galaxy --type globular_cluster
 uv sync --extra charts
 uv run lotse plan --chart
 uv run lotse plan --chart my-plan.png
+
+# best-sky answers "where's the clearest night", not "what should I shoot":
+# it ranks your configured sites by forecast cloud cover in each site's own
+# dark window. --radius-km restricts the comparison to sites within that
+# distance of --site (default: every configured site, any distance);
+# --date takes a single YYYY-MM-DD, same as `plan`, default tonight.
+uv run lotse best-sky --site Feldberg --radius-km 50 --date 2026-11-14
 ```
 
 `uv run <cmd>` runs the command inside the project's own virtual environment
@@ -78,15 +86,21 @@ On the first test run, `skyfield` downloads the JPL ephemeris `de421.bsp`
 (~17 MB) once and caches it in `.cache/skyfield/` (not part of the git repo).
 After that, everything runs offline.
 
+Every Open-Meteo forecast is cached per site for 1 hour in
+`.cache/open_meteo/` (also not part of the git repo) — a `plan` or
+`best-sky` run within that hour reuses it instead of hitting the network
+again.
+
 ## Architecture
 
 ```
 nachtlotse/
 ├── engine/     # pure, deterministic, testable — no I/O, no network
 ├── data/       # persistence — sites, rigs, horizons, session log
-├── weather/    # optional layer (from M4) — Open-Meteo
+├── weather/    # optional layer (from M4) — Open-Meteo, TTL-cached
 ├── charting.py # shared chart geometry, library-agnostic
 ├── chart_export.py  # CLI's --chart PNG export (matplotlib)
+├── best_sky.py # cross-site weather comparison (`lotse best-sky`)
 └── cli.py      # the only front end for now — a native macOS app is
                 #   planned later, kept Python-only (see CLAUDE.md)
 ```

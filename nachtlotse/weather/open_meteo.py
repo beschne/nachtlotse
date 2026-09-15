@@ -13,11 +13,20 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 
 from nachtlotse.engine.models import WeatherSummary
 
 _API_URL = "https://api.open-meteo.com/v1/forecast"
 _TIMEOUT_S = 10.0
+
+# Open-Meteo's own models refresh every 1-6h depending on model — polling
+# faster than that buys nothing. Short enough that a plan run never works
+# from meaningfully stale data; long enough that comparing several sites
+# (see `best_sky.py`) doesn't cost one network round-trip per site every
+# time you rerun it during the same evening's decision-making.
+CACHE_TTL_HOURS = 1.0
+DEFAULT_CACHE_DIR = Path(".cache/open_meteo")
 _FORECAST_DAYS = 16  # Open-Meteo's max for the free hourly forecast — covers
 # `lotse plan --date` for any night within that horizon, not just tonight.
 _HOURLY_FIELDS = (
@@ -99,6 +108,83 @@ def fetch_hourly(lat_deg: float, lon_deg: float) -> list[HourlyWeather]:
         for t, cloud, wind, humidity, dew_point, temperature in rows
         if None not in (cloud, wind, humidity, dew_point, temperature)
     ]
+
+
+def _cache_path(cache_dir: Path, lat_deg: float, lon_deg: float) -> Path:
+    # 3 decimals (~111 m) — more precision than any site's own coordinate
+    # buys nothing at forecast-model resolution.
+    return cache_dir / f"{lat_deg:.3f}_{lon_deg:.3f}.json"
+
+
+def _read_cache(path: Path) -> list[HourlyWeather] | None:
+    """A fresh, well-formed cache entry, or None on miss/expiry/corruption.
+
+    Corruption isn't an error here — the cache is a pure optimization, so
+    anything wrong with it just means falling back to a normal fetch.
+    """
+    try:
+        payload = json.loads(path.read_text())
+        fetched_at = datetime.fromisoformat(payload["fetched_at"])
+        age_hours = (datetime.now(UTC) - fetched_at).total_seconds() / 3600.0
+        if age_hours >= CACHE_TTL_HOURS:
+            return None
+        return [
+            HourlyWeather(
+                when=datetime.fromisoformat(row["when"]),
+                cloud_cover_pct=row["cloud_cover_pct"],
+                wind_speed_kmh=row["wind_speed_kmh"],
+                humidity_pct=row["humidity_pct"],
+                dew_point_c=row["dew_point_c"],
+                temperature_c=row["temperature_c"],
+            )
+            for row in payload["hours"]
+        ]
+    except (OSError, json.JSONDecodeError, KeyError, ValueError):
+        return None
+
+
+def _write_cache(path: Path, hours: list[HourlyWeather]) -> None:
+    payload = {
+        "fetched_at": datetime.now(UTC).isoformat(),
+        "hours": [
+            {
+                "when": hour.when.isoformat(),
+                "cloud_cover_pct": hour.cloud_cover_pct,
+                "wind_speed_kmh": hour.wind_speed_kmh,
+                "humidity_pct": hour.humidity_pct,
+                "dew_point_c": hour.dew_point_c,
+                "temperature_c": hour.temperature_c,
+            }
+            for hour in hours
+        ],
+    }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload))
+    except OSError:
+        pass  # best-effort — a stale/missing cache just means a re-fetch
+
+
+def fetch_hourly_cached(
+    lat_deg: float, lon_deg: float, *, cache_dir: Path | None = None
+) -> list[HourlyWeather]:
+    """Same as `fetch_hourly`, but serves a same-site forecast already
+    fetched within the last `CACHE_TTL_HOURS` from `cache_dir` (default:
+    `DEFAULT_CACHE_DIR`, re-read here rather than bound as a default
+    argument so tests can monkeypatch it) instead of calling Open-Meteo
+    again. `WeatherUnavailable` still propagates from the underlying
+    fetch exactly as `fetch_hourly` raises it.
+    """
+    if cache_dir is None:
+        cache_dir = DEFAULT_CACHE_DIR
+    path = _cache_path(cache_dir, lat_deg, lon_deg)
+    cached = _read_cache(path)
+    if cached is not None:
+        return cached
+
+    hours = fetch_hourly(lat_deg, lon_deg)
+    _write_cache(path, hours)
+    return hours
 
 
 def summarize_window(
