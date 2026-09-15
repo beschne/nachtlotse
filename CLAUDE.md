@@ -249,78 +249,34 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. Decided, in progress: no fake magnitude for visually attractive objects
-   that don't have a clear, published integrated magnitude — the
-   structural gap identified while reviewing the accumulated skip list
-   after all three book imports (Kier, Bracken's *Astrophotography
-   Planner*, and his *Astrophotography Sky Atlas*): the large majority —
-   diffuse emission/dark nebulae and Abell planetary nebulae without a
-   published integrated magnitude, and cases where the only found
-   magnitude belongs to an illuminating star or a sub-feature rather than
-   the pictured object — is structural, not a temporary data-search gap
-   (see [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
-   reasoning). An editorial best-estimate magnitude was rejected: it's
-   exactly the "fabricated fact" the Guiding Principle rules out, and
-   later indistinguishable from a sourced value. Instead: `Target.magnitude`
-   is `float | None` — `None` means no reliably sourced integrated
-   magnitude exists at all (not "arbitrarily faint"), the same convention
-   `size_arcmin == (0.0, 0.0)` already uses for unknown size. Mechanism
-   landed: a new `mag_unknown.yaml` bin (empty for now — see its header)
-   holds these; admission still requires a real, citable `catalog_id` and
-   a real `size_arcmin`, since that's what framing actually scores on.
-   The five designation-doubtful cases (the only ones worth revisiting
-   without more searching resolving anything) were rechecked against
-   SIMBAD/NED on 2026-09-15: IC 4606, NGC 1555, and Simeis 147 (as
-   Sh2-240) resolved to real, catalogable objects and are now
-   `mag_unknown.yaml` candidates pending a sourced size; IC 1316 and NGC
-   6874 remain excluded, still no real position/data at all. The surface-
-   brightness `reach` factor also landed: integrated magnitude was the
-   wrong signal for extended objects anyway — M57 (mag 8.8, 1.4′×1.0′)
-   packs far more light per pixel than NGC 7000 (mag 4.0, 120′×100′)
-   despite "losing" on magnitude by 4.8 mag, because the light is smeared
-   over ~6000× the area. `engine.framing.surface_brightness_mag_arcsec2`
-   derives the real signal from magnitude + size
-   (μ = m + 2.5·log₁₀(π·(a/2)·(b/2)·3600), arcsec) and `reach_factor`
-   compares it against the site's sky brightness (item #2) plus a tunable
-   stacking margin (a real one: many showpiece nebulae compute fainter
-   than the sky background yet are routinely imaged — the margin is a
-   frankly subjective constant, tuned like `DEFAULT_INTEGRATION_GAIN_MAG`,
-   not physics), feeding `target_priority_score` as a third multiplicative
-   factor alongside `fit`. Unknown magnitude *or* unknown size means
-   `reach = 1.0` (unconstrained); an over-the-limit target fades toward,
-   never all the way to, a floor — it downgrades, it doesn't exclude,
-   since the estimate carries real (~1-2 mag) uncertainty. Remaining:
-   source and add real OpenNGC/SIMBAD-sourced coordinates and sizes for
-   the ~50 already-identified `mag_unknown.yaml` candidates from
-   SKIPPED-OBJECTS.md — not fabricated, the same rigor as every other
-   catalog entry.
-2. `Site.bortle_class: float | None` (parsed from the existing free-text
-   `bortle` field on `SiteRecord`, e.g. `"3–4"` → `3.5`) plus
-   `Site.zenith_sky_brightness_mag_arcsec2: float | None` for a real
-   measured new-moon zenith SQM reading, when you have one — it overrides
-   the Bortle-derived estimate for that site, no code change needed to
-   start using it. Both `None` (no Bortle documented, no measurement) means
-   sky brightness is unconstrained for that site, same convention as
-   everywhere else. Prerequisite for item #1(b)'s `reach` factor; doesn't
-   by itself correct for altitude or moon phase — the measurement is
-   zenith-at-new-moon by definition, and today's target might be at 35°
-   under a 60% moon. That correction is a separate future refinement, not
-   bundled in here.
+1. "Where's the best sky?": given one of your configured sites as a
+   reference point and an optional maximum distance, check the weather
+   forecast across the sites within that radius and surface whichever has
+   the clearest night (least cloud cover) — without a distance, check all
+   configured sites. `Site.lat_deg`/`lon_deg` already carry what's needed
+   for the distance filter; this is a cross-site weather comparison, not
+   a new constraint or scoring rule in the engine.
+2. A "best rig for this target" chooser — `lotse plan` scores targets for
+   whichever rig you pass, it doesn't yet pick between rigs. Worth
+   revisiting `framing_score` (`engine/framing.py`) alongside this: today
+   it's a plateau — anything from 20% to 100% fill of the FoV's shorter
+   side scores the same 1.0, so two rigs that both "fit" a target aren't
+   distinguished by how much of the frame the target actually fills. A
+   rig chooser needs that gradient to meaningfully prefer the more
+   format-filling rig, not just any non-clipping one.
 3. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-4. A "best rig for this target" chooser — `lotse plan` scores targets for
-   whichever rig you pass, it doesn't yet pick between rigs.
-5. Session log: record what's already been captured, and when — total
+4. Session log: record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-6. Structured `lotse plan --json` output, alongside the existing
+5. Structured `lotse plan --json` output, alongside the existing
    human-readable table (not replacing it) — the interface a future native
    app, or any other tooling, consumes instead of parsing text output.
    Straightforward: `NightPlan`/`ShortlistEntry`/`RankedTarget` are already
    plain dataclasses/NamedTuples, so this is a serializer in `cli.py`, not
    an engine change.
-7. A native macOS app — the long-term UI goal now that Nachtlotse's GitHub
+6. A native macOS app — the long-term UI goal now that Nachtlotse's GitHub
    presence is explicitly a portfolio piece, not just a personal tool.
    Python throughout (Swift is deliberately out of scope); exact toolkit
    undecided (PySide6/Qt is the leading candidate) — to be designed once
@@ -329,7 +285,7 @@ Ideas for after the MVP, in priority order:
    if it's Python-native — the same `cli.py` → `engine`/`data` dependency
    direction applies; see the Streamlit MVP's retirement (M5, above) for
    why this project doesn't maintain two front ends at once.
-8. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+7. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
    from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)
@@ -337,13 +293,6 @@ Ideas for after the MVP, in priority order:
 - Multilingual UI/CLI text (at minimum German and English). Everything
   user-facing is English-only for now; this stays parked until there's a
   reason to localize.
-- "Where's the best sky?": given one of your configured sites as a
-  reference point and an optional maximum distance, check the weather
-  forecast across the sites within that radius and surface whichever has
-  the clearest night — without a distance, check all configured sites.
-  `Site.lat_deg`/`lon_deg` already carry what's needed for the distance
-  filter; this is a cross-site weather comparison, not a new constraint
-  or scoring rule in the engine.
 
 ### Out of scope (deliberately excluded)
 - Mount control / session automation
