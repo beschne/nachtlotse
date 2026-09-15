@@ -295,6 +295,9 @@ Ideas for after the MVP, in priority order:
   when touched, so there's no rerun to notice a value changed and re-enable
   the button until you already clicked Apply again) — would need giving up
   batched apply for per-change live reactivity instead. Parked for now.
+- Multilingual UI/CLI text (at minimum German and English). Everything
+  user-facing is English-only for now; this stays parked until there's a
+  reason to localize.
 
 ### Out of scope (deliberately excluded)
 - Mount control / session automation
