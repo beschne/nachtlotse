@@ -42,6 +42,21 @@
   size_arcmin: [10.0, 8.0]
   types: ["reflection_nebula"]
 
+- name: "IC 348 Cluster"
+  catalog_id: "IC 348"
+  ra_deg: 56.132
+  dec_deg: 32.159
+  # SIMBAD's own primary classification is Open Cluster, not the
+  # reflection nebula the original book import assumed — Bracken's "mag
+  # 3.8" is the illuminating star Omicron Persei, but the young cluster
+  # itself has its own real magnitude (go-astronomy.com), unrelated to
+  # that star-conflation issue. SIMBAD's own size field (480') describes
+  # the surrounding molecular cloud, not the recognizable cluster+nebula
+  # framing size — go-astronomy's 7' is used instead.
+  magnitude: 7.3
+  size_arcmin: [7.0, 7.0]
+  types: ["open_cluster"]
+
 - name: "Globular Cluster M5"
   catalog_id: "M5"
   aliases: ["NGC 5904"]

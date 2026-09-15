@@ -9,6 +9,17 @@
   size_arcmin: [12.0, 6.0]
   types: ["galaxy"]
 
+- name: "Tulip Nebula"
+  catalog_id: "Sh2-101"
+  ra_deg: 299.979
+  dec_deg: 35.277
+  # SIMBAD carries no magnitude for this HII region; V=9.0 sourced from
+  # Wikipedia's infobox instead (accepted per CLAUDE.md when SIMBAD/
+  # OpenNGC have nothing).
+  magnitude: 9.0
+  size_arcmin: [16.0, 9.0]
+  types: ["emission_nebula"]
+
 - name: "De Mairan's Nebula"
   catalog_id: "M43"
   aliases: ["NGC 1982"]
@@ -226,6 +237,19 @@
   magnitude: 9.92
   size_arcmin: [9.71, 7.10]
   types: ["galaxy"]
+
+- name: "Hind's Variable Nebula"
+  catalog_id: "NGC 1555"
+  aliases: ["Sh2-238", "vdB 28", "Ced 32b"]
+  ra_deg: 65.488
+  dec_deg: 19.535
+  # SIMBAD carries no magnitude/flux for this object at all; B-mag 9.98
+  # sourced from Wikipedia (accepted per CLAUDE.md when OpenNGC/SIMBAD
+  # have nothing) — a genuinely variable nebula illuminated by T Tauri,
+  # so this single value is one observed state, not a fixed brightness.
+  magnitude: 9.98
+  size_arcmin: [0.5, 0.5]
+  types: ["reflection_nebula"]
 
 - name: "UFO Galaxy"
   catalog_id: "NGC 2683"

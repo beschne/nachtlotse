@@ -7,10 +7,431 @@
 # `size_arcmin` is mandatory instead, since that's what framing actually
 # needs and magnitude can't provide here.
 #
-# Empty for now: this file establishes the mechanism (data model +
-# loader + catalog policy tests all accept `magnitude: None`), pending a
-# follow-up pass that sources real, citable coordinates and sizes for
-# the roughly 50 candidates already identified in SKIPPED-OBJECTS.md —
-# not fabricated from memory, the same OpenNGC/SIMBAD rigor as every
-# other entry in this catalog.
-[]
+# Populated block by block (2026-09-15 onward) from the ~50 candidates
+# identified in SKIPPED-OBJECTS.md — real OpenNGC/SIMBAD-sourced
+# coordinates and sizes, not fabricated, the same rigor as every other
+# entry in this catalog. Not sorted by anything in particular (there's no
+# magnitude to sort by) — roughly import order.
+
+- name: "Antares Nebula"
+  catalog_id: "IC 4606"
+  aliases: ["LBN 1107"]
+  ra_deg: 247.25
+  dec_deg: -26.6
+  # SIMBAD: HII Region, quality flag E (>=10" uncertain, still well inside
+  # this project's ~1' precision need); no NGC 6144 confusion in the
+  # current record (see SKIPPED-OBJECTS.md's 2026-09-15 recheck). Size
+  # from French Wikipedia (SIMBAD/OpenNGC carry none).
+  size_arcmin: [60.0, 40.0]
+  types: ["emission_nebula", "reflection_nebula"]
+
+- name: "Spaghetti Nebula"
+  catalog_id: "Sh2-240"
+  aliases: ["Simeis 147", "LBN 180.05-01.66"]
+  ra_deg: 85.275
+  dec_deg: 28.083
+  # SIMBAD: HII Region (supernova remnant by common usage — this project
+  # has no dedicated SNR type). Size (~3 degrees) corroborated across
+  # Wikipedia, APOD, and the original Sharpless (1959) catalog value.
+  size_arcmin: [180.0, 180.0]
+  types: ["emission_nebula"]
+
+# Block 2 (2026-09-15): six small reflection nebulae along Orion's belt.
+# Coordinates from SIMBAD; sizes from SIMBAD where it carried a Dim field
+# (IC 423, IC 426), otherwise from go-astronomy.com's OpenNGC-derived
+# major/minor-axis fields, cross-checked against its own coordinates
+# matching SIMBAD's closely. Bracken's own "reflection nebula" magnitude
+# for these belongs to the illuminating star, not the nebula (see
+# SKIPPED-OBJECTS.md).
+
+- name: "Reflection Nebula IC 423"
+  catalog_id: "IC 423"
+  ra_deg: 83.338
+  dec_deg: -0.633
+  size_arcmin: [6.0, 3.5]
+  types: ["reflection_nebula"]
+
+- name: "Reflection Nebula IC 424"
+  catalog_id: "IC 424"
+  ra_deg: 83.408
+  dec_deg: -0.413
+  size_arcmin: [2.5, 1.7]
+  types: ["reflection_nebula"]
+
+- name: "Reflection Nebula IC 426"
+  catalog_id: "IC 426"
+  ra_deg: 84.117
+  dec_deg: -0.277
+  size_arcmin: [6.0, 3.5]
+  types: ["reflection_nebula"]
+
+- name: "Reflection Nebula IC 431"
+  catalog_id: "IC 431"
+  ra_deg: 85.25
+  dec_deg: -1.6
+  size_arcmin: [8.0, 5.0]
+  types: ["reflection_nebula"]
+
+- name: "Reflection Nebula IC 432"
+  catalog_id: "IC 432"
+  ra_deg: 85.238
+  dec_deg: -1.508
+  size_arcmin: [10.0, 10.0]
+  types: ["reflection_nebula"]
+
+- name: "Reflection Nebula IC 435"
+  catalog_id: "IC 435"
+  ra_deg: 85.752
+  dec_deg: -2.313
+  size_arcmin: [3.98, 3.02]
+  types: ["reflection_nebula"]
+
+# Block 3 (2026-09-15): the illuminating-star-magnitude conflation cases.
+
+- name: "Blue Horsehead Nebula"
+  catalog_id: "IC 4592"
+  ra_deg: 243.25
+  dec_deg: -19.3
+  # SIMBAD carries no size; 150'x40' from Deep Sky Corner. Illuminated by
+  # Nu Scorpii (vis. mag 4) — that star's brightness, not a nebula
+  # magnitude, is the only number ever found for this object.
+  size_arcmin: [150.0, 60.0]
+  types: ["reflection_nebula"]
+
+- name: "Reflection Nebula IC 444"
+  catalog_id: "IC 444"
+  aliases: ["vdB 75", "Ced 74", "DG 100"]
+  ra_deg: 94.642
+  dec_deg: 23.313
+  # SKIPPED-OBJECTS.md previously listed this as "vdB 75 (Foxfur Nebula)"
+  # — a mislabeling caught during this recheck: the real Foxfur Nebula is
+  # a different object entirely (Sh2-273, part of NGC 2264 in Monoceros).
+  # SIMBAD's own "vdB 75" lookup resolves straight to the illuminating
+  # star (12 Gem) rather than a nebula entry; IC 444 is the same physical
+  # nebula's own, separately cataloged SIMBAD entry. Size (~32' dia.) from
+  # Wikipedia; Dreyer's original description ("nebula of magnitude 9.5,
+  # with star involved") is the same star-conflation pattern as the
+  # other entries in this block, not a real nebula magnitude.
+  size_arcmin: [32.0, 32.0]
+  types: ["reflection_nebula"]
+
+- name: "Gamma Cygni Nebula"
+  catalog_id: "IC 1318"
+  aliases: ["LBN 245"]
+  # SIMBAD's own "IC 1318" position (20 16 48 +41 57 24) sits ~1.7 deg from
+  # every other source for this object; Deep Sky Corner's coordinates
+  # (used here) are centered on Gamma Cygni (Sadr) itself, which the
+  # nebula complex surrounds — using them paired with its own size figure
+  # keeps the position and the framing size self-consistent, rather than
+  # mixing a size measured relative to one center onto a different one.
+  ra_deg: 305.558
+  dec_deg: 40.257
+  size_arcmin: [50.0, 30.0]
+  types: ["emission_nebula"]
+
+- name: "Reflection Nebula IC 1287"
+  catalog_id: "IC 1287"
+  ra_deg: 278.0
+  dec_deg: -10.8
+  # OpenNGC's B-Mag=6.10 (confirmed again via go-astronomy.com) matches
+  # Bracken's own description, "reflection nebula around mag 6.0 star" —
+  # the illuminating star's brightness, not the nebula's.
+  size_arcmin: [20.0, 10.0]
+  types: ["reflection_nebula"]
+
+# Block 4 (2026-09-15): straightforward "no magnitude" cases, single
+# source per field (SIMBAD first, one secondary lookup only when SIMBAD
+# carried no Dim) since none of these turned up anything implausible.
+
+- name: "Spider Nebula"
+  catalog_id: "IC 417"
+  ra_deg: 82.013
+  dec_deg: 34.412
+  size_arcmin: [3.75, 2.43]
+  types: ["emission_nebula"]
+
+- name: "Reflection Nebula IC 59"
+  catalog_id: "IC 59"
+  ra_deg: 14.427
+  dec_deg: 61.083
+  size_arcmin: [10.0, 5.0]
+  types: ["reflection_nebula"]
+
+- name: "Monkey Head Nebula"
+  catalog_id: "NGC 2174"
+  ra_deg: 92.425
+  dec_deg: 20.5
+  size_arcmin: [40.0, 40.0]
+  types: ["emission_nebula"]
+
+- name: "Seagull Nebula"
+  catalog_id: "IC 2177"
+  aliases: ["NGC 2327"]
+  ra_deg: 106.104
+  dec_deg: -10.455
+  # Size is the compact "head" (NGC 2327) region at IC 2177's own
+  # cataloged position, not the ~120' full wing complex the popular name
+  # sometimes refers to in wide-field images.
+  size_arcmin: [13.0, 13.0]
+  types: ["emission_nebula"]
+
+- name: "Reflection Nebula NGC 2023"
+  catalog_id: "NGC 2023"
+  ra_deg: 85.408
+  dec_deg: -2.264
+  size_arcmin: [10.0, 10.0]
+  types: ["reflection_nebula"]
+
+# Block 5 (2026-09-15): the "individually verified" Sharpless/CTB nebulae.
+# Note: Sh2-101 (Tulip Nebula) turned out to have a real Wikipedia
+# magnitude after all — see mag_9_10.yaml instead.
+
+- name: "Flying Bat Nebula"
+  catalog_id: "Sh2-129"
+  ra_deg: 317.95
+  dec_deg: 59.95
+  size_arcmin: [140.0, 140.0]
+  types: ["emission_nebula"]
+
+- name: "Lion Nebula"
+  catalog_id: "Sh2-132"
+  ra_deg: 334.788
+  dec_deg: 56.079
+  size_arcmin: [42.0, 30.0]
+  types: ["emission_nebula"]
+
+- name: "Lobster Claw Nebula"
+  catalog_id: "Sh2-157"
+  ra_deg: 349.016
+  dec_deg: 60.034
+  # SIMBAD's own Dim field (3.32'x1.68') measures a compact radio-bright
+  # core, not the full visible nebula (~35'x40', multiply corroborated) —
+  # the latter is used here for framing.
+  size_arcmin: [40.0, 35.0]
+  types: ["emission_nebula"]
+
+- name: "Barnard's Loop"
+  catalog_id: "Sh2-276"
+  ra_deg: 81.875
+  dec_deg: -3.967
+  # Wikipedia's infobox claims V=5 for this nebula, which is implausible
+  # (Barnard's Loop is famously invisible without narrowband filters and
+  # long exposure, not a naked-eye object) and contradicted by SIMBAD,
+  # which carries no magnitude/flux at all for it — not used. Size (~10
+  # degrees) corroborated by both sources.
+  size_arcmin: [600.0, 600.0]
+  types: ["emission_nebula"]
+
+- name: "Garlic Nebula"
+  catalog_id: "CTB 1"
+  aliases: ["Abell 85"]
+  ra_deg: 359.804
+  dec_deg: 62.437
+  # Size from Abell's own 1966 catalog value (2077"x2077" = 34.6'),
+  # corroborated by independent "~30', about the size of the full moon"
+  # estimates.
+  size_arcmin: [34.6, 34.6]
+  types: ["emission_nebula"]
+
+# Block 6 (2026-09-15): the rest of the Sharpless "skipped by the same
+# pattern" list, now individually checked.
+
+- name: "Reflection Nebula NGC 1491"
+  catalog_id: "NGC 1491"
+  aliases: ["Sh2-206"]
+  ra_deg: 60.816
+  dec_deg: 51.315
+  size_arcmin: [4.8, 4.8]
+  types: ["emission_nebula"]
+
+- name: "Lambda Orionis Ring"
+  catalog_id: "Sh2-264"
+  ra_deg: 83.825
+  dec_deg: 9.933
+  size_arcmin: [390.0, 390.0]
+  types: ["emission_nebula"]
+
+- name: "Sh2-86 Nebula"
+  catalog_id: "Sh2-86"
+  aliases: ["NGC 6820"]
+  ra_deg: 295.8
+  dec_deg: 23.25
+  # OpenNGC's B-Mag=15.0 belongs to the 30"-diameter NGC 6820 sub-feature
+  # inside the much larger (~40') Sh2-86 nebula, not the pictured object
+  # — confirmed again this pass. "NGC 6820" is colloquially used for the
+  # whole nebulous area, hence the alias, but is really the tiny
+  # sub-feature; the embedded open cluster NGC 6823 is a separate object
+  # not included here.
+  size_arcmin: [40.0, 40.0]
+  types: ["emission_nebula"]
+
+- name: "Sh2-119 Nebula"
+  catalog_id: "Sh2-119"
+  ra_deg: 319.625
+  dec_deg: 43.933
+  size_arcmin: [120.0, 120.0]
+  types: ["emission_nebula"]
+
+- name: "Great Lacerta Nebula"
+  catalog_id: "Sh2-126"
+  ra_deg: 338.658
+  dec_deg: 40.667
+  # Correcting a mislabeling in this document's original entry: this is
+  # not the "Scarlet Letter Nebula" (that's the unrelated Sh2-96, in a
+  # different constellation) — Sh2-126 is properly the Great Lacerta
+  # Nebula (aka Gecko/Star Funnel Nebula).
+  size_arcmin: [180.0, 180.0]
+  types: ["emission_nebula"]
+
+- name: "Dolphin Nebula"
+  catalog_id: "Sh2-308"
+  ra_deg: 103.554
+  dec_deg: -23.928
+  # Wikipedia's V=7.0 (and SIMBAD's own "Sh2-308" lookup, which resolves
+  # straight to it) is the central Wolf-Rayet star HD 50896, not the wind
+  # bubble nebula itself — the same illuminating-source conflation
+  # pattern as elsewhere in this catalog, just a star's wind rather than
+  # its light. Size (35'x35') is the bubble itself, from Wikipedia.
+  size_arcmin: [35.0, 35.0]
+  types: ["emission_nebula"]
+
+- name: "Lower's Nebula"
+  catalog_id: "Sh2-261"
+  ra_deg: 92.183
+  dec_deg: 15.675
+  # ~50' is the size consistently cited across current sources; an older
+  # catalog value (10'x8') describes only the brighter core.
+  size_arcmin: [50.0, 50.0]
+  types: ["emission_nebula"]
+
+# Block 7 (2026-09-15): 2 of the 6 minor Sky-Atlas-only Sharpless entries
+# resolved; Sh2-88, Sh2-134, Sh2-135, Sh2-230 had no citable angular size
+# anywhere found (only physical size + distance, which would need an
+# uncertain derived conversion — left open rather than computed) and stay
+# in SKIPPED-OBJECTS.md.
+
+- name: "Pi Scorpii Nebula"
+  catalog_id: "Sh2-1"
+  aliases: ["vdB 99"]
+  ra_deg: 239.7
+  dec_deg: -26.117
+  size_arcmin: [150.0, 150.0]
+  types: ["emission_nebula", "reflection_nebula"]
+
+- name: "Sh2-232 Nebula"
+  catalog_id: "Sh2-232"
+  ra_deg: 85.618
+  dec_deg: 36.19
+  size_arcmin: [45.63, 45.63]
+  types: ["emission_nebula"]
+
+# Block 8 (2026-09-15): the five Abell planetary nebulae. "Abell N" alone
+# is ambiguous in SIMBAD — it collides with George Abell's separate,
+# much more famous catalog of galaxy clusters — so each was looked up via
+# its disambiguating PN A66/PK designation instead. Sizes and coordinates
+# from Deep Sky Corner throughout; every one of these also lists a
+# "C-Star" (central star) magnitude distinct from the nebula, confirming
+# the original "no published magnitude" finding rather than contradicting
+# it — these are point-source stellar magnitudes, not the nebula's own.
+
+- name: "Planetary Nebula Abell 7"
+  catalog_id: "Abell 7"
+  aliases: ["PN A66 7", "PK 215-30.1"]
+  ra_deg: 75.781
+  dec_deg: -15.606
+  size_arcmin: [12.7, 12.7]
+  types: ["planetary_nebula"]
+
+- name: "Planetary Nebula Abell 29"
+  catalog_id: "Abell 29"
+  aliases: ["PN A66 29", "PK 244+12.1"]
+  ra_deg: 130.058
+  dec_deg: -20.895
+  size_arcmin: [6.67, 6.67]
+  types: ["planetary_nebula"]
+
+- name: "Planetary Nebula Abell 33"
+  catalog_id: "Abell 33"
+  ra_deg: 144.787
+  dec_deg: -2.809
+  size_arcmin: [4.5, 4.5]
+  types: ["planetary_nebula"]
+
+- name: "Planetary Nebula Abell 35"
+  catalog_id: "Abell 35"
+  ra_deg: 193.421
+  dec_deg: -22.862
+  size_arcmin: [12.83, 12.83]
+  types: ["planetary_nebula"]
+
+- name: "Planetary Nebula Abell 36"
+  catalog_id: "Abell 36"
+  ra_deg: 205.171
+  dec_deg: -19.883
+  size_arcmin: [6.17, 6.17]
+  types: ["planetary_nebula"]
+
+# Block 9 (2026-09-15): the last of the Sharpless/CTB group. Only one of
+# the four candidates was actually addable — see SKIPPED-OBJECTS.md for
+# why BFS63, Fox Fur Nebula, and Perseus Molecular Cloud are correctly
+# excluded rather than just not-yet-sourced.
+
+- name: "Planetary Nebula RCW 181"
+  catalog_id: "RCW 181"
+  aliases: ["YM-16", "PK 38+2.1"]
+  ra_deg: 283.739
+  dec_deg: 6.042
+  # A widely-cited "magnitude 14.6" for this object could not be verified
+  # against a primary source (blocked page) and, given how often a
+  # planetary nebula's own photometry turns out to be its central star's
+  # instead (see the Abell block above), isn't used here.
+  size_arcmin: [6.0, 6.0]
+  types: ["planetary_nebula"]
+
+# Block 10 (2026-09-15): the Barnard/Lynds dark nebulae, plus NGC 7822 —
+# dark nebulae are obscuration, not emission, so "no magnitude" isn't a
+# gap here, it's definitional; only coordinates/size needed sourcing.
+
+- name: "Snake Nebula"
+  catalog_id: "Barnard 72"
+  ra_deg: 260.913
+  dec_deg: -23.695
+  size_arcmin: [37.0, 17.0]
+  types: ["dark_nebula"]
+
+- name: "Pipe Nebula (Stem)"
+  catalog_id: "LDN 1773"
+  aliases: ["Barnard 59", "Barnard 65", "Barnard 66", "Barnard 67"]
+  ra_deg: 260.275
+  dec_deg: -26.8
+  # This is specifically the stem (B59, 65-67) of the Pipe Nebula, per
+  # Wikipedia's own distinction — the bowl is the separate B78/LDN 42,
+  # not part of the original skip-list entry and not added here.
+  size_arcmin: [300.0, 60.0]
+  types: ["dark_nebula"]
+
+- name: "E Nebula"
+  catalog_id: "Barnard 142"
+  aliases: ["Barnard 143"]
+  ra_deg: 294.925
+  dec_deg: 10.517
+  size_arcmin: [30.0, 30.0]
+  types: ["dark_nebula"]
+
+- name: "Dark Shark Nebula"
+  catalog_id: "LDN 1235"
+  ra_deg: 333.729
+  dec_deg: 73.417
+  # SIMBAD's own Dim field (10.2'x4.2') covers specifically the "nose" —
+  # LDN 1235 catalogs only that feature, not the full, much larger shark
+  # silhouette some wide-field images popularly call by the same name.
+  size_arcmin: [10.2, 4.2]
+  types: ["dark_nebula"]
+
+- name: "NGC 7822 Nebula"
+  catalog_id: "NGC 7822"
+  aliases: ["Ced 214", "Sh2-171"]
+  ra_deg: 0.286
+  dec_deg: 67.421
+  size_arcmin: [22.8, 22.8]
+  types: ["emission_nebula"]

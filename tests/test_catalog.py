@@ -46,8 +46,12 @@ _MIN_DEC_DEG_FOR_40N_VISIBILITY = -30.0
 _MAX_CATALOG_MAGNITUDE = 18.6
 
 
-def test_catalog_has_around_185_unique_objects() -> None:
-    assert 175 <= len(CATALOG) <= 200
+def test_catalog_has_a_plausible_number_of_unique_objects() -> None:
+    # 185 after the three book imports; growing block by block as
+    # mag_unknown.yaml is populated from SKIPPED-OBJECTS.md (roadmap #1) —
+    # wide enough to not need bumping every block, tight enough to still
+    # catch a loader regression that silently drops or duplicates entries.
+    assert 175 <= len(CATALOG) <= 260
 
 
 def test_catalog_ids_are_unique() -> None:
