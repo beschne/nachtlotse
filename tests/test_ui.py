@@ -85,7 +85,8 @@ def test_selecting_an_object_type_filters_the_plan_to_that_type(
     # but whichever happens must be internally consistent with the filter.
     if at.error and any("selected type" in e.value for e in at.error):
         return
-    assert "Galaxy" in at.caption[-1].value  # hero's caption, not the page tagline
+    # last shortlist card's caption, not the page tagline
+    assert "Galaxy" in at.caption[-1].value
     if at.dataframe:
         assert all("Galaxy" in cell for cell in at.dataframe[0].value["Type"])
 

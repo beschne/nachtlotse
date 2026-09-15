@@ -1,7 +1,7 @@
 [project]
 name = "nachtlotse"
-version = "0.1.0"
-description = "Deterministic astrophotography session planner: scores sky, site, and equipment into a GO/MARGINAL/SKIP verdict"
+version = "1.1.0"
+description = "Deterministic astrophotography session planner: scores sky, site, and equipment into a shortlist with a GO/MARGINAL/SKIP verdict per target"
 requires-python = ">=3.12"
 dependencies = [
     "astroplan>=0.10.1",

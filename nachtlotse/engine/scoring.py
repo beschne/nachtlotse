@@ -33,7 +33,7 @@ MARGINAL_WIND_KMH = 25.0
 # on the optics becomes a real risk over a multi-hour session.
 MARGINAL_DEW_POINT_SPREAD_C = 2.0
 
-# Altitude (deg) of the hero target's best moment tonight. Below this,
+# Altitude (deg) of a target's best moment tonight. Below this,
 # atmospheric extinction and seeing degrade the shot even under a clear
 # sky — a "clear but low" night is MARGINAL, not GO.
 MARGINAL_ALTITUDE_DEG = 40.0
@@ -48,7 +48,10 @@ def verdict_for_target(
 
     `alt_deg` is the altitude already computed by the engine ranking (see
     `engine.constraints.best_time_tonight`) — this function only combines
-    it with weather, it doesn't recompute sky geometry.
+    it with weather, it doesn't recompute sky geometry. Called once per
+    shortlisted target (see `planning.plan_night`), not once for the night
+    as a whole — two targets in the same shortlist can land on different
+    verdicts if their altitudes differ.
     """
     level: _Level = "GO"
     reasons: list[str] = []
@@ -86,7 +89,7 @@ def verdict_for_target(
             )
 
     if alt_deg < MARGINAL_ALTITUDE_DEG:
-        downgrade("MARGINAL", f"hero target only reaches {alt_deg:.0f}° altitude")
+        downgrade("MARGINAL", f"target only reaches {alt_deg:.0f}° altitude")
 
     if not reasons:
         reasons.append(

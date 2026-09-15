@@ -4,8 +4,9 @@
 
 Same rule as `cli.py`: this file is the UI boundary. It calls
 `nachtlotse.planning.plan_night()` for every number on the page and adds
-no astronomy of its own — verdict light, hero target, backups, and the
-altitude curve all come straight from the engine's own output.
+no astronomy of its own — the shortlist cards, each with its own verdict,
+backups, and the altitude curve all come straight from the engine's own
+output.
 """
 
 from __future__ import annotations
@@ -76,17 +77,18 @@ def _cached_plan(
     return planning.plan_night(site_record.site, rig_record.rig, when, types=types)
 
 
-def _altitude_chart(plan: planning.NightPlan, local_tz: ZoneInfo) -> alt.Chart:
-    hero = plan.ranked[0]
+def _altitude_chart(
+    plan: planning.NightPlan, row: planning.RankedTarget, local_tz: ZoneInfo
+) -> alt.Chart:
     series = ephemeris.altitude_series(
         plan.site,
-        hero.target,
+        row.target,
         plan.evening_start,
         plan.morning_end,
         num_samples=_ALTITUDE_CURVE_SAMPLES,
     )
     local_times = [when.astimezone(local_tz) for when, _pos in series]
-    hero_label = f"{hero.target.name} altitude"
+    target_label = f"{row.target.name} altitude"
 
     # Long-form, two series stacked, so a single mark_line + color encoding
     # draws both — Altair's own default (not calling .interactive()) has
@@ -98,7 +100,7 @@ def _altitude_chart(plan: planning.NightPlan, local_tz: ZoneInfo) -> alt.Chart:
                 *(pos.alt_deg for _when, pos in series),
                 *([_MIN_USEFUL_ALTITUDE_DEG] * len(series)),
             ],
-            "Series": [hero_label] * len(series)
+            "Series": [target_label] * len(series)
             + ["Min useful altitude"] * len(series),
         }
     )
@@ -112,7 +114,8 @@ def _altitude_chart(plan: planning.NightPlan, local_tz: ZoneInfo) -> alt.Chart:
 def _backups_frame(
     plan: planning.NightPlan, local_tz: ZoneInfo, backup_count: int
 ) -> pd.DataFrame:
-    rows = plan.ranked[1 : 1 + backup_count]
+    shortlisted = len(plan.shortlist)
+    rows = plan.ranked[shortlisted : shortlisted + backup_count]
     return pd.DataFrame(
         {
             "Target": [f"{row.target.catalog_id} {row.target.name}" for row in rows],
@@ -194,34 +197,33 @@ def main() -> None:
         )
         return
 
-    hero = plan.ranked[0]
-    verdict = plan.verdict
-    assert verdict is not None  # a ranked hero always yields a verdict
+    st.markdown("### Shortlist")
+    for rank, (row, verdict) in enumerate(plan.shortlist, start=1):
+        with st.container(border=True):
+            box = _VERDICT_BOX[verdict.level]
+            box(f"**{verdict.level}** — #{rank} **{row.target.name}**")
+            for reason in verdict.reasons:
+                st.markdown(f"- {reason}")
 
-    box = _VERDICT_BOX[verdict.level]
-    box(f"**{verdict.level}** — hero target: **{hero.target.name}**")
-    for reason in verdict.reasons:
-        st.markdown(f"- {reason}")
+            entry_cols = st.columns(4)
+            entry_cols[0].metric("Max altitude", f"{row.pos.alt_deg:.0f}°")
+            entry_cols[1].metric("Azimuth", f"{row.pos.az_deg:.0f}°")
+            entry_cols[2].metric("Framing fit", f"{row.fit:.2f}")
+            entry_cols[3].metric(
+                "Best time", row.best_time.astimezone(local_tz).strftime("%H:%M")
+            )
+            width_arcmin, height_arcmin = row.target.size_arcmin
+            st.caption(
+                f"{row.target.catalog_id} · {_format_types(row.target.types)} · "
+                f"magnitude {row.target.magnitude:.1f} · "
+                f"size {_format_arcmin(width_arcmin)}′ × {_format_arcmin(height_arcmin)}′"
+            )
 
-    st.markdown(f"### Hero target {hero.target.catalog_id} {hero.target.name}")
-    hero_cols = st.columns(4)
-    hero_cols[0].metric("Max altitude", f"{hero.pos.alt_deg:.0f}°")
-    hero_cols[1].metric("Azimuth", f"{hero.pos.az_deg:.0f}°")
-    hero_cols[2].metric("Framing fit", f"{hero.fit:.2f}")
-    hero_cols[3].metric(
-        "Best time", hero.best_time.astimezone(local_tz).strftime("%H:%M")
-    )
-    width_arcmin, height_arcmin = hero.target.size_arcmin
-    st.caption(
-        f"{hero.target.catalog_id} · {_format_types(hero.target.types)} · "
-        f"magnitude {hero.target.magnitude:.1f} · "
-        f"size {_format_arcmin(width_arcmin)}′ × {_format_arcmin(height_arcmin)}′"
-    )
+    top_pick = plan.shortlist[0].ranked
+    st.markdown(f"### Altitude tonight — {top_pick.target.name}")
+    st.altair_chart(_altitude_chart(plan, top_pick, local_tz), width="stretch")
 
-    st.markdown("### Altitude tonight")
-    st.altair_chart(_altitude_chart(plan, local_tz), width="stretch")
-
-    if len(plan.ranked) > 1:
+    if len(plan.ranked) > len(plan.shortlist):
         st.markdown("### Backups")
         backups = _backups_frame(plan, local_tz, backup_count)
         # An explicit height covering every row avoids st.dataframe's own

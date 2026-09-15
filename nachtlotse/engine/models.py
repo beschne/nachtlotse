@@ -179,4 +179,5 @@ class WeatherSummary:
 @dataclass(frozen=True)
 class Verdict:
     level: Literal["GO", "MARGINAL", "SKIP"]
-    reasons: list[str]
+    reasons: list[str]  # every number comes from the engine
+    # one Verdict per shortlisted target, not one per night — see roadmap

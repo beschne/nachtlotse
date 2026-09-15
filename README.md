@@ -8,11 +8,9 @@ ships through difficult waters, but for clear nights and telescopes.)*
 
 A deterministic session planner for astrophotography, native on macOS. It scores
 tonight's sky over a given site against a given equipment rig and distills the
-result down to **one** hero target plus a verdict: **GO / MARGINAL / SKIP** —
-with a traceable rationale.
-
-Motivated by [Clear Night Coach](https://clearnightcoach.com) (Windows-only).
-Nachtlotse rebuilds the same core cross-platform — with an open, testable engine.
+result down to a short, score-ranked **shortlist** of targets — each with its
+own verdict: **GO / MARGINAL / SKIP** — with a traceable rationale, built on an
+open, testable engine.
 
 ## Guiding principle
 

@@ -94,12 +94,12 @@ def _cmd_plan(
         )
         return 0
 
-    hero = plan.ranked[0]
-    verdict = plan.verdict
-    assert verdict is not None  # a ranked hero always yields a verdict
-    print(f"Verdict: {verdict.level} — hero target {hero.target.name}")
-    for reason in verdict.reasons:
-        print(f"  {reason}")
+    print("Shortlist:")
+    for rank, (row, verdict) in enumerate(plan.shortlist, start=1):
+        label = f"{row.target.catalog_id} {row.target.name}".strip()
+        print(f"  {rank}. Verdict: {verdict.level} — {label}")
+        for reason in verdict.reasons:
+            print(f"       {reason}")
     print()
 
     print(

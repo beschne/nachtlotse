@@ -200,11 +200,15 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 - Sits between the pure `engine` core and any UI: `plan_night(site, rig,
   when)` runs the whole pipeline — dark window, moon illumination, ranked
   targets (`rank_targets`, rig-aware field-rotation gating included),
-  weather (`fetch_weather_summary`, optional and network-only here), and
-  the hero verdict — into one `NightPlan`. Extracted out of `cli.py` when
-  the Streamlit UI needed the exact same pipeline, so neither front end
-  duplicates it; `cli.py` and `nachtlotse/ui/app.py` both just format a
-  `NightPlan` for their own medium.
+  weather (`fetch_weather_summary`, optional and network-only here), and a
+  `shortlist` of the top `SHORTLIST_SIZE` ranked targets, each with its own
+  `verdict_for_target` call — into one `NightPlan`. There is no single hero
+  target or single verdict for the night; two shortlisted targets at
+  different altitudes can land on different GO/MARGINAL/SKIP levels.
+  Extracted out of `cli.py` when the Streamlit UI needed the exact same
+  pipeline, so neither front end duplicates it; `cli.py` and
+  `nachtlotse/ui/app.py` both just format a `NightPlan` for their own
+  medium.
 - Not UI code itself — no printing, no framework imports — which is what
   keeps it shared instead of becoming a third implementation.
 
@@ -233,9 +237,10 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/engine/scoring.py`
 
-- The GO/MARGINAL/SKIP verdict for the hero (top-ranked) target: pure and
-  deterministic given an altitude plus an optional `WeatherSummary`, so it
-  never touches the network itself.
+- The GO/MARGINAL/SKIP verdict for a single target: pure and deterministic
+  given an altitude plus an optional `WeatherSummary`, so it never touches
+  the network itself. `planning.plan_night` calls it once per shortlisted
+  target, not once for the night as a whole.
 - Cloud cover, wind, dew-point margin, and low altitude can each downgrade
   the verdict, worst-wins; thresholds are named module constants, called
   out as a tunable heuristic rather than physics (per CLAUDE.md's M4 note).
@@ -247,9 +252,9 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
 
 - `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD]` calls
   `planning.plan_night` and prints the result: dark window, moon
-  illumination, weather summary, a framing-fit column, and a
-  GO/MARGINAL/SKIP verdict for the top target; `lotse sites` / `lotse rigs`
-  list what's configured.
+  illumination, weather summary, a numbered shortlist with its own
+  GO/MARGINAL/SKIP verdict per target, and the full ranked table with a
+  framing-fit column; `lotse sites` / `lotse rigs` list what's configured.
 - The ranked list is sorted by `framing.target_priority_score` (altitude ×
   framing fit, descending) — the "Max Alt" column alone no longer decides
   the order. A target whose best window is horizon- or rotation-limited
@@ -268,12 +273,13 @@ and roadmap, see [README.md](./README.md) and [CLAUDE.md](./CLAUDE.md).
   date picker; `st.cache_data` keys the plan on (site, rig, date) so
   switching between them doesn't re-run the ephemeris/weather pipeline for
   a combination already seen this session.
-- Main page, single glance: a colored verdict box (`st.success` /
-  `st.warning` / `st.error` map directly onto GO / MARGINAL / SKIP) with
-  its reasons listed underneath, the hero target's stats, an altitude
-  curve for the hero across the whole dark window (`ephemeris.
-  altitude_series`, with the 20° minimum-useful-altitude line for
-  reference), and a backups table of the next several ranked targets.
+- Main page: a "Shortlist" section with one card per shortlisted target,
+  each its own colored verdict box (`st.success` / `st.warning` /
+  `st.error` map directly onto GO / MARGINAL / SKIP) with its own reasons
+  and stats — no single verdict or hero target for the night. An altitude
+  curve (`ephemeris.altitude_series`, with the 20° minimum-useful-altitude
+  line for reference) for the top-ranked shortlist pick, and a backups
+  table of the next several ranked targets beyond the shortlist.
 - Missing `sites_local.yaml`/`rigs_local.yaml` shows the same actionable
   setup hint as the CLI (`store.require_sites`/`require_rigs`) rather than
   a raw traceback.

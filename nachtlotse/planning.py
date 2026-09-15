@@ -39,6 +39,24 @@ class RankedTarget(NamedTuple):
     fit: float
 
 
+class ShortlistEntry(NamedTuple):
+    """One shortlisted target with its own GO/MARGINAL/SKIP verdict.
+
+    There is no single hero target and no single verdict for the night —
+    each of the top few ranked targets is independently judged on its own
+    altitude (see `engine.scoring.verdict_for_target`), so a night can be a
+    GO on one target and a SKIP on another.
+    """
+
+    ranked: RankedTarget
+    verdict: Verdict
+
+
+# How many of the top-ranked targets get their own verdict. A "handful", per
+# the roadmap — not the whole ranking, which can run to dozens of targets.
+SHORTLIST_SIZE = 5
+
+
 @dataclass(frozen=True)
 class NightPlan:
     """Everything needed to render a plan, independent of any UI."""
@@ -50,9 +68,9 @@ class NightPlan:
     moon_illumination_pct: float
     weather: WeatherSummary | None
     ranked: list[RankedTarget]
-    # None only when no catalog target clears constraints tonight at all —
-    # there is no hero target to base a verdict on.
-    verdict: Verdict | None
+    # The top SHORTLIST_SIZE of `ranked`, each with its own verdict. Empty
+    # only when no catalog target clears constraints tonight at all.
+    shortlist: list[ShortlistEntry]
 
 
 def _rotation_gate(
@@ -144,10 +162,10 @@ def plan_night(
     weather = fetch_weather_summary(site, evening_start, morning_end)
     ranked = rank_targets(site, rig, when, types=types)
 
-    verdict = None
-    if ranked:
-        hero = ranked[0]
-        verdict = scoring.verdict_for_target(hero.pos.alt_deg, weather=weather)
+    shortlist = [
+        ShortlistEntry(row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather))
+        for row in ranked[:SHORTLIST_SIZE]
+    ]
 
     return NightPlan(
         site=site,
@@ -157,5 +175,5 @@ def plan_night(
         moon_illumination_pct=illumination_pct,
         weather=weather,
         ranked=ranked,
-        verdict=verdict,
+        shortlist=shortlist,
     )

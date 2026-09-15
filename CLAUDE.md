@@ -6,10 +6,8 @@
 A deterministic session planner for astrophotography, native on macOS.
 It scores tonight's sky over *your* site against *your* equipment and
 distills the result down to a short, score-ranked shortlist of targets —
-each with its own verdict: **GO / MARGINAL / SKIP** — and a traceable rationale.
-
-Modeled after [Clear Night Coach](https://clearnightcoach.com) (Windows-only).
-Nachtlotse rebuilds the same core cross-platform — with an open, testable engine.
+each with its own verdict: **GO / MARGINAL / SKIP** — and a traceable
+rationale, built on an open, testable engine.
 
 ---
 
@@ -228,15 +226,7 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. Drop the single hero-target framing: `plan_night()` returns a short,
-   score-ranked shortlist (a handful of objects, not one), and each
-   shortlisted object gets its **own** `Verdict` (GO/MARGINAL/SKIP with its
-   own reasons) instead of one verdict borrowed from `ranked[0]`. The UI's
-   "Hero target" section becomes a list of a few cards/rows, each with its
-   own verdict badge. `scoring.verdict_for_target()` already takes a single
-   target's altitude, so this is calling it once per shortlisted target
-   instead of once for the top pick — not a rewrite of the heuristic itself.
-2. New: a polar (alt/az) chart as the entry point into a shortlist —
+1. New: a polar (alt/az) chart as the entry point into a shortlist —
    azimuth around the ring, altitude (or zenith distance) as the radius,
    with **all** shortlisted objects' tracks over the dark window plotted on
    it together (one line per object, distinguishable by color/label), not
@@ -244,16 +234,16 @@ Ideas for after the MVP, in priority order:
    grayed-out wedge straight from `HorizonProfile.min_alt(az)` — no new
    astronomy, just a second, more informative rendering of numbers the
    engine already produces (today's `_altitude_chart` only plots one
-   target's altitude over time as a line, with no azimuth/horizon context).
-   There is exactly one polar chart — the shortlist overview. The
-   per-object detail view (roadmap item 5) is not polar; it's the existing
-   altitude-over-time line chart, just scoped to whichever object was
-   clicked instead of always the top pick.
-3. Streamlit UI: swap the object-type `st.multiselect` (`app.py`'s
+   shortlisted target's altitude over time as a line, with no azimuth/
+   horizon context). There is exactly one polar chart — the shortlist
+   overview. The per-object detail view (roadmap item 5) is not polar;
+   it's the existing altitude-over-time line chart, just scoped to
+   whichever object was clicked instead of always the top pick.
+2. Streamlit UI: swap the object-type `st.multiselect` (`app.py`'s
    `selected_types`, currently empty = no filter) for one checkbox per
    `TargetType`, all checked by default — filtering out a category becomes
    an explicit uncheck instead of an opt-in multiselect.
-4. With all three book imports done (Kier, Bracken's *Astrophotography
+3. With all three book imports done (Kier, Bracken's *Astrophotography
    Planner*, and his *Astrophotography Sky Atlas*), the accumulated skip
    list is large enough to analyze rather than just carry forward: the
    large majority — diffuse emission/dark nebulae and Abell planetary
@@ -268,6 +258,16 @@ Ideas for after the MVP, in priority order:
    Variable Nebula"), NGC 6874, and Simeis 147. See
    [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full list and
    reasoning behind each exclusion.
+4. Decide how to handle visually attractive objects that don't have a
+   clear, published integrated magnitude — the structural gap identified
+   in item #3's skip-list review, but a design question of its own rather
+   than more data-searching. Right now `Target.magnitude` defaults to 99.0,
+   which sorts/filters an unknown-magnitude object as if arbitrarily faint,
+   so a real showpiece can drop out of contention entirely just for lacking
+   a number, not for being unsuitable. Not decided yet: whether to admit a
+   curated subset with an editorial best-estimate magnitude, add a
+   framing/size-only ranking path that never needs magnitude, or accept the
+   exclusion as-is for objects with no reliable number at all.
 5. Streamlit UI: clicking a shortlisted target shows the same detail panel
    (stats + altitude-over-time curve) as the top pick.
 6. Streamlit UI: a real RGB/visual image of a shortlisted target (e.g. from

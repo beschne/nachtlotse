@@ -193,7 +193,7 @@ def test_altaz_rig_devalues_a_near_zenith_target_that_an_eq_rig_keeps_at_peak(
     # else: fully excluded for the night — also a valid "devalued" outcome.
 
 
-def test_plan_night_carries_dark_window_moon_weather_and_a_hero_verdict(
+def test_plan_night_carries_dark_window_moon_weather_and_a_shortlist(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
 ) -> None:
@@ -207,11 +207,16 @@ def test_plan_night_carries_dark_window_moon_weather_and_a_hero_verdict(
     assert 0.0 <= plan.moon_illumination_pct <= 100.0
     assert plan.weather is not None  # offline fixture always provides one
     assert plan.ranked, "the default site/rig should have observable targets tonight"
-    assert plan.verdict is not None
-    assert plan.verdict.level in ("GO", "MARGINAL", "SKIP")
+    assert plan.shortlist, "a non-empty ranking should yield a shortlist"
+    assert len(plan.shortlist) <= planning.SHORTLIST_SIZE
+    assert [entry.ranked for entry in plan.shortlist] == plan.ranked[
+        : planning.SHORTLIST_SIZE
+    ]
+    for entry in plan.shortlist:
+        assert entry.verdict.level in ("GO", "MARGINAL", "SKIP")
 
 
-def test_plan_night_has_no_verdict_when_nothing_is_observable(
+def test_plan_night_has_no_shortlist_when_nothing_is_observable(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     monkeypatch: pytest.MonkeyPatch,
@@ -223,4 +228,65 @@ def test_plan_night_has_no_verdict_when_nothing_is_observable(
     plan = planning.plan_night(site, rig, datetime.now(UTC))
 
     assert plan.ranked == []
-    assert plan.verdict is None
+    assert plan.shortlist == []
+
+
+def test_plan_night_gives_each_shortlisted_target_its_own_verdict(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A shortlist is not one verdict for the night: two targets at
+    different altitudes can land on different GO/MARGINAL/SKIP levels."""
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+    from nachtlotse.weather import open_meteo
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    rig = store.default_rig_record().rig
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    # conftest's autouse clear-sky fixture anchors its forecast window on
+    # the real `datetime.now()`, which doesn't cover this fixed 2026 test
+    # date — without this, both targets fall back to "no weather forecast"
+    # and get capped at MARGINAL regardless of altitude, masking the thing
+    # this test checks. Re-anchor the same clear-sky forecast on the
+    # reference night instead.
+    def clear_sky_around_reference(lat_deg: float, lon_deg: float) -> list:
+        base = night_reference.to_datetime(timezone=UTC).replace(
+            minute=0, second=0, microsecond=0
+        )
+        return [
+            open_meteo.HourlyWeather(
+                when=base + timedelta(hours=offset),
+                cloud_cover_pct=10.0,
+                wind_speed_kmh=5.0,
+                humidity_pct=50.0,
+                dew_point_c=5.0,
+                temperature_c=15.0,
+            )
+            for offset in range(-24, 72)
+        ]
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", clear_sky_around_reference)
+
+    high_target = Target(
+        name="high test target", ra_deg=lst_deg, dec_deg=site.lat_deg - 20.0
+    )
+    low_target = Target(
+        name="low test target", ra_deg=lst_deg, dec_deg=site.lat_deg - 55.0
+    )
+    monkeypatch.setattr(planning, "CATALOG", [high_target, low_target])
+
+    plan = planning.plan_night(site, rig, night_reference.to_datetime(timezone=UTC))
+
+    assert [entry.ranked.target.name for entry in plan.shortlist] == [
+        "high test target",
+        "low test target",
+    ]
+    high_entry, low_entry = plan.shortlist
+    assert high_entry.verdict.level != low_entry.verdict.level
