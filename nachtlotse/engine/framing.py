@@ -51,18 +51,20 @@ _ROTATION_RATE_BASELINE = timedelta(minutes=5)
 # if needed.
 DEFAULT_MAX_ROTATION_RATE_DEG_PER_MIN = 1.5
 
-_MIN_FILL_FRACTION = 0.2
-
-
 def framing_score(rig: Rig, target: Target) -> float:
     """How well the target's angular size fits the rig's field of view.
 
-    1.0: the target's major axis fills at least 20% of the FoV's shorter
-    dimension without being clipped. Scales down toward 0.0 as the target
-    is either lost in a tiny fraction of the frame (fill < 20%) or badly
-    clipped (overflows it). Targets with no known size (`size_arcmin ==
-    (0, 0)`) score 1.0 — treated as framing-unconstrained, not
-    "infinitely small".
+    Scales directly with the fill fraction (major axis / FoV's shorter
+    side): 1.0 at a fill fraction of 1.0 — the major axis exactly spans
+    the frame's short side, the most a target can fill the shot without
+    clipping — fading linearly down toward 0.0 as the target shrinks
+    toward a speck in the frame. Past 1.0 the target starts clipping and
+    the score fades back down just as it rose. A rig that frames a target
+    at 90% fill now outscores one at 25% fill; previously both scored the
+    same flat 1.0 (see CLAUDE.md's Roadmap #1), which gave a future "best
+    rig for this target" chooser nothing to prefer one by. Targets with
+    no known size (`size_arcmin == (0, 0)`) score 1.0 — treated as
+    framing-unconstrained, not "infinitely small".
     """
     major_arcmin, _minor_arcmin = target.size_arcmin
     if major_arcmin <= 0.0:
@@ -77,9 +79,7 @@ def framing_score(rig: Rig, target: Target) -> float:
 
     if fill_fraction > 1.0:
         return max(0.0, 1.0 - (fill_fraction - 1.0))
-    if fill_fraction >= _MIN_FILL_FRACTION:
-        return 1.0
-    return fill_fraction / _MIN_FILL_FRACTION
+    return fill_fraction
 
 
 _MAX_ALTITUDE_DEG = 90.0

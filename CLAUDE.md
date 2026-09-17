@@ -250,13 +250,13 @@ The MVP (M0–M5) is complete.
 Ideas for after the MVP, in priority order:
 
 1. A "best rig for this target" chooser — `lotse plan` scores targets for
-   whichever rig you pass, it doesn't yet pick between rigs. Worth
-   revisiting `framing_score` (`engine/framing.py`) alongside this: today
-   it's a plateau — anything from 20% to 100% fill of the FoV's shorter
-   side scores the same 1.0, so two rigs that both "fit" a target aren't
-   distinguished by how much of the frame the target actually fills. A
-   rig chooser needs that gradient to meaningfully prefer the more
-   format-filling rig, not just any non-clipping one.
+   whichever rig you pass, it doesn't yet pick between rigs. `framing_score`
+   (`engine/framing.py`) now scales with fill fraction (1.0 at a fill
+   fraction of 1.0, fading toward 0.0 as the target shrinks toward a speck
+   or, past 1.0, as it clips) instead of the old flat 20%-100% plateau, so
+   the gradient a chooser needs — preferring the more format-filling rig,
+   not just any non-clipping one — is in place. The chooser itself (picking
+   between rigs, not just scoring one) is still to build.
 2. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
 3. Session log: record what's already been captured, and when — total

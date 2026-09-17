@@ -126,17 +126,56 @@ def test_has_safe_field_rotation_is_always_true_for_eq_mount() -> None:
     )
 
 
-def test_framing_score_is_full_for_a_well_matched_target() -> None:
-    # ALTAZ_RIG FoV short side; a target filling ~50% of it should score 1.0.
+def test_framing_score_is_full_for_a_target_that_exactly_spans_the_frame() -> None:
+    # A target whose major axis exactly matches the FoV short side fills
+    # the shot as much as possible without clipping.
     fov_width_deg, fov_height_deg = ALTAZ_RIG.fov_deg
     fov_short_arcmin = min(fov_width_deg, fov_height_deg) * 60.0
     target = Target(
-        name="well-matched",
+        name="full-frame",
+        ra_deg=0.0,
+        dec_deg=0.0,
+        size_arcmin=(fov_short_arcmin, fov_short_arcmin * 0.6),
+    )
+    assert framing.framing_score(ALTAZ_RIG, target) == pytest.approx(1.0)
+
+
+def test_framing_score_scales_with_fill_fraction() -> None:
+    # No more 20%-100% plateau (CLAUDE.md Roadmap #1): a target filling
+    # half the frame scores noticeably below one that fills it fully.
+    fov_width_deg, fov_height_deg = ALTAZ_RIG.fov_deg
+    fov_short_arcmin = min(fov_width_deg, fov_height_deg) * 60.0
+    half_filling = Target(
+        name="half-filling",
         ra_deg=0.0,
         dec_deg=0.0,
         size_arcmin=(fov_short_arcmin * 0.5, fov_short_arcmin * 0.3),
     )
-    assert framing.framing_score(ALTAZ_RIG, target) == pytest.approx(1.0)
+    assert framing.framing_score(ALTAZ_RIG, half_filling) == pytest.approx(0.5)
+
+
+def test_framing_score_prefers_a_more_format_filling_target_over_a_smaller_one() -> (
+    None
+):
+    """The gradient a future "best rig for this target" chooser needs:
+    two targets that both "fit" (no clipping) must not score the same."""
+    fov_width_deg, fov_height_deg = ALTAZ_RIG.fov_deg
+    fov_short_arcmin = min(fov_width_deg, fov_height_deg) * 60.0
+    small_fill = Target(
+        name="small-fill",
+        ra_deg=0.0,
+        dec_deg=0.0,
+        size_arcmin=(fov_short_arcmin * 0.25, fov_short_arcmin * 0.2),
+    )
+    large_fill = Target(
+        name="large-fill",
+        ra_deg=0.0,
+        dec_deg=0.0,
+        size_arcmin=(fov_short_arcmin * 0.9, fov_short_arcmin * 0.7),
+    )
+    assert framing.framing_score(ALTAZ_RIG, small_fill) < framing.framing_score(
+        ALTAZ_RIG, large_fill
+    )
 
 
 def test_framing_score_penalizes_a_target_lost_in_the_frame() -> None:
