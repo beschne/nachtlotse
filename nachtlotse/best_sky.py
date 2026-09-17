@@ -38,12 +38,24 @@ def _distance_km(site_a: Site, site_b: Site) -> float:
     return 2.0 * _EARTH_RADIUS_KM * math.asin(math.sqrt(a))
 
 
+def _bearing_deg(origin: Site, destination: Site) -> float:
+    """Initial compass bearing (0=N, 90=E, ...) from `origin` to `destination`."""
+    lat1, lat2 = math.radians(origin.lat_deg), math.radians(destination.lat_deg)
+    dlon = math.radians(destination.lon_deg - origin.lon_deg)
+    x = math.sin(dlon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(
+        dlon
+    )
+    return math.degrees(math.atan2(x, y)) % 360.0
+
+
 @dataclass(frozen=True)
 class SiteSkyReport:
     """One site's weather for its own dark window on the planned night."""
 
     site: Site
     distance_km: float
+    bearing_deg: float | None  # from the reference site; None if distance is ~0
     weather: WeatherSummary | None
 
 
@@ -71,6 +83,7 @@ def compare_sites(
         distance_km = _distance_km(reference, site)
         if max_distance_km is not None and distance_km > max_distance_km:
             continue
+        bearing_deg = _bearing_deg(reference, site) if distance_km > 0.01 else None
 
         evening_start, morning_end = constraints.dark_window(site, when)
         try:
@@ -80,7 +93,14 @@ def compare_sites(
         else:
             weather = open_meteo.summarize_window(hours, evening_start, morning_end)
 
-        reports.append(SiteSkyReport(site=site, distance_km=distance_km, weather=weather))
+        reports.append(
+            SiteSkyReport(
+                site=site,
+                distance_km=distance_km,
+                bearing_deg=bearing_deg,
+                weather=weather,
+            )
+        )
 
     def sort_key(report: SiteSkyReport) -> tuple[int, float]:
         if report.weather is None:

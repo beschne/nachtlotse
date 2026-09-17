@@ -249,14 +249,7 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. "Where's the best sky?": given one of your configured sites as a
-   reference point and an optional maximum distance, check the weather
-   forecast across the sites within that radius and surface whichever has
-   the clearest night (least cloud cover) — without a distance, check all
-   configured sites. `Site.lat_deg`/`lon_deg` already carry what's needed
-   for the distance filter; this is a cross-site weather comparison, not
-   a new constraint or scoring rule in the engine.
-2. A "best rig for this target" chooser — `lotse plan` scores targets for
+1. A "best rig for this target" chooser — `lotse plan` scores targets for
    whichever rig you pass, it doesn't yet pick between rigs. Worth
    revisiting `framing_score` (`engine/framing.py`) alongside this: today
    it's a plateau — anything from 20% to 100% fill of the FoV's shorter
@@ -264,19 +257,19 @@ Ideas for after the MVP, in priority order:
    distinguished by how much of the frame the target actually fills. A
    rig chooser needs that gradient to meaningfully prefer the more
    format-filling rig, not just any non-clipping one.
-3. Current events: well-placed comets, supernova alerts; later also minor
+2. Current events: well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-4. Session log: record what's already been captured, and when — total
+3. Session log: record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-5. Structured `lotse plan --json` output, alongside the existing
+4. Structured `lotse plan --json` output, alongside the existing
    human-readable table (not replacing it) — the interface a future native
    app, or any other tooling, consumes instead of parsing text output.
    Straightforward: `NightPlan`/`ShortlistEntry`/`RankedTarget` are already
    plain dataclasses/NamedTuples, so this is a serializer in `cli.py`, not
    an engine change.
-6. A native macOS app — the long-term UI goal now that Nachtlotse's GitHub
+5. A native macOS app — the long-term UI goal now that Nachtlotse's GitHub
    presence is explicitly a portfolio piece, not just a personal tool.
    Python throughout (Swift is deliberately out of scope); exact toolkit
    undecided (PySide6/Qt is the leading candidate) — to be designed once
@@ -285,7 +278,7 @@ Ideas for after the MVP, in priority order:
    if it's Python-native — the same `cli.py` → `engine`/`data` dependency
    direction applies; see the Streamlit MVP's retirement (M5, above) for
    why this project doesn't maintain two front ends at once.
-7. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
+6. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
    from the engine, never computed by the LLM.
 
 ### Possible future extensions (not scheduled)
