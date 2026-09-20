@@ -32,26 +32,36 @@ with more searching. See `catalog_sourcing_policy` in CLAUDE.md's Coding
 conventions for the sequential-query/conflicting-value rules this recheck
 followed.
 
-- **NGC 6874** — current SIMBAD: "Object of Unknown Nature", no
-  coordinates at all. Same tangle as before (NED: "Identification as NGC
-  6682 is not certain" on the related NGC 6874/6882/6885 entries).
 - **IC 1316** — current NED: still "Nothing here; nominal position" (RA
   20h22m26s, Dec +06°30'06", 150″ uncertainty ellipse), unchanged from the
-  original finding. (A SIMBAD-page summary during this recheck briefly
-  claimed "IC 1316 = NGC 6901, a barred spiral galaxy" — cross-checked
-  directly against NED and rejected; that claim was fabricated by the
+  original finding; reconfirmed again 2026-09-20 (prompted by a fresh NED
+  link) via OpenNGC's own `NGC.csv`, whose NED-notes field for IC1316
+  carries the identical phrase — a genuine absence, not a research gap.
+  (A SIMBAD-page summary during the 2026-09-15 recheck briefly claimed
+  "IC 1316 = NGC 6901, a barred spiral galaxy" — cross-checked directly
+  against NED and rejected; that claim was fabricated by the
   page-summarization step, not something NED actually says. Noted here,
   and in CLAUDE.md's sourcing policy, as a reminder to verify surprising
   findings against a second source.)
+
+NGC 6874 was previously listed here too ("Object of Unknown Nature" per
+SIMBAD) — a 2026-09-20 recheck (prompted by user-supplied German
+Wikipedia/OpenNGC/NED links) found that conclusion wrong: it does have a
+real, citable position and size, just no sourced magnitude. It's now in
+the catalog (`mag_unknown.yaml`, Block 12) — see the comment there for
+the full sourcing.
 
 ## No formal catalog designation at all
 
 - **OU4** (Squid Nebula) — discovered and named purely by an amateur
   (Nicolas Outters, 2011); lies within Sh2-129 (Flying Bat Nebula), which
-  is in the catalog under its own designation.
+  is in the catalog under its own designation. Cross-referenced directly
+  in that entry's comment (`mag_unknown.yaml`) as of 2026-09-20, along
+  with its central star (HD 202214).
 - **IC 1318b** — an informal sub-region of the Gamma Cygni/IC 1318
   complex (IC 1318 itself is in the catalog); IC 1318b has no catalog
-  entry of its own.
+  entry of its own. Cross-referenced directly in that entry's comment
+  (`mag_unknown.yaml`) as of 2026-09-20.
 
 ## Structurally excluded — would duplicate an already-catalogued object
 
@@ -79,8 +89,9 @@ looked at":
 
 - **No citable angular size found anywhere**, despite a real lookup pass:
   BFS63, Sh2-88, Sh2-134, Sh2-135, Sh2-230 (5 objects).
-- **Not real, catalogable objects at all** — no position/data exists, not
-  expected to change with more searching: IC 1316, NGC 6874.
+- **Not a real, catalogable object at all** — no position/data exists, not
+  expected to change with more searching: IC 1316 (NGC 6874 turned out not
+  to belong here after all — see above — and is now in the catalog).
 - **Structurally excluded, not just unsourced** — each would duplicate or
   misrepresent an object already in this catalog: IC 1318b (sub-region of
   the already-catalogued Gamma Cygni/IC 1318), Fox Fur Nebula (sub-region

@@ -126,6 +126,10 @@
   # mixing a size measured relative to one center onto a different one.
   ra_deg: 305.558
   dec_deg: 40.257
+  # "IC 1318b" (an informal sub-region label for part of this same
+  # complex) isn't a separate catalog entry — it has no catalog
+  # designation or sourcing of its own beyond this object (see
+  # SKIPPED-OBJECTS.md).
   size_arcmin: [50.0, 30.0]
   types: ["emission_nebula"]
 
@@ -190,6 +194,11 @@
   catalog_id: "Sh2-129"
   ra_deg: 317.95
   dec_deg: 59.95
+  # The Squid Nebula (informal name "OU4", central star HD 202214) lies
+  # within this same field — a popular imaging pairing ("Flying Bat &
+  # Squid"). Not a separate catalog entry: OU4 has no formal catalog
+  # designation of its own and no sourced magnitude (see
+  # SKIPPED-OBJECTS.md), so it's referenced here rather than added.
   size_arcmin: [140.0, 140.0]
   types: ["emission_nebula"]
 
@@ -435,3 +444,62 @@
   dec_deg: 67.421
   size_arcmin: [22.8, 22.8]
   types: ["emission_nebula"]
+
+# Block 11 (2026-09-20): the Roadmap's own multi-object-grouping example
+# (see CLAUDE.md/ROADMAP.md — "LBN 550 + 552 + 555") — three faint patches
+# of Cepheus's Integrated Flux Nebula (IFN, dust reflecting/re-emitting the
+# Milky Way's integrated light rather than one nearby illuminating star),
+# routinely imaged together as one wide-field target. Coordinates and
+# sizes from VizieR's Lynds' Catalogue of Bright Nebulae (CDS VII/9,
+# Diam1/Diam2 fields, largest/smallest); SIMBAD independently confirms
+# each position (within its own ~10" quality flag) and lists no
+# magnitude for any of the three, consistent with the rest of this file.
+# SIMBAD types all three "HII Region" -> emission_nebula, per this
+# catalog's own evidentiary rule (SIMBAD's object type over popular
+# "reflection nebula" usage for IFN).
+
+- name: "LBN 550 Nebula"
+  catalog_id: "LBN 550"
+  ra_deg: 314.705
+  dec_deg: 78.196
+  size_arcmin: [140.0, 30.0]
+  types: ["emission_nebula"]
+
+- name: "LBN 552 Nebula"
+  catalog_id: "LBN 552"
+  ra_deg: 314.415
+  dec_deg: 78.612
+  size_arcmin: [35.0, 10.0]
+  types: ["emission_nebula"]
+
+- name: "LBN 555 Nebula"
+  catalog_id: "LBN 555"
+  ra_deg: 314.615
+  dec_deg: 79.196
+  size_arcmin: [145.0, 40.0]
+  types: ["emission_nebula"]
+
+# Block 12 (2026-09-20): NGC 6874, previously listed in SKIPPED-OBJECTS.md
+# under "not real, catalogable objects" alongside IC 1316 — a recheck
+# prompted by user-supplied German Wikipedia/OpenNGC sources found that
+# was wrong for this one: unlike IC 1316 (OpenNGC/NED: "nothing here,
+# nominal position" at that coordinate, reconfirmed again this pass — a
+# real absence, correctly still excluded), NGC 6874 does have a real,
+# citable position (German Wikipedia and OpenNGC's own NGC.csv agree:
+# RA 20:07:33.08, Dec +38:14:46.0) and a real size (7.0', German
+# Wikipedia) — it just has no sourced magnitude anywhere (OpenNGC's
+# B/V/J/H/K-Mag fields are all empty for this row) and an ambiguous type:
+# OpenNGC classifies it "*Ass" (stellar association), SIMBAD "Object of
+# Unknown Nature", while German Wikipedia and Bracken's own listing call
+# it an open cluster (Trumpler type IV1m). A single Flickr caption claims
+# "mag 7.7" but isn't a citable source and isn't corroborated anywhere
+# else, so it isn't used. `types: ["open_cluster"]` follows the same
+# "lack of a better bucket" precedent as M73's entry (mag_9_10.yaml)
+# rather than introducing a stellar-association category for one object.
+
+- name: "NGC 6874"
+  catalog_id: "NGC 6874"
+  ra_deg: 301.888
+  dec_deg: 38.246
+  size_arcmin: [7.0, 7.0]
+  types: ["open_cluster"]

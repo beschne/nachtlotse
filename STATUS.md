@@ -169,11 +169,14 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   ("Hind's Variable Nebula") cites Strauss et al. 1992 identifying the
   position as a star, not a confirmed extant nebula, which is a step
   further than an unreliable magnitude — the object's own physical reality
-  is in dispute; NGC 6874 has the same flavor of problem one level down —
+  is in dispute; NGC 6874 had the same flavor of problem one level down —
   OpenNGC types it a stellar association (no photometric magnitude at all)
   rather than the open cluster Bracken lists it as, tangled up in the same
   NGC 6874/6882/6885 duplicate-designation confusion NED flags as "not
-  certain" for its neighbors.
+  certain" for its neighbors — though a 2026-09-20 recheck found its
+  position/size were real after all and added it anyway (see this
+  section's own note on `mag_unknown.yaml` Block 12, below, and
+  SKIPPED-OBJECTS.md).
 - With all three books' skip lists combined (see
   [SKIPPED-OBJECTS.md](./SKIPPED-OBJECTS.md) for the full, per-object list),
   the accumulated exclusions are overwhelmingly structural
@@ -182,9 +185,9 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   per-object integrated magnitude at all — that's a fact about what gets
   photometered, not a gap more searching closes. The exceptions worth an
   actual future revisit are the small "designation itself is disputed"
-  set — IC 4606, IC 1316, NGC 1555, NGC 6874, and Simeis 147 — where a
-  future SIMBAD/NED correction, not a deeper search, is what could change
-  the answer.
+  set — IC 4606, IC 1316, NGC 1555, and Simeis 147 (NGC 6874 resolved,
+  see above) — where a future SIMBAD/NED correction, not a deeper search,
+  is what could change the answer.
 - Magnitudes prefer OpenNGC's B-Mag field over V-Mag (an early extraction
   pass that preferred V-Mag whenever present produced silently wrong
   values, e.g. the Sculptor Galaxy's V-Mag=11.11 vs. its correct
@@ -230,6 +233,32 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   well within that ceiling today, so there's room to go deeper later
   without hitting it. `mag_unknown.yaml` entries are exempt from the
   magnitude ceiling — there's nothing to check it against.
+- LBN 550, LBN 552, and LBN 555 (`mag_unknown.yaml`, Block 11) were added
+  to cover ROADMAP.md's own multi-object-grouping example — three faint
+  patches of Cepheus's Integrated Flux Nebula, routinely imaged together.
+  Coordinates/sizes from VizieR's Lynds' Catalogue of Bright Nebulae (CDS
+  VII/9); cross-checked against SIMBAD, which confirmed each position and
+  the absence of a magnitude for all three. The roadmap text's other
+  example pairing, "NGC 2244 + 2624", turned out not to check out: NGC
+  2624 is a real object, but an unrelated mag-14.5 barred spiral galaxy in
+  Cancer, nowhere near the Rosette Nebula's NGC 2244 — almost certainly a
+  transposed-digit typo for NGC 2264 (the Christmas Tree Cluster, already
+  in this catalog and already grouping with NGC 2261 in practice). Left
+  un-added rather than adding the wrong NGC 2624 to force the example.
+- NGC 6874 (`mag_unknown.yaml`, Block 12) was added on a 2026-09-20
+  recheck of SKIPPED-OBJECTS.md, prompted by user-supplied German
+  Wikipedia/OpenNGC/NED links — it turned out to have a real, citable
+  position and size after all (previously miscategorized alongside IC
+  1316 as "no position/data at all"), just no sourced magnitude and an
+  ambiguous type (OpenNGC: stellar association; SIMBAD: unknown nature;
+  Wikipedia/Bracken: open cluster) — `types: ["open_cluster"]` follows
+  the M73 "lack of a better bucket" precedent. IC 1316 itself was
+  reconfirmed as genuinely absent (OpenNGC's own NED-notes field: "nothing
+  here, nominal position") — still correctly excluded. Two more
+  SKIPPED-OBJECTS.md items (OU4/Squid Nebula, IC 1318b) got cross-
+  referenced directly as comments on their host entries (Sh2-129, IC
+  1318) in the same pass, rather than added as separate entries — neither
+  has a citable magnitude or a formal catalog designation of its own.
 
 ## `nachtlotse/planning.py`
 
