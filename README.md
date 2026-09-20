@@ -10,7 +10,9 @@ A deterministic session planner for astrophotography, native on macOS. It scores
 tonight's sky over a given site against a given equipment rig and distills the
 result down to a short, score-ranked **shortlist** of targets — each with its
 own verdict: **GO / MARGINAL / SKIP** — with a traceable rationale, built on an
-open, testable engine.
+open, testable engine. Targets close enough to share one frame of your rig
+(e.g. M81 + M82) are automatically suggested as a single co-visible group,
+not two separate shortlist entries.
 
 ## Guiding principle
 
@@ -61,6 +63,10 @@ uv run lotse plan --site Feldberg --date 2026-11-14
 # one of them): emission_nebula, reflection_nebula, planetary_nebula,
 # dark_nebula, galaxy, galaxy_group, open_cluster, globular_cluster.
 uv run lotse plan --type galaxy --type globular_cluster
+
+# Co-visible targets (close enough to share one frame of your rig, e.g.
+# M81 + M82 or the Orion Nebula complex) are folded into a single
+# shortlist entry automatically — no flag needed, nothing to opt into.
 
 # --limit caps how many catalog objects are evaluated (default: 50, use 0 for all).
 # Keeps `lotse plan` fast when the catalog is large; all objects that clear
