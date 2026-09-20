@@ -79,7 +79,7 @@ def template_sites(monkeypatch: pytest.MonkeyPatch) -> list[store.SiteRecord]:
 
 @pytest.fixture
 def template_rigs(monkeypatch: pytest.MonkeyPatch) -> list[store.RigRecord]:
-    """Monkeypatch store.RIGS to the committed template's four examples.
+    """Monkeypatch store.RIGS to the committed template's five examples.
 
     Decouples tests from whatever a developer's own gitignored
     rigs_local.yaml happens to contain — or whether it exists at all — so

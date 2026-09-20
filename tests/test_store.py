@@ -234,7 +234,7 @@ def test_load_local_sites_parses_bortle_class_and_measured_sky_brightness(
     assert no_bortle.zenith_sky_brightness_mag_arcsec2 is None
 
 
-def test_template_file_parses_into_four_distinct_named_rigs(
+def test_template_file_parses_into_five_distinct_named_rigs(
     template_rigs: list[store.RigRecord],
 ) -> None:
     names = {record.rig.name for record in template_rigs}
@@ -243,6 +243,7 @@ def test_template_file_parses_into_four_distinct_named_rigs(
         "ZWO Seestar S30 Pro (EQ wedge)",
         "ZWO Seestar S50 Pro",
         "Redcat 51 with ASI2600MC Duo",
+        "TEC AP 160/1120 f/7 FL",
     }
 
 

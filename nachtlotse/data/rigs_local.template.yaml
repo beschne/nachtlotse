@@ -86,3 +86,18 @@
   mount:
     name: "EQ mount"
     kind: "eq"
+
+- name: "TEC AP 160/1120 f/7 FL"
+  aliases: ["TEC160FL"]
+  optics:
+    name: "TEC AP 160/1120 f/7 FL"
+    focal_length_mm: 1120.0
+    aperture_mm: 160.0
+  sensor:
+    name: "ZWO ASI2600MC Duo (Sony IMX571, APS-C)"
+    width_px: 6248
+    height_px: 4176
+    pixel_um: 3.76
+  mount:
+    name: "EQ mount"
+    kind: "eq"
