@@ -42,7 +42,7 @@ At a dark site, the core decision runs **offline** (weather is an optional layer
   engine wasn't worth it while the CLI is still the active focus. The
   longer-term goal is a **native macOS app, in Python** (Swift is
   explicitly out of scope; exact toolkit — e.g. PySide6/Qt — not yet
-  decided) — see "Roadmap".
+  decided) — see [ROADMAP.md](./ROADMAP.md).
 
 ---
 
@@ -73,7 +73,8 @@ nachtlotse/
 
 **Dependency direction:** `cli.py` → `engine`/`data`. The `engine` core imports
 *nothing* from `cli.py`, `data`, or `weather`. This is the most important rule in
-the project — whatever front end comes next (see "Roadmap") plugs in the same way.
+the project — whatever front end comes next (see [ROADMAP.md](./ROADMAP.md)) plugs
+in the same way.
 
 ---
 
@@ -177,137 +178,21 @@ presets, **alt-az mount** ⇒ field rotation is real and gets scored.
 
 ## MVP roadmap (milestones, complete)
 
-Follow the order strictly — each stage builds on the previous one, and the engine
-core grows before the UI is added.
-
-### M0 — Scaffolding & engine core *(target: one weekend)*
-- Project setup: `uv`, `ruff`, `pytest`, directory structure.
-- Data model (dataclasses). **One** site (Bad Homburg) and **one** rig (Seestar
-  S30 Pro), hardcoded.
-- Engine: altitude/azimuth/transit time of a target via `skyfield`.
-- Small catalog (Messier core, ~30 objects). Ranking by max altitude within the
-  time window.
-- CLI: `lotse plan` prints top targets as a table.
-- **DoD:** tests compare altitude/transit against known ephemeris values
-  (± tolerance).
-
-### M1 — Moon & dark window
-- Astronomical twilight (the window in which photography is worthwhile).
-- Moon phase, moon altitude, moon separation as constraints.
-- `astroplan`: `AltitudeConstraint`, `AtNightConstraint`, `MoonSeparationConstraint`,
-  `observability_table()`.
-- **DoD:** a target near a full moon/the horizon correctly drops out of the ranking.
-
-### M2 — Horizon profiles & multiple sites
-- Custom `HorizonConstraint` (target visible only if `alt > horizon.min_alt(az)`).
-- Horizon profile as azimuth→min-altitude points, inline in site YAML.
-  Blocked targets are no longer suggested.
-- Persistence for multiple sites (YAML) + CLI `lotse sites`.
-- **DoD:** the same sky yields different target lists at two sites with different
-  horizons.
-
-### M3 — Rig scoring, framing & field rotation
-- FoV and sampling (arcsec/px) from optics + sensor. Framing score: does the
-  target fit the sensor?
-- **Alt-az field rotation** from the parallactic angle (`astroplan` provides it);
-  divergence near the zenith ⇒ penalty/exclusion (the "mount limits near zenith"
-  criterion).
-- Multiple rigs; scoring picks the best target-rig combination or scores per rig.
-- CLI `lotse rigs`.
-- **DoD:** a near-zenith target is penalized for the alt-az mount, but not for a
-  (hypothetical) eq rig.
-
-### M4 — Weather & verdict
-- Open-Meteo client (clouds, wind, humidity, dew point) for the dark window.
-- Heuristic ⇒ **GO / MARGINAL / SKIP** with a list of reasons.
-- Weather stays an **optional layer**; without a network, the core still returns
-  the target ranking.
-- **DoD:** overcast sky ⇒ SKIP with a stated reason; clear window with a low
-  target ⇒ MARGINAL.
-- *Note:* the weighting (clouds vs. moon vs. altitude vs. rotation) is subjective
-  and gets **tuned iteratively** — this is where the real thinking happens, not
-  in the physics.
-
-### M5 — UI (Streamlit MVP)
-- Verdict light, hero target + backups, altitude curve over the night, rationale.
-- Site/rig selection.
-- **DoD:** a single glance is enough to decide, without opening the CLI.
-- *Later retired:* once the shortlist replaced the single hero target, the
-  UI needed its own copy of every new rendering (e.g. the polar chart got
-  built twice — once in Altair for Streamlit, once in matplotlib for the
-  CLI's `--chart`) just to keep two front ends in sync. With Nachtlotse
-  staying a personal/portfolio project and a native macOS app the real
-  long-term goal (Python, not Swift — see "Roadmap"), that double
-  maintenance wasn't worth it, so the Streamlit UI was removed and the CLI
-  is the only front end again.
-
-The MVP (M0–M5) is complete.
+M0–M5 (scaffolding & engine core, moon & dark window, horizon profiles &
+multiple sites, rig scoring/framing/field rotation, weather & verdict, and
+a since-retired Streamlit UI) are all complete. For the detailed
+milestone-by-milestone breakdown (scope, DoD per milestone, and the note
+on why the Streamlit UI was retired), see
+[STATUS.md](./STATUS.md#mvp-roadmap-milestones-detail).
 
 ---
 
 ## Roadmap
 
-Ideas for after the MVP, in priority order:
-
-1. **Object count limit:** computing scores for every catalog object takes too
-   long. Limit the set of considered objects and output only a limited number
-   by default. The limit should be configurable (CLI flag) up to all objects.
-   This is a performance prerequisite for all future work — the planning step
-   must be fast enough to make iterative development tolerable.
-2. **Multi-object grouping:** the current planner scores individual targets in
-   isolation. With widefield gear (Seestar S30 Pro at 300 mm), multiple objects
-   often fit the sensor simultaneously. The planner should detect when targets
-   are close enough to share the same field of view (e.g. LBN 550 + 552 + 555,
-   NGC 2244 + 2624, M81 + M82) and suggest them as co-visible groups. This
-   requires angular-separation checks between catalog objects and a grouping
-   heuristic.
-3. **Session log:** record what's already been captured, and when — total
-   exposure time per target, logged per session. Prior exposure on a target
-   is informational, not a deterrent; it doesn't mean the target drops out of
-   contention, more can still be worth shooting. No attached photos.
-4. **Best-rig chooser:** `lotse plan` scores targets for whichever rig you pass,
-   it doesn't yet pick between rigs. `framing_score`
-   (`engine/framing.py`) now scales with fill fraction (1.0 at a fill
-   fraction of 1.0, fading toward 0.0 as the target shrinks toward a speck
-   or, past 1.0, as it clips) instead of the old flat 20%-100% plateau, so
-   the gradient a chooser needs — preferring the more format-filling rig,
-   not just any non-clipping one — is in place. The chooser itself (picking
-   between rigs, not just scoring one) is still to build.
-5. **LLM prose (nightly briefing)** via the Claude API — numbers strictly from
-   the engine, never computed by the LLM. No longer optional; this is the
-   presentation layer that wraps the engine's numbers in readable prose.
-6. **Current events:** well-placed comets, supernova alerts; later also minor
-   planets/asteroids and near-Earth objects (NEOs).
-7. **Native macOS app** — the long-term UI goal now that Nachtlotse's GitHub
-   presence is explicitly a portfolio piece, not just a personal tool.
-   Python throughout (Swift is deliberately out of scope); exact toolkit
-   undecided (PySide6/Qt is the leading candidate) — to be designed once
-   the CLI's own feature set (items above) has matured further. Whatever
-   it consumes — `--json` output, or the engine/`planning` layer directly
-   if it's Python-native — the same `cli.py` → `engine`/`data` dependency
-   direction applies; see the Streamlit MVP's retirement (M5, above) for
-   why this project doesn't maintain two front ends at once.
-8. **Structured `lotse plan --json` output**, alongside the existing
-   human-readable table (not replacing it) — the interface a future native
-   app, or any other tooling, consumes instead of parsing text output.
-   Straightforward: `NightPlan`/`ShortlistEntry`/`RankedTarget` are already
-   plain dataclasses/NamedTuples, so this is a serializer in `cli.py`, not
-   an engine change.
-
-### Possible future extensions (not scheduled)
-- Export today's pick to a NINA-compatible format.
-- Multilingual UI/CLI text (at minimum German and English). Everything
-  user-facing is English-only for now; this stays parked until there's a
-  reason to localize.
-
-### Out of scope (deliberately excluded)
-- Mount control / session automation
-- Cloud sync
-- Accounts
-- Southern-sky curation
-- Mobile apps
-
-Deliberately excluded; not reconsidered above without a specific reason to.
+Tracked separately in [ROADMAP.md](./ROADMAP.md): the prioritized list of
+ideas for after the MVP, and what's deliberately out of scope. Update
+that file, not this one, when roadmap items are added, reprioritized, or
+closed.
 
 ---
 
@@ -322,7 +207,7 @@ Deliberately excluded; not reconsidered above without a specific reason to.
 - **Rule of thumb:** Sonnet 5 as default, switch on Opus 5 as soon as a session
   gets think-heavy instead of type-heavy.
 
-The optional **LLM prose extension** (see "Roadmap") would
+The optional **LLM prose extension** (see [ROADMAP.md](./ROADMAP.md)) would
 call the Claude API (e.g. `claude-sonnet-5`) — only for phrasing, never for
 computing.
 

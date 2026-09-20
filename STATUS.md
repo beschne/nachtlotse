@@ -1,7 +1,8 @@
 # Status
 
 Milestone overview and detailed implementation status, module by module.
-For the full roadmap, see [CLAUDE.md](./CLAUDE.md).
+For architecture and conventions, see [CLAUDE.md](./CLAUDE.md); for the
+full roadmap, see [ROADMAP.md](./ROADMAP.md).
 
 ## Milestones
 
@@ -10,8 +11,8 @@ For the full roadmap, see [CLAUDE.md](./CLAUDE.md).
 - ✅ **M2 — Horizon profiles & multiple sites**, done.
 - ✅ **M3 — Rig scoring, framing & field rotation**, done.
 - ✅ **M4 — Weather & verdict**, done.
-- ✅ **M5 — UI (Streamlit MVP)**, done, later retired — see CLAUDE.md's M5
-  note and "Roadmap" (native macOS app, Python-only).
+- ✅ **M5 — UI (Streamlit MVP)**, done, later retired — see this file's M5
+  note below and [ROADMAP.md](./ROADMAP.md) (native macOS app, Python-only).
 
 ## `nachtlotse/engine/models.py`
 
@@ -246,6 +247,14 @@ For the full roadmap, see [CLAUDE.md](./CLAUDE.md).
   `plan_night()` cli.py does.
 - Not UI code itself — no printing, no framework imports — which is what
   keeps it shared instead of becoming a second implementation.
+- `rank_targets`/`plan_night` take a `limit` param (`DEFAULT_MAX_EVALUATED
+  = 50`) capping how many catalog targets are *evaluated* (not returned) —
+  the first N matching any `--type` filter, in catalog order
+  (magnitude-binned, brightest first), skipped before the expensive
+  ephemeris check. `limit=0` evaluates the full catalog (~400+ objects,
+  ~30s); `None` falls back to the 50 default. Added because the unbounded
+  per-run scan had become slow enough to make iterative development
+  tedious — this was the roadmap's "object count limit" item, now closed.
 
 ## `nachtlotse/data/store.py`
 
@@ -285,12 +294,15 @@ For the full roadmap, see [CLAUDE.md](./CLAUDE.md).
 
 ## `nachtlotse/cli.py`
 
-- `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD]` calls
-  `planning.plan_night` and prints the result: dark window, moon
+- `lotse plan [--site NAME] [--rig NAME] [--date YYYY-MM-DD] [--limit N]`
+  calls `planning.plan_night` and prints the result: dark window, moon
   illumination, weather summary, a numbered shortlist with its own
   GO/MARGINAL/SKIP verdict per target, and the full ranked table with
   framing-fit and surface-brightness-reach columns; `lotse sites` /
   `lotse rigs` list what's configured.
+- `--limit N` caps evaluated catalog objects (default: 50); `--limit 0`
+  evaluates every catalog object. See `planning.py` above for what
+  "evaluated" means and why the cap exists.
 - The ranked list is sorted by `framing.target_priority_score` (altitude ×
   framing fit × reach, descending) — the "Max Alt" column alone no longer
   decides the order. A target whose best window is horizon- or
@@ -356,5 +368,74 @@ For the full roadmap, see [CLAUDE.md](./CLAUDE.md).
 
 The MVP (M0–M5) is complete. Ideas kept for later — a "best rig for this
 target" chooser, current-events alerts, a native macOS app, and more —
-are listed in [CLAUDE.md](./CLAUDE.md)'s "Roadmap" and "Possible future
-extensions", not scheduled to any milestone.
+are listed in [ROADMAP.md](./ROADMAP.md), not scheduled to any milestone.
+
+## MVP roadmap (milestones, detail)
+
+Moved here from CLAUDE.md, which now only summarizes that the MVP is
+complete — this is the milestone-by-milestone scope and DoD, kept for
+reference. Follow-on work is tracked in [ROADMAP.md](./ROADMAP.md)
+instead of new milestones.
+
+### M0 — Scaffolding & engine core *(target: one weekend)*
+- Project setup: `uv`, `ruff`, `pytest`, directory structure.
+- Data model (dataclasses). **One** site (Bad Homburg) and **one** rig (Seestar
+  S30 Pro), hardcoded.
+- Engine: altitude/azimuth/transit time of a target via `skyfield`.
+- Small catalog (Messier core, ~30 objects). Ranking by max altitude within the
+  time window.
+- CLI: `lotse plan` prints top targets as a table.
+- **DoD:** tests compare altitude/transit against known ephemeris values
+  (± tolerance).
+
+### M1 — Moon & dark window
+- Astronomical twilight (the window in which photography is worthwhile).
+- Moon phase, moon altitude, moon separation as constraints.
+- `astroplan`: `AltitudeConstraint`, `AtNightConstraint`, `MoonSeparationConstraint`,
+  `observability_table()`.
+- **DoD:** a target near a full moon/the horizon correctly drops out of the ranking.
+
+### M2 — Horizon profiles & multiple sites
+- Custom `HorizonConstraint` (target visible only if `alt > horizon.min_alt(az)`).
+- Horizon profile as azimuth→min-altitude points, inline in site YAML.
+  Blocked targets are no longer suggested.
+- Persistence for multiple sites (YAML) + CLI `lotse sites`.
+- **DoD:** the same sky yields different target lists at two sites with different
+  horizons.
+
+### M3 — Rig scoring, framing & field rotation
+- FoV and sampling (arcsec/px) from optics + sensor. Framing score: does the
+  target fit the sensor?
+- **Alt-az field rotation** from the parallactic angle (`astroplan` provides it);
+  divergence near the zenith ⇒ penalty/exclusion (the "mount limits near zenith"
+  criterion).
+- Multiple rigs; scoring picks the best target-rig combination or scores per rig.
+- CLI `lotse rigs`.
+- **DoD:** a near-zenith target is penalized for the alt-az mount, but not for a
+  (hypothetical) eq rig.
+
+### M4 — Weather & verdict
+- Open-Meteo client (clouds, wind, humidity, dew point) for the dark window.
+- Heuristic ⇒ **GO / MARGINAL / SKIP** with a list of reasons.
+- Weather stays an **optional layer**; without a network, the core still returns
+  the target ranking.
+- **DoD:** overcast sky ⇒ SKIP with a stated reason; clear window with a low
+  target ⇒ MARGINAL.
+- *Note:* the weighting (clouds vs. moon vs. altitude vs. rotation) is subjective
+  and gets **tuned iteratively** — this is where the real thinking happens, not
+  in the physics.
+
+### M5 — UI (Streamlit MVP)
+- Verdict light, hero target + backups, altitude curve over the night, rationale.
+- Site/rig selection.
+- **DoD:** a single glance is enough to decide, without opening the CLI.
+- *Later retired:* once the shortlist replaced the single hero target, the
+  UI needed its own copy of every new rendering (e.g. the polar chart got
+  built twice — once in Altair for Streamlit, once in matplotlib for the
+  CLI's `--chart`) just to keep two front ends in sync. With Nachtlotse
+  staying a personal/portfolio project and a native macOS app the real
+  long-term goal (Python, not Swift — see [ROADMAP.md](./ROADMAP.md)), that
+  double maintenance wasn't worth it, so the Streamlit UI was removed and
+  the CLI is the only front end again.
+
+The MVP (M0–M5) is complete.

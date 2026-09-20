@@ -23,10 +23,12 @@ is fully backed by `pytest` against known astronomical values.
 
 ## Status
 
-**The MVP is complete** (M0–M5): engine, multi-site/multi-rig support,
-weather, and the GO/MARGINAL/SKIP verdict. Milestone-by-milestone and
-module-by-module detail: [STATUS.md](./STATUS.md). Full roadmap and all
-architecture decisions: [CLAUDE.md](./CLAUDE.md).
+The MVP (M0–M5: engine, multi-site/multi-rig support, weather, and the
+GO/MARGINAL/SKIP verdict) is done and history — development has moved on
+to the roadmap beyond it. Module-by-module detail and the MVP's
+milestone-by-milestone history: [STATUS.md](./STATUS.md). Current
+roadmap: [ROADMAP.md](./ROADMAP.md). Architecture and all other
+decisions: [CLAUDE.md](./CLAUDE.md).
 
 ## Quickstart
 
