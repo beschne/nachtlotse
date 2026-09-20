@@ -471,3 +471,59 @@ def test_plan_command_shows_a_co_visible_group_as_one_joined_shortlist_entry(
     assert "close a" in output and "close b" in output
     assert "close a + close b" in output or "close b + close a" in output
     assert output.count("Verdict:") == 1
+
+
+def test_plan_command_rejects_best_rig_combined_with_rig(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["plan", "--best-rig", "--rig", "S30P"]) == 2
+    assert "--best-rig" in capsys.readouterr().err
+
+
+def test_plan_command_rejects_best_rig_combined_with_chart(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["plan", "--best-rig", "--chart"]) == 2
+    assert "--best-rig" in capsys.readouterr().err
+
+
+def test_plan_command_best_rig_shows_which_rig_won_each_target(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--best-rig scores every configured rig per target and shows the
+    winner in its own column/label — not the single --rig it replaces."""
+    from astropy.time import Time
+
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    target = Target(
+        name="best-rig cli test target", ra_deg=lst_deg, dec_deg=site.lat_deg - 20.0
+    )
+    monkeypatch.setattr(planning, "CATALOG", [target])
+    monkeypatch.setattr(
+        cli, "_resolve_when", lambda *_a, **_kw: night_reference.to_datetime(timezone=UTC)
+    )
+
+    assert cli.main(["plan", "--best-rig"]) == 0
+    output = capsys.readouterr().out
+
+    assert "best rig per target" in output
+    assert "best-rig cli test target" in output
+    assert any(
+        record.rig.name in output for record in template_rigs
+    )  # the winning rig's name is shown somewhere

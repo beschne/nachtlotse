@@ -8,24 +8,16 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Best-rig chooser:** `lotse plan` scores targets for whichever rig you pass,
-   it doesn't yet pick between rigs. `framing_score`
-   (`engine/framing.py`) now scales with fill fraction (1.0 at a fill
-   fraction of 1.0, fading toward 0.0 as the target shrinks toward a speck
-   or, past 1.0, as it clips) instead of the old flat 20%-100% plateau, so
-   the gradient a chooser needs — preferring the more format-filling rig,
-   not just any non-clipping one — is in place. The chooser itself (picking
-   between rigs, not just scoring one) is still to build.
-2. **LLM prose (nightly briefing)** via the Claude API — numbers strictly from
+1. **LLM prose (nightly briefing)** via the Claude API — numbers strictly from
    the engine, never computed by the LLM. No longer optional; this is the
    presentation layer that wraps the engine's numbers in readable prose.
-3. **Session log:** record what's already been captured, and when — total
+2. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-4. **Current events:** well-placed comets, supernova alerts; later also minor
+3. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-5. **Framing preview for selected targets:** render what a target would
+4. **Framing preview for selected targets:** render what a target would
    actually look like through the given rig — its angular size/shape
    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
    math) — rather than only the numeric `framing_score`/reach. A visual
@@ -69,6 +61,14 @@ up when it fits, not in any particular order.
   also give every entry a place for the kind of context this catalog's
   comments already accumulate — why a size/magnitude was chosen, what
   makes a target worth shooting — without needing to open the YAML source.
+- **Grouping-aware best-rig chooser:** the best-rig chooser
+  (`lotse plan --best-rig`) picks a winning rig per target independently,
+  so it doesn't run multi-object grouping (`engine.grouping`) — two
+  targets can each win with a *different* rig, leaving no single shared
+  field of view to group against. Picking a best rig per target first,
+  then finding the best co-visible grouping among whatever wins, would
+  close that gap; not attempted in the first version (see
+  `planning.rank_targets_for_best_rig`'s own docstring).
 - **Native macOS app** — the long-term UI goal now that Nachtlotse's GitHub
   presence is explicitly a portfolio piece, not just a personal tool.
   Python throughout (Swift is deliberately out of scope); exact toolkit

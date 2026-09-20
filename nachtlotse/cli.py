@@ -20,6 +20,7 @@ from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
 from nachtlotse.engine.models import (
     TARGET_TYPE_LABELS,
+    Site,
     Target,
     TargetType,
     WeatherSummary,
@@ -96,22 +97,32 @@ def _cmd_plan(
     types: list[str] | None,
     chart_path: str | None,
     limit: int | None,
+    best_rig: bool,
 ) -> int:
+    if best_rig and rig_name:
+        print("--best-rig can't be combined with --rig.", file=sys.stderr)
+        return 2
+    if best_rig and chart_path is not None:
+        print("--best-rig can't be combined with --chart yet.", file=sys.stderr)
+        return 2
+
     try:
         site_record = (
             store.get_site_record(site_name)
             if site_name
             else store.default_site_record()
         )
-        rig_record = (
-            store.get_rig_record(rig_name) if rig_name else store.default_rig_record()
-        )
+        if not best_rig:
+            rig_record = (
+                store.get_rig_record(rig_name)
+                if rig_name
+                else store.default_rig_record()
+            )
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
 
     site = site_record.site
-    rig = rig_record.rig
     local_tz = ZoneInfo(site.tz)
 
     try:
@@ -121,6 +132,11 @@ def _cmd_plan(
         return 2
 
     type_filter = frozenset(types) if types else None
+
+    if best_rig:
+        return _cmd_plan_best_rig(site, now, type_filter, limit, local_tz)
+
+    rig = rig_record.rig
     plan = planning.plan_night(site, rig, now, types=type_filter, limit=limit)
 
     print(f"Nachtlotse — {site.name} ({rig.name})")
@@ -167,6 +183,68 @@ def _cmd_plan(
             print(f"\n{exc}", file=sys.stderr)
             return 2
         print(f"\nChart written to {chart_path}")
+    return 0
+
+
+def _cmd_plan_best_rig(
+    site: Site,
+    when: datetime,
+    type_filter: frozenset[str] | None,
+    limit: int | None,
+    local_tz: ZoneInfo,
+) -> int:
+    """`--best-rig`'s own rendering path: a rig chosen per target (see
+    `planning.plan_night_for_best_rig`), so each row gets its own "Rig"
+    column instead of one rig name in the header. No grouping and no
+    `--chart` support yet — see `planning.rank_targets_for_best_rig`."""
+    try:
+        store.require_rigs()
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    rigs = store.load_rigs()
+
+    plan = planning.plan_night_for_best_rig(
+        site, rigs, when, types=type_filter, limit=limit
+    )
+
+    print(f"Nachtlotse — {site.name} (best rig per target, {len(rigs)} configured)")
+    print(
+        f"Dark window: {plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
+        f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}  ·  "
+        f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
+    )
+    print(_format_weather_line(plan.weather))
+    print()
+
+    if not plan.ranked:
+        suffix = " matching --type" if type_filter else ""
+        print(
+            f"No catalog target{suffix} clears altitude/moon/night/horizon/"
+            "rotation constraints tonight, for any configured rig."
+        )
+        return 0
+
+    print("Shortlist:")
+    for rank, (row, verdict) in enumerate(plan.shortlist, start=1):
+        label = _target_label(row.target)
+        print(f"  {rank}. Verdict: {verdict.level} — {label} ({row.rig.name})")
+        for reason in verdict.reasons:
+            print(f"       {reason}")
+    print()
+
+    print(
+        f"{'Target':<32} {'Rig':<24} {'Type':<28} {'Max Alt':>8} {'Az':>7} "
+        f"{'Fit':>5} {'Reach':>6}  Best time (local)"
+    )
+    for row in plan.ranked:
+        local_time = row.best_time.astimezone(local_tz)
+        print(
+            f"{_target_label(row.target):<32} {row.rig.name:<24} "
+            f"{_format_types(row.target.types):<28} {row.pos.alt_deg:7.1f}° "
+            f"{row.pos.az_deg:6.1f}° {row.fit:5.2f} {row.reach:6.2f}  "
+            f"{local_time:%Y-%m-%d %H:%M %Z}"
+        )
     return 0
 
 
@@ -376,6 +454,18 @@ def main(argv: list[str] | None = None) -> int:
             "catalog object."
         ),
     )
+    plan_parser.add_argument(
+        "--best-rig",
+        dest="best_rig",
+        action="store_true",
+        help=(
+            "Best-rig chooser: score every configured rig for each target "
+            "and keep only the best-scoring one per target, instead of the "
+            "single --rig you'd otherwise pass. Mutually exclusive with "
+            "--rig and --chart; does not group co-visible targets (see "
+            "ROADMAP.md)."
+        ),
+    )
 
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
@@ -416,7 +506,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "plan":
         return _cmd_plan(
-            args.site, args.rig, args.date, args.types, args.chart_path, args.limit
+            args.site,
+            args.rig,
+            args.date,
+            args.types,
+            args.chart_path,
+            args.limit,
+            args.best_rig,
         )
     if args.command == "sites":
         return _cmd_sites()

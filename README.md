@@ -12,7 +12,9 @@ result down to a short, score-ranked **shortlist** of targets — each with its
 own verdict: **GO / MARGINAL / SKIP** — with a traceable rationale, built on an
 open, testable engine. Targets close enough to share one frame of your rig
 (e.g. M81 + M82) are automatically suggested as a single co-visible group,
-not two separate shortlist entries.
+not two separate shortlist entries. With more than one rig configured, a
+best-rig chooser can also pick whichever one frames each target best,
+instead of scoring for a single rig you name.
 
 ## Guiding principle
 
@@ -52,6 +54,12 @@ uv run lotse best-sky  # compare all configured sites' forecast cloud cover toni
 # --site and --rig accept a name or alias (or a unique substring of one),
 # and can be combined; either defaults to the first entry in its file:
 uv run lotse plan --site "Großer Feldberg" --rig S30P
+
+# --best-rig scores every configured rig per target and keeps only the
+# best-scoring one, instead of the single --rig above — useful once you
+# have more than one rig and want the planner to pick. Mutually exclusive
+# with --rig and --chart; doesn't group co-visible targets (see ROADMAP.md):
+uv run lotse plan --best-rig
 
 # --date plans for a given night (YYYY-MM-DD, local to the site) instead
 # of tonight — useful for checking ahead. Weather beyond Open-Meteo's

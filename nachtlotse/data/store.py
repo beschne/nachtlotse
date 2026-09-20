@@ -222,6 +222,10 @@ def load_sites() -> list[Site]:
     return [record.site for record in SITES]
 
 
+def load_rigs() -> list[Rig]:
+    return [record.rig for record in RIGS]
+
+
 def list_site_names() -> list[str]:
     return [record.site.name for record in SITES]
 

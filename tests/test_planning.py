@@ -230,6 +230,122 @@ def test_rank_targets_leaves_distant_targets_ungrouped(
     assert {row.target.name for row in ranked} == {"test a", "test b"}
 
 
+def _narrow_and_wide_test_rigs():
+    from nachtlotse.engine.models import Mount, Optics, Rig, Sensor
+
+    sensor = Sensor(name="Test Sensor", width_px=4000, height_px=3000, pixel_um=3.0)
+    narrow = Rig(
+        name="Narrow Test Rig",
+        optics=Optics(name="Narrow Optics", focal_length_mm=1000.0, aperture_mm=150.0),
+        sensor=sensor,
+        mount=Mount(name="EQ Test Mount", kind="eq"),
+    )
+    wide = Rig(
+        name="Wide Test Rig",
+        optics=Optics(name="Wide Optics", focal_length_mm=100.0, aperture_mm=30.0),
+        sensor=sensor,
+        mount=Mount(name="EQ Test Mount", kind="eq"),  # sidesteps rotation gating
+    )
+    return narrow, wide
+
+
+def test_rank_targets_for_best_rig_picks_the_better_framing_rig_per_target(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The best-rig chooser: a small target should win with the
+    narrow/long-focal-length rig (higher fill fraction), a large target
+    with the wide one — not the same rig for both."""
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    narrow_rig, wide_rig = _narrow_and_wide_test_rigs()
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    narrow_fov_short_arcmin = min(narrow_rig.fov_deg) * 60.0
+    wide_fov_short_arcmin = min(wide_rig.fov_deg) * 60.0
+    assert narrow_fov_short_arcmin < wide_fov_short_arcmin  # sanity check the fixture
+
+    small_target = Target(
+        name="small test target",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 20.0,
+        # Fits the narrow rig well (fit 1.0) but is a speck in the wide one.
+        size_arcmin=(narrow_fov_short_arcmin * 0.9, narrow_fov_short_arcmin * 0.7),
+    )
+    large_target = Target(
+        name="large test target",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 40.0,
+        # Fits the wide rig well but clips badly in the narrow one.
+        size_arcmin=(wide_fov_short_arcmin * 0.9, wide_fov_short_arcmin * 0.7),
+    )
+    monkeypatch.setattr(planning, "CATALOG", [small_target, large_target])
+
+    ranked = planning.rank_targets_for_best_rig(
+        site, [narrow_rig, wide_rig], night_reference.to_datetime(timezone=UTC)
+    )
+
+    by_name = {row.target.name: row for row in ranked}
+    assert by_name["small test target"].rig.name == "Narrow Test Rig"
+    assert by_name["large test target"].rig.name == "Wide Test Rig"
+
+
+def test_rank_targets_for_best_rig_drops_a_target_no_configured_rig_can_observe(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    narrow_rig, wide_rig = _narrow_and_wide_test_rigs()
+
+    never_up = Target(name="never up test target", ra_deg=0.0, dec_deg=-89.0)
+    monkeypatch.setattr(planning, "CATALOG", [never_up])
+
+    ranked = planning.rank_targets_for_best_rig(
+        site, [narrow_rig, wide_rig], datetime.now(UTC)
+    )
+
+    assert ranked == []
+
+
+def test_plan_night_for_best_rig_carries_a_rig_per_shortlisted_target(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    narrow_rig, wide_rig = _narrow_and_wide_test_rigs()
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    target = Target(
+        name="best-rig plan test target", ra_deg=lst_deg, dec_deg=site.lat_deg - 20.0
+    )
+    monkeypatch.setattr(planning, "CATALOG", [target])
+
+    plan = planning.plan_night_for_best_rig(
+        site, [narrow_rig, wide_rig], night_reference.to_datetime(timezone=UTC)
+    )
+
+    assert len(plan.shortlist) == 1
+    entry = plan.shortlist[0]
+    assert entry.ranked.target.name == "best-rig plan test target"
+    assert entry.ranked.rig.name in {"Narrow Test Rig", "Wide Test Rig"}
+    assert entry.verdict.level in {"GO", "MARGINAL", "SKIP"}
+
+
 def test_altaz_rig_devalues_a_near_zenith_target_that_an_eq_rig_keeps_at_peak(
     template_sites: list[store.SiteRecord],
     monkeypatch: pytest.MonkeyPatch,

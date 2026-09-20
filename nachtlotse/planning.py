@@ -299,6 +299,87 @@ def rank_targets(
     return _fold_in_groups(site, rig, ranked, when)
 
 
+class RankedTargetForBestRig(NamedTuple):
+    """One catalog target's best moment tonight with whichever configured
+    rig frames it best — `rank_targets_for_best_rig`'s result row, the
+    best-rig-chooser counterpart to `RankedTarget`.
+    """
+
+    target: Target
+    rig: Rig
+    best_time: datetime
+    pos: ephemeris.AltAz
+    fit: float
+    reach: float
+
+
+def rank_targets_for_best_rig(
+    site: Site,
+    rigs: list[Rig],
+    when: datetime,
+    types: frozenset[TargetType] | None = None,
+    limit: int | None = None,
+) -> list[RankedTargetForBestRig]:
+    """The best-rig chooser: for each target, evaluate every rig in
+    `rigs` and keep only the one that scores highest
+    (`framing.target_priority_score`) — rather than `rank_targets`,
+    which requires one rig for the whole run.
+
+    `types` and `limit` behave exactly as in `rank_targets` — filtering
+    and the evaluated-target cap are unaffected by having multiple rigs
+    to check per target; `limit` still counts catalog targets, not
+    (target, rig) attempts.
+
+    Multi-object grouping (`engine.grouping`, see `rank_targets`) isn't
+    applied here: a co-visible group only makes sense for one shared
+    rig's field of view, but two targets in this mode can each win with
+    a *different* rig, leaving no single field of view to group against.
+    Choosing a best rig per target first, then grouping among whatever
+    wins under a shared rig, is a possible future refinement (see
+    ROADMAP.md's best-rig-chooser item), not attempted here.
+    """
+    if limit is None:
+        limit = DEFAULT_MAX_EVALUATED
+    ranked: list[RankedTargetForBestRig] = []
+    evaluated = 0
+    for target in CATALOG:
+        if types is not None and not (set(target.types) & types):
+            continue
+        if 0 < limit <= evaluated:
+            break
+        evaluated += 1
+
+        best_for_target: RankedTargetForBestRig | None = None
+        for rig in rigs:
+            result = constraints.best_time_tonight(
+                site, target, when, extra_ok=_rotation_gate(rig, site, target)
+            )
+            if result is None:
+                continue
+            best_time, pos = result
+            reach = framing.reach_factor(site, target.magnitude, target.size_arcmin)
+            candidate = RankedTargetForBestRig(
+                target, rig, best_time, pos, framing.framing_score(rig, target), reach
+            )
+            if best_for_target is None or framing.target_priority_score(
+                candidate.pos.alt_deg, candidate.fit, candidate.reach
+            ) > framing.target_priority_score(
+                best_for_target.pos.alt_deg,
+                best_for_target.fit,
+                best_for_target.reach,
+            ):
+                best_for_target = candidate
+
+        if best_for_target is not None:
+            ranked.append(best_for_target)
+
+    ranked.sort(
+        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
+        reverse=True,
+    )
+    return ranked
+
+
 def fetch_weather_summary(
     site: Site, evening_start: datetime, morning_end: datetime
 ) -> WeatherSummary | None:
@@ -342,6 +423,64 @@ def plan_night(
     return NightPlan(
         site=site,
         rig=rig,
+        evening_start=evening_start,
+        morning_end=morning_end,
+        moon_illumination_pct=illumination_pct,
+        weather=weather,
+        ranked=ranked,
+        shortlist=shortlist,
+    )
+
+
+class BestRigShortlistEntry(NamedTuple):
+    """One shortlisted target with its own GO/MARGINAL/SKIP verdict, for
+    the best-rig chooser — see `ShortlistEntry`."""
+
+    ranked: RankedTargetForBestRig
+    verdict: Verdict
+
+
+@dataclass(frozen=True)
+class NightPlanForBestRig:
+    """`NightPlan`'s best-rig-chooser counterpart: no single `rig` field,
+    since each ranked entry can win with a different one — see
+    `rank_targets_for_best_rig`.
+    """
+
+    site: Site
+    evening_start: datetime
+    morning_end: datetime
+    moon_illumination_pct: float
+    weather: WeatherSummary | None
+    ranked: list[RankedTargetForBestRig]
+    shortlist: list[BestRigShortlistEntry]
+
+
+def plan_night_for_best_rig(
+    site: Site,
+    rigs: list[Rig],
+    when: datetime,
+    types: frozenset[TargetType] | None = None,
+    limit: int | None = None,
+) -> NightPlanForBestRig:
+    """`plan_night`'s best-rig-chooser counterpart — see
+    `rank_targets_for_best_rig` for what's different (a rig chosen per
+    target instead of one for the whole plan; no grouping).
+    """
+    evening_start, morning_end = constraints.dark_window(site, when)
+    illumination_pct = moon_illumination(Time(when)) * 100
+    weather = fetch_weather_summary(site, evening_start, morning_end)
+    ranked = rank_targets_for_best_rig(site, rigs, when, types=types, limit=limit)
+
+    shortlist = [
+        BestRigShortlistEntry(
+            row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather)
+        )
+        for row in ranked[:SHORTLIST_SIZE]
+    ]
+
+    return NightPlanForBestRig(
+        site=site,
         evening_start=evening_start,
         morning_end=morning_end,
         moon_illumination_pct=illumination_pct,

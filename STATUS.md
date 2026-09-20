@@ -284,6 +284,28 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   ~30s); `None` falls back to the 50 default. Added because the unbounded
   per-run scan had become slow enough to make iterative development
   tedious — this was the roadmap's "object count limit" item, now closed.
+- Multi-object grouping (the roadmap item of the same name, now closed):
+  `rank_targets` clusters its own output via `engine.grouping.find_groups`
+  (co-visible = every pairwise separation within `rig`'s field of view)
+  and, for every cluster that's also *simultaneously* observable tonight
+  (`_group_best_time` — angular closeness alone doesn't guarantee a
+  shared moment; e.g. one member horizon-blocked while another peaks),
+  folds the cluster into one `RankedGroup` — worst-member altitude/reach,
+  the group's own fill-fraction fit — replacing the members' individual
+  `RankedTarget` entries (`_fold_in_groups`). `RankedEntry =
+  RankedTarget | RankedGroup` is what `NightPlan.ranked`/`.shortlist`
+  actually carry now.
+- Best-rig chooser (the roadmap item of the same name, now closed):
+  `rank_targets_for_best_rig(site, rigs, when, ...)` /
+  `plan_night_for_best_rig(...)` are `rank_targets`/`plan_night`'s
+  multi-rig counterparts — for each target, every rig in `rigs` is
+  scored and only the best-scoring one
+  (`framing.target_priority_score`) is kept, carried as a `rig` field on
+  each `RankedTargetForBestRig`/`NightPlanForBestRig` row instead of one
+  rig for the whole plan. Deliberately does *not* run multi-object
+  grouping: a co-visible group needs one shared field of view, but two
+  targets here can each win with a different rig — see ROADMAP.md's
+  "grouping-aware best-rig chooser" idea for the natural follow-up.
 
 ## `nachtlotse/data/store.py`
 
@@ -299,6 +321,9 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   entries under different aliases (e.g. `S30P` for a Seestar's native
   alt-az ball mount vs. `S30P-EQ` on a latitude wedge); pick per session
   with `--rig`.
+- `load_rigs()` (mirroring the existing `load_sites()`) returns every
+  configured `Rig`, plain — used by `--best-rig`, which needs the whole
+  list rather than one resolved-by-name record.
 
 ## `nachtlotse/weather/open_meteo.py`
 
@@ -348,6 +373,16 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   different path. Lazily imports matplotlib (`uv sync --extra charts`) so
   plain `lotse plan` never needs it; a missing install turns into an
   actionable stderr message and exit code 2, not a traceback.
+- A `RankedGroup` entry (see `planning.py` above) renders as one row/
+  shortlist line: member names joined with " + " (`_entry_label`) and
+  every distinct member category in the "Type" column (`_entry_types`) —
+  one verdict for the whole group, not one per member.
+- `--best-rig`: the best-rig chooser, `_cmd_plan_best_rig`'s own
+  rendering path (`planning.plan_night_for_best_rig` — see `planning.py`
+  above). Mutually exclusive with both `--rig` (there's no longer one
+  rig to name) and `--chart` (not wired up yet); the ranked table gets
+  an extra "Rig" column, the shortlist labels each entry with its
+  winning rig in parentheses.
 
 ## `nachtlotse/charting.py` and `nachtlotse/chart_export.py`
 
