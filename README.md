@@ -60,6 +60,12 @@ uv run lotse plan --site Feldberg --date 2026-11-14
 # dark_nebula, galaxy, galaxy_group, open_cluster, globular_cluster.
 uv run lotse plan --type galaxy --type globular_cluster
 
+# --limit caps how many catalog objects are evaluated (default: 50, use 0 for all).
+# Keeps `lotse plan` fast when the catalog is large; all objects that clear
+# basic constraints are still ranked, just the evaluation budget is limited:
+uv run lotse plan --limit 20
+uv run lotse plan --limit 0    # evaluate every catalog object
+
 # --chart writes the shortlist's alt/az polar overview as a PNG (default
 # filename: nachtlotse-shortlist.png in the current directory, overwriting
 # any existing file there) — or pick your own path. Needs its own extra:

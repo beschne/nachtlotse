@@ -293,3 +293,143 @@ def test_plan_night_gives_each_shortlisted_target_its_own_verdict(
     ]
     high_entry, low_entry = plan.shortlist
     assert high_entry.verdict.level != low_entry.verdict.level
+
+
+def test_rank_targets_limits_evaluated_count(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rank_targets with a limit should stop after evaluating N matching targets."""
+    from unittest.mock import patch
+
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    rig = store.default_rig_record().rig
+
+    targets = [
+        Target(name=f"target {i}", ra_deg=0.0, dec_deg=0.0, types=("galaxy",))
+        for i in range(20)
+    ]
+    monkeypatch.setattr(planning, "CATALOG", targets)
+
+    call_count = 0
+
+    def counting_best_time(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return None  # every target fails — but the call is still made
+
+    with patch(
+        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+    ):
+        ranked = planning.rank_targets(site, rig, datetime.now(UTC), limit=5)
+
+    assert call_count == 5  # only 5 evaluated
+    assert len(ranked) == 0  # all failed constraints
+
+
+def test_rank_targets_limit_zero_evaluates_all(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rank_targets with limit=0 should evaluate every matching target."""
+    from unittest.mock import patch
+
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    rig = store.default_rig_record().rig
+
+    targets = [
+        Target(name=f"target {i}", ra_deg=0.0, dec_deg=0.0, types=("galaxy",))
+        for i in range(20)
+    ]
+    monkeypatch.setattr(planning, "CATALOG", targets)
+
+    call_count = 0
+
+    def counting_best_time(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return None
+
+    with patch(
+        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+    ):
+        ranked = planning.rank_targets(site, rig, datetime.now(UTC), limit=0)
+
+    assert call_count == 20  # all 20 evaluated
+    assert len(ranked) == 0
+
+
+def test_rank_targets_default_limit_is_50(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rank_targets without a limit should evaluate at most DEFAULT_MAX_EVALUATED."""
+    from unittest.mock import patch
+
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    rig = store.default_rig_record().rig
+
+    targets = [
+        Target(name=f"target {i}", ra_deg=0.0, dec_deg=0.0, types=("galaxy",))
+        for i in range(100)
+    ]
+    monkeypatch.setattr(planning, "CATALOG", targets)
+
+    call_count = 0
+
+    def counting_best_time(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return None
+
+    with patch(
+        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+    ):
+        ranked = planning.rank_targets(site, rig, datetime.now(UTC))
+
+    assert call_count == 50  # default limit
+    assert len(ranked) == 0
+
+
+def test_rank_targets_limit_exceeds_catalog(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rank_targets with limit > catalog size should not error."""
+    from unittest.mock import patch
+
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    rig = store.default_rig_record().rig
+
+    targets = [
+        Target(name=f"target {i}", ra_deg=0.0, dec_deg=0.0, types=("galaxy",))
+        for i in range(10)
+    ]
+    monkeypatch.setattr(planning, "CATALOG", targets)
+
+    call_count = 0
+
+    def counting_best_time(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return None
+
+    with patch(
+        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+    ):
+        ranked = planning.rank_targets(site, rig, datetime.now(UTC), limit=50)
+
+    assert call_count == 10  # all evaluated (no error)
+    assert len(ranked) == 0

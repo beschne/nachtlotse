@@ -58,6 +58,11 @@ class ShortlistEntry(NamedTuple):
 # the roadmap — not the whole ranking, which can run to dozens of targets.
 SHORTLIST_SIZE = 5
 
+# Default maximum number of catalog objects to evaluate per planning run.
+# Higher values improve result quality at the cost of planning time.
+# Set to 0 (unlimited) or pass limit=0 for full-catalog evaluation.
+DEFAULT_MAX_EVALUATED = 50
+
 
 @dataclass(frozen=True)
 class NightPlan:
@@ -94,6 +99,7 @@ def rank_targets(
     rig: Rig,
     when: datetime,
     types: frozenset[TargetType] | None = None,
+    limit: int | None = None,
 ) -> list[RankedTarget]:
     """Rank catalog targets by their best moment within tonight's dark window.
 
@@ -107,15 +113,28 @@ def rank_targets(
     `types`, if given, keeps only targets carrying at least one of those
     categories (e.g. `{"galaxy"}`) — None means no filtering.
 
+    `limit`, if given, caps the number of catalog targets that are
+    *evaluated* (not the number returned).  `0` means unlimited.
+    `None` falls back to `DEFAULT_MAX_EVALUATED`.  Targets past the limit
+    are skipped before the expensive ephemeris check, keeping `lotse plan`
+    fast even with a large catalog.  The first N matching objects are
+    evaluated (catalog order is magnitude-binned, brightest first).
+
     Ranked by `framing.target_priority_score` (altitude, fit, and
     surface-brightness reach together), not altitude alone — a target
     that barely fits the frame, or is too diffuse for this site's sky
     darkness, no longer wins purely for sitting high in the sky.
     """
+    if limit is None:
+        limit = DEFAULT_MAX_EVALUATED
     ranked: list[RankedTarget] = []
+    evaluated = 0
     for target in CATALOG:
         if types is not None and not (set(target.types) & types):
             continue
+        if 0 < limit <= evaluated:
+            break
+        evaluated += 1
         result = constraints.best_time_tonight(
             site, target, when, extra_ok=_rotation_gate(rig, site, target)
         )
@@ -158,15 +177,17 @@ def plan_night(
     rig: Rig,
     when: datetime,
     types: frozenset[TargetType] | None = None,
+    limit: int | None = None,
 ) -> NightPlan:
     """Rank tonight's (or `when`'s night's) observable targets and verdict.
 
     `types` is passed straight through to `rank_targets` — see there.
+    `limit` is passed straight through to `rank_targets` — see there.
     """
     evening_start, morning_end = constraints.dark_window(site, when)
     illumination_pct = moon_illumination(Time(when)) * 100
     weather = fetch_weather_summary(site, evening_start, morning_end)
-    ranked = rank_targets(site, rig, when, types=types)
+    ranked = rank_targets(site, rig, when, types=types, limit=limit)
 
     shortlist = [
         ShortlistEntry(row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather))

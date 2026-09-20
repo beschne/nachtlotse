@@ -249,27 +249,36 @@ The MVP (M0–M5) is complete.
 
 Ideas for after the MVP, in priority order:
 
-1. A "best rig for this target" chooser — `lotse plan` scores targets for
-   whichever rig you pass, it doesn't yet pick between rigs. `framing_score`
+1. **Object count limit:** computing scores for every catalog object takes too
+   long. Limit the set of considered objects and output only a limited number
+   by default. The limit should be configurable (CLI flag) up to all objects.
+   This is a performance prerequisite for all future work — the planning step
+   must be fast enough to make iterative development tolerable.
+2. **Multi-object grouping:** the current planner scores individual targets in
+   isolation. With widefield gear (Seestar S30 Pro at 300 mm), multiple objects
+   often fit the sensor simultaneously. The planner should detect when targets
+   are close enough to share the same field of view (e.g. LBN 550 + 552 + 555,
+   NGC 2244 + 2624, M81 + M82) and suggest them as co-visible groups. This
+   requires angular-separation checks between catalog objects and a grouping
+   heuristic.
+3. **Session log:** record what's already been captured, and when — total
+   exposure time per target, logged per session. Prior exposure on a target
+   is informational, not a deterrent; it doesn't mean the target drops out of
+   contention, more can still be worth shooting. No attached photos.
+4. **Best-rig chooser:** `lotse plan` scores targets for whichever rig you pass,
+   it doesn't yet pick between rigs. `framing_score`
    (`engine/framing.py`) now scales with fill fraction (1.0 at a fill
    fraction of 1.0, fading toward 0.0 as the target shrinks toward a speck
    or, past 1.0, as it clips) instead of the old flat 20%-100% plateau, so
    the gradient a chooser needs — preferring the more format-filling rig,
    not just any non-clipping one — is in place. The chooser itself (picking
    between rigs, not just scoring one) is still to build.
-2. Current events: well-placed comets, supernova alerts; later also minor
+5. **LLM prose (nightly briefing)** via the Claude API — numbers strictly from
+   the engine, never computed by the LLM. No longer optional; this is the
+   presentation layer that wraps the engine's numbers in readable prose.
+6. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-3. Session log: record what's already been captured, and when — total
-   exposure time per target, logged per session. Prior exposure on a target
-   is informational, not a deterrent; it doesn't mean the target drops out of
-   contention, more can still be worth shooting. No attached photos.
-4. Structured `lotse plan --json` output, alongside the existing
-   human-readable table (not replacing it) — the interface a future native
-   app, or any other tooling, consumes instead of parsing text output.
-   Straightforward: `NightPlan`/`ShortlistEntry`/`RankedTarget` are already
-   plain dataclasses/NamedTuples, so this is a serializer in `cli.py`, not
-   an engine change.
-5. A native macOS app — the long-term UI goal now that Nachtlotse's GitHub
+7. **Native macOS app** — the long-term UI goal now that Nachtlotse's GitHub
    presence is explicitly a portfolio piece, not just a personal tool.
    Python throughout (Swift is deliberately out of scope); exact toolkit
    undecided (PySide6/Qt is the leading candidate) — to be designed once
@@ -278,8 +287,12 @@ Ideas for after the MVP, in priority order:
    if it's Python-native — the same `cli.py` → `engine`/`data` dependency
    direction applies; see the Streamlit MVP's retirement (M5, above) for
    why this project doesn't maintain two front ends at once.
-6. Optional LLM prose (nightly briefing) via the Claude API — numbers strictly
-   from the engine, never computed by the LLM.
+8. **Structured `lotse plan --json` output**, alongside the existing
+   human-readable table (not replacing it) — the interface a future native
+   app, or any other tooling, consumes instead of parsing text output.
+   Straightforward: `NightPlan`/`ShortlistEntry`/`RankedTarget` are already
+   plain dataclasses/NamedTuples, so this is a serializer in `cli.py`, not
+   an engine change.
 
 ### Possible future extensions (not scheduled)
 - Export today's pick to a NINA-compatible format.
@@ -324,6 +337,8 @@ uv run pytest                 # tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
 uv run lotse plan              # tonight's recommendation (from M0)
+uv run lotse plan --limit 20   # evaluate only the first 20 matching objects
+uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 ```
 

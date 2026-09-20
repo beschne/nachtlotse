@@ -64,6 +64,7 @@ def _cmd_plan(
     date_str: str | None,
     types: list[str] | None,
     chart_path: str | None,
+    limit: int | None,
 ) -> int:
     try:
         site_record = (
@@ -89,7 +90,7 @@ def _cmd_plan(
         return 2
 
     type_filter = frozenset(types) if types else None
-    plan = planning.plan_night(site, rig, now, types=type_filter)
+    plan = planning.plan_night(site, rig, now, types=type_filter, limit=limit)
 
     print(f"Nachtlotse — {site.name} ({rig.name})")
     print(
@@ -332,6 +333,18 @@ def main(argv: list[str] | None = None) -> int:
             "path. Needs `uv sync --extra charts`."
         ),
     )
+    plan_parser.add_argument(
+        "--limit",
+        dest="limit",
+        default=None,
+        metavar="N",
+        type=int,
+        help=(
+            "Limit evaluated catalog objects to the first N matching any "
+            "--type filter (default: 50). Use --limit 0 to evaluate every "
+            "catalog object."
+        ),
+    )
 
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
@@ -371,7 +384,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "plan":
-        return _cmd_plan(args.site, args.rig, args.date, args.types, args.chart_path)
+        return _cmd_plan(
+            args.site, args.rig, args.date, args.types, args.chart_path, args.limit
+        )
     if args.command == "sites":
         return _cmd_sites()
     if args.command == "rigs":

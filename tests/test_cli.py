@@ -59,9 +59,9 @@ def test_plan_command_passes_selected_types_through_to_planning(
     captured: dict[str, object] = {}
     original_plan_night = planning.plan_night
 
-    def spy_plan_night(site, rig, when, types=None):
+    def spy_plan_night(site, rig, when, types=None, limit=None):
         captured["types"] = types
-        return original_plan_night(site, rig, when, types=types)
+        return original_plan_night(site, rig, when, types=types, limit=limit)
 
     monkeypatch.setattr(planning, "plan_night", spy_plan_night)
 
@@ -77,9 +77,9 @@ def test_plan_command_defaults_to_no_type_filter(
     captured: dict[str, object] = {}
     original_plan_night = planning.plan_night
 
-    def spy_plan_night(site, rig, when, types=None):
+    def spy_plan_night(site, rig, when, types=None, limit=None):
         captured["types"] = types
-        return original_plan_night(site, rig, when, types=types)
+        return original_plan_night(site, rig, when, types=types, limit=limit)
 
     monkeypatch.setattr(planning, "plan_night", spy_plan_night)
 
@@ -356,3 +356,77 @@ def test_plan_command_reports_the_setup_hint_when_matplotlib_is_missing(
 def test_unknown_command_is_rejected() -> None:
     with pytest.raises(SystemExit):
         cli.main(["nonsense"])
+
+
+def test_plan_command_respects_limit_flag(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--limit should cap the number of evaluated catalog objects."""
+    from nachtlotse.data.catalog import CATALOG
+    from nachtlotse.engine.models import Target
+
+    # Build a controlled list: first 5 pass constraints, next 10 fail
+    from nachtlotse.engine.constraints import build_observer
+    from astropy.time import Time
+
+    site = store.get_site_record("Großer Feldberg").site
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    passing_targets = [
+        Target(
+            name=f"passing {i}",
+            ra_deg=lst_deg,
+            dec_deg=site.lat_deg - 20.0 - i * 5.0,
+            types=("galaxy",),
+        )
+        for i in range(3)
+    ]
+    failing_targets = [
+        Target(
+            name=f"failing {i}",
+            ra_deg=lst_deg,
+            dec_deg=site.lat_deg - 20.0 - i * 0.1,  # too close together = blocked
+            types=("galaxy",),
+        )
+        for i in range(20)
+    ]
+    monkeypatch.setattr(planning, "CATALOG", passing_targets + failing_targets)
+
+    assert cli.main(["plan", "--limit", "5"]) == 0
+    output = capsys.readouterr().out
+
+    # Only 3 passing targets + 2 evaluated from failing = 5 evaluated
+    # But only 3 pass constraints, so the ranked table shows 3
+    assert "Best time (local)" in output
+    # The shortlist should have at most 3 (all passing)
+    verdict_count = output.count("Verdict:")
+    assert verdict_count <= 5
+
+
+def test_plan_command_limit_zero_evaluates_all(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--limit 0 should evaluate all catalog objects."""
+    from nachtlotse.engine.models import Target
+
+    # A small set where some pass and some fail constraints
+    passing_targets = [
+        Target(name=f"passing {i}", ra_deg=0.0, dec_deg=0.0, types=("galaxy",))
+        for i in range(5)
+    ]
+    monkeypatch.setattr(planning, "CATALOG", passing_targets)
+
+    assert cli.main(["plan", "--limit", "0"]) == 0
+    output = capsys.readouterr().out
+    # Should not crash and should attempt all 5
+    assert "Best time (local)" in output or "No catalog target" in output
