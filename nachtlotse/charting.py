@@ -20,8 +20,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from nachtlotse.engine import ephemeris
-from nachtlotse.engine.models import Site
-from nachtlotse.planning import NightPlan
+from nachtlotse.engine.models import Site, Target
+from nachtlotse.planning import NightPlan, RankedGroup
 
 # Zenith-distance rings drawn as chart grid lines, in degrees of altitude.
 GRID_RINGS_ALT_DEG = (0.0, 20.0, 40.0, 60.0, 80.0)
@@ -71,30 +71,51 @@ class Track:
     segments: list[list[tuple[float, float]]]
 
 
+def _entry_targets(entry: object) -> tuple[Target, ...]:
+    """The one or more real catalog targets behind a shortlist entry —
+    a `RankedGroup`'s members, or a single-target entry's own target."""
+    if isinstance(entry, RankedGroup):
+        return entry.targets
+    return (entry.target,)
+
+
+def _entry_name(entry: object) -> str:
+    targets = _entry_targets(entry)
+    return " + ".join(t.name for t in targets)
+
+
 def shortlist_tracks(plan: NightPlan, num_samples: int = 49) -> list[Track]:
-    """One `Track` per shortlisted target, points clipped to alt >= 0
-    (below the true horizon isn't part of the visible sky dome)."""
+    """One `Track` per shortlisted entry, points clipped to alt >= 0
+    (below the true horizon isn't part of the visible sky dome).
+
+    A group's track carries every member's segments together — members
+    sit close enough to share one frame of the rig (see
+    `engine.grouping`), so their curves stay visually close too, and one
+    legend entry/color for the whole group beats a separate slot per
+    member (`SHORTLIST_PALETTE` has one slot per shortlist entry, not
+    per target).
+    """
     tracks = []
     for entry in plan.shortlist:
-        target = entry.ranked.target
-        series = ephemeris.altitude_series(
-            plan.site,
-            target,
-            plan.evening_start,
-            plan.morning_end,
-            num_samples=num_samples,
-        )
         segments: list[list[tuple[float, float]]] = []
-        current: list[tuple[float, float]] = []
-        for _when, pos in series:
-            if pos.alt_deg >= 0.0:
-                current.append(project(pos.alt_deg, pos.az_deg))
-            elif current:
+        for target in _entry_targets(entry.ranked):
+            series = ephemeris.altitude_series(
+                plan.site,
+                target,
+                plan.evening_start,
+                plan.morning_end,
+                num_samples=num_samples,
+            )
+            current: list[tuple[float, float]] = []
+            for _when, pos in series:
+                if pos.alt_deg >= 0.0:
+                    current.append(project(pos.alt_deg, pos.az_deg))
+                elif current:
+                    segments.append(current)
+                    current = []
+            if current:
                 segments.append(current)
-                current = []
-        if current:
-            segments.append(current)
-        tracks.append(Track(name=target.name, segments=segments))
+        tracks.append(Track(name=_entry_name(entry.ranked), segments=segments))
     return tracks
 
 

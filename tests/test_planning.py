@@ -130,14 +130,104 @@ def test_a_heavily_obstructed_horizon_excludes_targets_a_clear_horizon_admits(
         base_site, horizon=HorizonProfile(points=store._sector_to_points(348.0, 105.0))
     )
 
-    open_ranked = {
-        row.target.catalog_id for row in planning.rank_targets(open_site, rig, now)
-    }
-    walled_ranked = {
-        row.target.catalog_id for row in planning.rank_targets(walled_site, rig, now)
-    }
+    def catalog_ids(ranked: list[planning.RankedEntry]) -> set[str]:
+        ids: set[str] = set()
+        for row in ranked:
+            targets = row.targets if isinstance(row, planning.RankedGroup) else (row.target,)
+            ids.update(target.catalog_id for target in targets)
+        return ids
+
+    open_ranked = catalog_ids(planning.rank_targets(open_site, rig, now))
+    walled_ranked = catalog_ids(planning.rank_targets(walled_site, rig, now))
 
     assert open_ranked != walled_ranked
+
+
+def test_rank_targets_folds_a_co_visible_pair_into_one_group(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two targets close enough to share one frame of the rig, and
+    simultaneously observable, become a single `RankedGroup` — replacing
+    their individual `RankedTarget` entries rather than sitting alongside
+    them (see engine.grouping and planning._fold_in_groups)."""
+    from nachtlotse.engine import ephemeris, grouping
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Mount, Optics, Rig, Sensor, Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    rig = Rig(
+        name="Wide-Field Test Rig",
+        optics=Optics(name="Test Optics", focal_length_mm=250.0, aperture_mm=50.0),
+        sensor=Sensor(name="Test Sensor", width_px=4000, height_px=3000, pixel_um=3.0),
+        mount=Mount(name="EQ Test Mount", kind="eq"),  # sidesteps rotation gating
+    )
+    fov_short_arcmin = min(rig.fov_deg) * 60.0
+
+    close_a = Target(name="close a", ra_deg=lst_deg, dec_deg=site.lat_deg - 20.0)
+    close_b = Target(
+        name="close b",
+        ra_deg=lst_deg + (fov_short_arcmin * 0.3) / 60.0,
+        dec_deg=site.lat_deg - 20.0,
+    )
+    far = Target(name="far", ra_deg=lst_deg, dec_deg=site.lat_deg - 60.0)
+    monkeypatch.setattr(planning, "CATALOG", [close_a, close_b, far])
+
+    ranked = planning.rank_targets(
+        site, rig, night_reference.to_datetime(timezone=UTC)
+    )
+
+    groups = [row for row in ranked if isinstance(row, planning.RankedGroup)]
+    singles = [row for row in ranked if isinstance(row, planning.RankedTarget)]
+
+    assert len(groups) == 1
+    assert {t.name for t in groups[0].targets} == {"close a", "close b"}
+    assert [row.target.name for row in singles] == ["far"]
+
+    group = groups[0]
+    assert group.fit == pytest.approx(grouping.group_framing_score(rig, group.targets))
+    assert group.pos.alt_deg == pytest.approx(
+        min(
+            ephemeris.altaz(site, member, group.best_time).alt_deg
+            for member in group.targets
+        )
+    )
+
+
+def test_rank_targets_leaves_distant_targets_ungrouped(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Targets too far apart for the rig's field of view stay as separate
+    `RankedTarget` entries — grouping is opt-in by geometry, not assumed."""
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    rig = store.default_rig_record().rig
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    a = Target(name="test a", ra_deg=lst_deg, dec_deg=site.lat_deg - 20.0)
+    b = Target(name="test b", ra_deg=lst_deg, dec_deg=site.lat_deg - 60.0)
+    monkeypatch.setattr(planning, "CATALOG", [a, b])
+
+    ranked = planning.rank_targets(
+        site, rig, night_reference.to_datetime(timezone=UTC)
+    )
+
+    assert all(isinstance(row, planning.RankedTarget) for row in ranked)
+    assert {row.target.name for row in ranked} == {"test a", "test b"}
 
 
 def test_altaz_rig_devalues_a_near_zenith_target_that_an_eq_rig_keeps_at_peak(

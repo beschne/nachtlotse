@@ -27,8 +27,10 @@ def test_plan_command_prints_dark_window_moon_and_a_ranked_table(
     default_site = store.default_site_record().site
     default_rig = store.default_rig_record().rig
     ranked = planning.rank_targets(default_site, default_rig, datetime.now(UTC))
-    for target, *_rest in ranked:
-        assert target.catalog_id in output
+    for entry in ranked:
+        targets = entry.targets if isinstance(entry, planning.RankedGroup) else (entry.target,)
+        for target in targets:
+            assert target.catalog_id in output
 
 
 def test_plan_command_accepts_a_site_by_name_or_alias(
@@ -430,3 +432,42 @@ def test_plan_command_limit_zero_evaluates_all(
     output = capsys.readouterr().out
     # Should not crash and should attempt all 5
     assert "Best time (local)" in output or "No catalog target" in output
+
+
+def test_plan_command_shows_a_co_visible_group_as_one_joined_shortlist_entry(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Two targets close enough to share the rig's frame show up as one
+    "name + name" shortlist entry with a single verdict, not two separate
+    ones (see engine.grouping and planning._fold_in_groups)."""
+    from astropy.time import Time
+
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    rig = store.default_rig_record().rig
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+    fov_short_arcmin = min(rig.fov_deg) * 60.0
+    dec_deg = site.lat_deg - 40.0  # well off zenith, safe for the alt-az default rig
+
+    close_a = Target(name="close a", ra_deg=lst_deg, dec_deg=dec_deg)
+    close_b = Target(
+        name="close b", ra_deg=lst_deg + (fov_short_arcmin * 0.3) / 60.0, dec_deg=dec_deg
+    )
+    monkeypatch.setattr(planning, "CATALOG", [close_a, close_b])
+    monkeypatch.setattr(cli, "_resolve_when", lambda *_a, **_kw: night_reference.to_datetime(timezone=UTC))
+
+    assert cli.main(["plan"]) == 0
+    output = capsys.readouterr().out
+
+    assert "close a" in output and "close b" in output
+    assert "close a + close b" in output or "close b + close a" in output
+    assert output.count("Verdict:") == 1

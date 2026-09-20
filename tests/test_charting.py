@@ -137,3 +137,56 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
     assert len(segment) == 3  # the three above-horizon samples
     for x, y in segment:
         assert math.hypot(x, y) <= 90.0 + 1e-9
+
+
+def test_shortlist_tracks_combines_every_member_of_a_group_into_one_track(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `RankedGroup`'s track carries every member's own altitude curve
+    — one legend entry/color for the whole group, not one per member
+    (`SHORTLIST_PALETTE` has a slot per shortlist entry, not per target)."""
+    site = store.default_site_record().site
+    rig = store.default_rig_record().rig
+    target_a = Target(name="group member a", ra_deg=10.0, dec_deg=20.0)
+    target_b = Target(name="group member b", ra_deg=10.1, dec_deg=20.0)
+
+    base = datetime(2026, 6, 1, 22, 0, tzinfo=UTC)
+    always_above_horizon = [
+        (base + timedelta(hours=i), ephemeris.AltAz(alt_deg=30.0, az_deg=40.0, distance_au=1.0))
+        for i in range(3)
+    ]
+
+    def fake_altitude_series(_site, target, *_args, **_kwargs):
+        return always_above_horizon
+
+    monkeypatch.setattr(charting.ephemeris, "altitude_series", fake_altitude_series)
+
+    ranked = planning.RankedGroup(
+        targets=(target_a, target_b),
+        best_time=base,
+        pos=ephemeris.AltAz(30.0, 40.0, 1.0),
+        fit=1.0,
+        reach=1.0,
+    )
+    entry = planning.ShortlistEntry(ranked=ranked, verdict=Verdict(level="GO", reasons=[]))
+    plan = planning.NightPlan(
+        site=site,
+        rig=rig,
+        evening_start=base,
+        morning_end=base + timedelta(hours=3),
+        moon_illumination_pct=0.0,
+        weather=None,
+        ranked=[ranked],
+        shortlist=[entry],
+    )
+
+    tracks = charting.shortlist_tracks(plan)
+
+    assert len(tracks) == 1
+    (track,) = tracks
+    assert track.name == "group member a + group member b"
+    # One 3-point segment per member, both above the horizon throughout.
+    assert len(track.segments) == 2
+    assert all(len(segment) == 3 for segment in track.segments)

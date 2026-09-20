@@ -18,7 +18,7 @@ from astroplan import moon_illumination
 from astropy.time import Time
 
 from nachtlotse.data.catalog import CATALOG
-from nachtlotse.engine import constraints, ephemeris, framing, scoring
+from nachtlotse.engine import constraints, ephemeris, framing, grouping, scoring
 from nachtlotse.engine.models import (
     Rig,
     Site,
@@ -41,16 +41,40 @@ class RankedTarget(NamedTuple):
     reach: float
 
 
+class RankedGroup(NamedTuple):
+    """A co-visible group of catalog targets that fit in one frame of the
+    rig at a shared moment tonight (see `engine.grouping`) — the
+    multi-object counterpart to `RankedTarget`.
+
+    `pos.alt_deg` is the *lowest* member's altitude at the shared
+    `best_time` (worst-wins, same convention `reach` and the eventual
+    verdict use below) — a group is only as good as its weakest member,
+    not its highest. `pos.az_deg` is the group centroid's azimuth, for
+    display/chart placement only.
+    """
+
+    targets: tuple[Target, ...]
+    best_time: datetime
+    pos: ephemeris.AltAz
+    fit: float
+    reach: float
+
+
+# Either shape a ranked entry can take — see `RankedGroup` above.
+RankedEntry = RankedTarget | RankedGroup
+
+
 class ShortlistEntry(NamedTuple):
-    """One shortlisted target with its own GO/MARGINAL/SKIP verdict.
+    """One shortlisted target (or group) with its own GO/MARGINAL/SKIP
+    verdict.
 
     There is no single hero target and no single verdict for the night —
-    each of the top few ranked targets is independently judged on its own
+    each of the top few ranked entries is independently judged on its own
     altitude (see `engine.scoring.verdict_for_target`), so a night can be a
     GO on one target and a SKIP on another.
     """
 
-    ranked: RankedTarget
+    ranked: RankedEntry
     verdict: Verdict
 
 
@@ -74,7 +98,7 @@ class NightPlan:
     morning_end: datetime
     moon_illumination_pct: float
     weather: WeatherSummary | None
-    ranked: list[RankedTarget]
+    ranked: list[RankedEntry]
     # The top SHORTLIST_SIZE of `ranked`, each with its own verdict. Empty
     # only when no catalog target clears constraints tonight at all.
     shortlist: list[ShortlistEntry]
@@ -94,13 +118,129 @@ def _rotation_gate(
     return gate
 
 
+def _member_clears_constraints(
+    site: Site, rig: Rig, member: Target, sample_time: datetime
+) -> bool:
+    """Whether one real group member — not the synthetic centroid
+    `best_time_tonight` is sampling against — individually clears
+    altitude, horizon, moon separation, and (for alt-az rigs) safe field
+    rotation at `sample_time`. See `_group_gate`."""
+    pos = ephemeris.altaz(site, member, sample_time)
+    if pos.alt_deg < constraints.DEFAULT_MIN_ALT_DEG:
+        return False
+    if not constraints.clears_horizon(site, pos):
+        return False
+    if (
+        constraints.moon_separation_deg(site, member, sample_time)
+        < constraints.DEFAULT_MIN_MOON_SEP_DEG
+    ):
+        return False
+    return framing.has_safe_field_rotation(rig, site, member, sample_time)
+
+
+def _group_gate(
+    rig: Rig, site: Site, members: tuple[Target, ...]
+) -> Callable[[datetime, ephemeris.AltAz], bool]:
+    """An `extra_ok` callback for `best_time_tonight`, checking every
+    real group member (not just the synthetic centroid it samples
+    against) at each candidate moment — see `_member_clears_constraints`.
+    """
+
+    def gate(sample_time: datetime, _centroid_pos: ephemeris.AltAz) -> bool:
+        return all(
+            _member_clears_constraints(site, rig, member, sample_time)
+            for member in members
+        )
+
+    return gate
+
+
+def _group_best_time(
+    site: Site, rig: Rig, members: tuple[Target, ...], when: datetime
+) -> tuple[datetime, ephemeris.AltAz] | None:
+    """The best shared moment tonight at which every member of `members`
+    simultaneously clears constraints, or None if there isn't one —
+    individually observable members don't guarantee a shared moment
+    (e.g. one horizon-blocked exactly while the other peaks).
+
+    Samples around a synthetic centroid target (`grouping.centroid_target`)
+    reusing `constraints.best_time_tonight`'s own night-scanning loop,
+    the same way `_rotation_gate` reuses it for single-target field
+    rotation — `pos.alt_deg` in the result is the *centroid's* altitude,
+    not any real member's; callers needing a member's own altitude (e.g.
+    the group's worst-wins score) recompute it at the returned time.
+    """
+    anchor = grouping.centroid_target(members)
+    return constraints.best_time_tonight(
+        site, anchor, when, extra_ok=_group_gate(rig, site, members)
+    )
+
+
+def _build_ranked_group(
+    site: Site, rig: Rig, members: tuple[Target, ...], when: datetime
+) -> RankedGroup | None:
+    """A `RankedGroup` for `members`, or None if they have no shared
+    observable moment tonight (see `_group_best_time`)."""
+    result = _group_best_time(site, rig, members, when)
+    if result is None:
+        return None
+    best_time, centroid_pos = result
+
+    worst_alt_deg = min(
+        ephemeris.altaz(site, member, best_time).alt_deg for member in members
+    )
+    pos = ephemeris.AltAz(
+        alt_deg=worst_alt_deg,
+        az_deg=centroid_pos.az_deg,
+        distance_au=centroid_pos.distance_au,
+    )
+    fit = grouping.group_framing_score(rig, members)
+    reach = min(
+        framing.reach_factor(site, member.magnitude, member.size_arcmin)
+        for member in members
+    )
+    return RankedGroup(targets=members, best_time=best_time, pos=pos, fit=fit, reach=reach)
+
+
+def _fold_in_groups(
+    site: Site, rig: Rig, ranked: list[RankedTarget], when: datetime
+) -> list[RankedEntry]:
+    """Replace each co-visible group's member `RankedTarget`s (see
+    `engine.grouping.find_groups`) with one combined `RankedGroup`, for
+    every group that also turns out simultaneously observable tonight —
+    angular closeness alone doesn't guarantee that (see
+    `_group_best_time`). Ungrouped targets, and groups that fail the
+    simultaneous check, pass through unchanged.
+    """
+    by_target = {row.target: row for row in ranked}
+    groups = grouping.find_groups(rig, [row.target for row in ranked])
+
+    entries: list[RankedEntry] = []
+    grouped_targets: set[Target] = set()
+    for members in groups:
+        ranked_group = _build_ranked_group(site, rig, members, when)
+        if ranked_group is None:
+            continue
+        entries.append(ranked_group)
+        grouped_targets.update(members)
+
+    entries.extend(
+        row for target, row in by_target.items() if target not in grouped_targets
+    )
+    entries.sort(
+        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
+        reverse=True,
+    )
+    return entries
+
+
 def rank_targets(
     site: Site,
     rig: Rig,
     when: datetime,
     types: frozenset[TargetType] | None = None,
     limit: int | None = None,
-) -> list[RankedTarget]:
+) -> list[RankedEntry]:
     """Rank catalog targets by their best moment within tonight's dark window.
 
     A target is dropped unless some moment tonight simultaneously clears
@@ -124,6 +264,11 @@ def rank_targets(
     surface-brightness reach together), not altitude alone — a target
     that barely fits the frame, or is too diffuse for this site's sky
     darkness, no longer wins purely for sitting high in the sky.
+
+    Targets close enough to share one frame of `rig` (see
+    `engine.grouping`) and simultaneously observable tonight are folded
+    into a single `RankedGroup`, replacing their individual `RankedTarget`
+    entries — see `_fold_in_groups`.
     """
     if limit is None:
         limit = DEFAULT_MAX_EVALUATED
@@ -151,7 +296,7 @@ def rank_targets(
         key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
         reverse=True,
     )
-    return ranked
+    return _fold_in_groups(site, rig, ranked, when)
 
 
 def fetch_weather_summary(

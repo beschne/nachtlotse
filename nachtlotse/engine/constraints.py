@@ -43,8 +43,8 @@ iers.conf.auto_download = False
 # The effect is negligible at arcsecond level, far below what matters here.
 warnings.filterwarnings("ignore", category=NonRotationTransformationWarning)
 
-_DEFAULT_MIN_ALT_DEG = 20.0
-_DEFAULT_MIN_MOON_SEP_DEG = 30.0
+DEFAULT_MIN_ALT_DEG = 20.0
+DEFAULT_MIN_MOON_SEP_DEG = 30.0
 _SAMPLES_PER_NIGHT = 25
 
 
@@ -70,7 +70,15 @@ def _earth_location(site: Site) -> EarthLocation:
     )
 
 
-def _moon_separation_deg(site: Site, target: Target, when: datetime) -> float:
+def moon_separation_deg(site: Site, target: Target, when: datetime) -> float:
+    """Angular separation between `target` and the Moon at `when`.
+
+    Unlike `engine.grouping.angular_separation_deg` (two fixed catalog
+    positions), this tracks a moving body, so it needs `site` and
+    `when`. Public because `planning`'s group-visibility gate checks it
+    per group member, not just for the single target `best_time_tonight`
+    itself is scanning.
+    """
     moon = get_body("moon", Time(when), _earth_location(site))
     target_coord = SkyCoord(ra=target.ra_deg * u.deg, dec=target.dec_deg * u.deg)
     return float(moon.separation(target_coord).deg)
@@ -110,8 +118,8 @@ def is_observable_tonight(
     target: Target,
     reference: datetime,
     *,
-    min_alt_deg: float = _DEFAULT_MIN_ALT_DEG,
-    min_moon_sep_deg: float = _DEFAULT_MIN_MOON_SEP_DEG,
+    min_alt_deg: float = DEFAULT_MIN_ALT_DEG,
+    min_moon_sep_deg: float = DEFAULT_MIN_MOON_SEP_DEG,
 ) -> bool:
     """Whether the target ever clears altitude/night/moon-separation
     constraints during tonight's astronomical-twilight dark window.
@@ -140,8 +148,8 @@ def best_time_tonight(
     target: Target,
     reference: datetime,
     *,
-    min_alt_deg: float = _DEFAULT_MIN_ALT_DEG,
-    min_moon_sep_deg: float = _DEFAULT_MIN_MOON_SEP_DEG,
+    min_alt_deg: float = DEFAULT_MIN_ALT_DEG,
+    min_moon_sep_deg: float = DEFAULT_MIN_MOON_SEP_DEG,
     extra_ok: Callable[[datetime, ephemeris.AltAz], bool] | None = None,
 ) -> tuple[datetime, ephemeris.AltAz] | None:
     """The best (highest-altitude) moment tonight that clears altitude,
@@ -181,7 +189,7 @@ def best_time_tonight(
             continue
         if not clears_horizon(site, pos):
             continue
-        if _moon_separation_deg(site, target, sample_time) < min_moon_sep_deg:
+        if moon_separation_deg(site, target, sample_time) < min_moon_sep_deg:
             continue
         if extra_ok is not None and not extra_ok(sample_time, pos):
             continue

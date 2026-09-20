@@ -18,13 +18,44 @@ from nachtlotse import best_sky, chart_export, planning
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
-from nachtlotse.engine.models import TARGET_TYPE_LABELS, TargetType, WeatherSummary
+from nachtlotse.engine.models import (
+    TARGET_TYPE_LABELS,
+    Target,
+    TargetType,
+    WeatherSummary,
+)
+from nachtlotse.planning import RankedEntry, RankedGroup
 
 _TARGET_TYPE_CHOICES = sorted(get_args(TargetType))
 
 
 def _format_types(types: tuple[str, ...]) -> str:
     return "/".join(TARGET_TYPE_LABELS.get(t, t) for t in types)
+
+
+def _target_label(target: Target) -> str:
+    return f"{target.catalog_id} {target.name}".strip()
+
+
+def _entry_label(entry: RankedEntry) -> str:
+    """Display label for one ranked entry — joined member names for a
+    `RankedGroup` (e.g. "M81 + M82"), the target's own name otherwise."""
+    if isinstance(entry, RankedGroup):
+        return " + ".join(_target_label(member) for member in entry.targets)
+    return _target_label(entry.target)
+
+
+def _entry_types(entry: RankedEntry) -> tuple[str, ...]:
+    """Category labels for one ranked entry — every distinct category
+    across a group's members, in first-seen order; a single target's own
+    otherwise."""
+    if isinstance(entry, RankedGroup):
+        seen: dict[str, None] = {}
+        for member in entry.targets:
+            for member_type in member.types:
+                seen[member_type] = None
+        return tuple(seen)
+    return entry.target.types
 
 
 def _format_weather_line(weather: WeatherSummary | None) -> str:
@@ -111,8 +142,7 @@ def _cmd_plan(
 
     print("Shortlist:")
     for rank, (row, verdict) in enumerate(plan.shortlist, start=1):
-        label = f"{row.target.catalog_id} {row.target.name}".strip()
-        print(f"  {rank}. Verdict: {verdict.level} — {label}")
+        print(f"  {rank}. Verdict: {verdict.level} — {_entry_label(row)}")
         for reason in verdict.reasons:
             print(f"       {reason}")
     print()
@@ -121,12 +151,13 @@ def _cmd_plan(
         f"{'Target':<32} {'Type':<32} {'Max Alt':>8} {'Az':>7} {'Fit':>5} {'Reach':>6}  "
         "Best time (local)"
     )
-    for target, best_time, pos, fit, reach in plan.ranked:
-        label = f"{target.catalog_id} {target.name}"
-        local_time = best_time.astimezone(local_tz)
+    for entry in plan.ranked:
+        label = _entry_label(entry)
+        local_time = entry.best_time.astimezone(local_tz)
         print(
-            f"{label:<32} {_format_types(target.types):<32} {pos.alt_deg:7.1f}° "
-            f"{pos.az_deg:6.1f}° {fit:5.2f} {reach:6.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
+            f"{label:<32} {_format_types(_entry_types(entry)):<32} "
+            f"{entry.pos.alt_deg:7.1f}° {entry.pos.az_deg:6.1f}° {entry.fit:5.2f} "
+            f"{entry.reach:6.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
         )
 
     if chart_path is not None:

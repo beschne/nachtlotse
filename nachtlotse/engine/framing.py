@@ -51,35 +51,58 @@ _ROTATION_RATE_BASELINE = timedelta(minutes=5)
 # if needed.
 DEFAULT_MAX_ROTATION_RATE_DEG_PER_MIN = 1.5
 
-def framing_score(rig: Rig, target: Target) -> float:
-    """How well the target's angular size fits the rig's field of view.
+def fov_short_arcmin(rig: Rig) -> float:
+    """`rig`'s field of view's shorter side, in arcmin.
 
-    Scales directly with the fill fraction (major axis / FoV's shorter
-    side): 1.0 at a fill fraction of 1.0 — the major axis exactly spans
-    the frame's short side, the most a target can fill the shot without
-    clipping — fading linearly down toward 0.0 as the target shrinks
-    toward a speck in the frame. Past 1.0 the target starts clipping and
-    the score fades back down just as it rose. A rig that frames a target
-    at 90% fill now outscores one at 25% fill; previously both scored the
-    same flat 1.0 (see CLAUDE.md's Roadmap #1), which gave a future "best
-    rig for this target" chooser nothing to prefer one by. Targets with
-    no known size (`size_arcmin == (0, 0)`) score 1.0 — treated as
-    framing-unconstrained, not "infinitely small".
+    The rotation-invariant fit bound: an alt-az rig's frame keeps
+    rotating relative to the sky over a session (see the module
+    docstring), so a span is only guaranteed to fit the frame regardless
+    of orientation if it stays within this — the diameter of the circle
+    inscribed in the FoV rectangle. Used both for single-target framing
+    fit (`framing_score`) and multi-object grouping (`engine.grouping`,
+    which imports this rather than recomputing it).
     """
-    major_arcmin, _minor_arcmin = target.size_arcmin
-    if major_arcmin <= 0.0:
-        return 1.0
-
     fov_width_deg, fov_height_deg = rig.fov_deg
-    fov_short_arcmin = min(fov_width_deg, fov_height_deg) * 60.0
-    if fov_short_arcmin <= 0.0:
+    return min(fov_width_deg, fov_height_deg) * 60.0
+
+
+def fill_fraction_score(span_arcmin: float, fov_short_arcmin_value: float) -> float:
+    """How well an angular span fits within a field-of-view dimension.
+
+    1.0 at a fill fraction of 1.0 — the span exactly matches
+    `fov_short_arcmin_value`, the most it can fill the shot without
+    clipping — fading linearly down toward 0.0 as the span shrinks
+    toward a speck. Past 1.0 the span starts clipping and the score
+    fades back down just as it rose. A span of 0.0 (unknown size) scores
+    1.0 — treated as framing-unconstrained, not "infinitely small". The
+    shared curve behind `framing_score` (fed one target's own size) and
+    `engine.grouping.group_framing_score` (fed a group's own angular
+    span) — one source of truth for "how forgiving is a near-miss".
+    """
+    if span_arcmin <= 0.0:
+        return 1.0
+    if fov_short_arcmin_value <= 0.0:
         return 0.0
 
-    fill_fraction = major_arcmin / fov_short_arcmin
+    fill_fraction = span_arcmin / fov_short_arcmin_value
 
     if fill_fraction > 1.0:
         return max(0.0, 1.0 - (fill_fraction - 1.0))
     return fill_fraction
+
+
+def framing_score(rig: Rig, target: Target) -> float:
+    """How well the target's angular size fits the rig's field of view.
+
+    See `fill_fraction_score` for the fade curve — this feeds it the
+    target's own major axis against `fov_short_arcmin(rig)`. A rig that
+    frames a target at 90% fill now outscores one at 25% fill;
+    previously both scored the same flat 1.0 (see CLAUDE.md's Roadmap
+    #1), which gave a future "best rig for this target" chooser nothing
+    to prefer one by.
+    """
+    major_arcmin, _minor_arcmin = target.size_arcmin
+    return fill_fraction_score(major_arcmin, fov_short_arcmin(rig))
 
 
 _MAX_ALTITUDE_DEG = 90.0
