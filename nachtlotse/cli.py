@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import get_args
 from zoneinfo import ZoneInfo
 
-from nachtlotse import best_sky, chart_export, planning
+from nachtlotse import best_sky, chart_export, planning, prose
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
@@ -90,6 +90,20 @@ def _resolve_when(date_str: str | None, local_tz: ZoneInfo) -> datetime:
     )
 
 
+def _print_prose_briefing(plan: planning.NightPlan | planning.NightPlanForBestRig) -> int | None:
+    """Prints `--prose`'s nightly briefing for `plan`, or an actionable
+    error to stderr. Returns an exit code the caller should return
+    immediately, or None to keep going (the briefing printed fine)."""
+    try:
+        briefing = prose.generate_nightly_briefing(plan)
+    except prose.ProseUnavailable as exc:
+        print(f"\n{exc}", file=sys.stderr)
+        return 2
+    print(f"\nNightly briefing ({prose.resolve_model()}):")
+    print(briefing)
+    return None
+
+
 def _cmd_plan(
     site_name: str | None,
     rig_name: str | None,
@@ -98,6 +112,7 @@ def _cmd_plan(
     chart_path: str | None,
     limit: int | None,
     best_rig: bool,
+    want_prose: bool,
 ) -> int:
     if best_rig and rig_name:
         print("--best-rig can't be combined with --rig.", file=sys.stderr)
@@ -134,7 +149,7 @@ def _cmd_plan(
     type_filter = frozenset(types) if types else None
 
     if best_rig:
-        return _cmd_plan_best_rig(site, now, type_filter, limit, local_tz)
+        return _cmd_plan_best_rig(site, now, type_filter, limit, local_tz, want_prose)
 
     rig = rig_record.rig
     plan = planning.plan_night(site, rig, now, types=type_filter, limit=limit)
@@ -183,6 +198,11 @@ def _cmd_plan(
             print(f"\n{exc}", file=sys.stderr)
             return 2
         print(f"\nChart written to {chart_path}")
+
+    if want_prose:
+        exit_code = _print_prose_briefing(plan)
+        if exit_code is not None:
+            return exit_code
     return 0
 
 
@@ -192,6 +212,7 @@ def _cmd_plan_best_rig(
     type_filter: frozenset[str] | None,
     limit: int | None,
     local_tz: ZoneInfo,
+    want_prose: bool,
 ) -> int:
     """`--best-rig`'s own rendering path: a rig chosen per target (see
     `planning.plan_night_for_best_rig`), so each row gets its own "Rig"
@@ -245,6 +266,11 @@ def _cmd_plan_best_rig(
             f"{row.pos.az_deg:6.1f}° {row.fit:5.2f} {row.reach:6.2f}  "
             f"{local_time:%Y-%m-%d %H:%M %Z}"
         )
+
+    if want_prose:
+        exit_code = _print_prose_briefing(plan)
+        if exit_code is not None:
+            return exit_code
     return 0
 
 
@@ -466,6 +492,19 @@ def main(argv: list[str] | None = None) -> int:
             "ROADMAP.md)."
         ),
     )
+    plan_parser.add_argument(
+        "--prose",
+        dest="prose",
+        action="store_true",
+        help=(
+            "Print an LLM-written nightly briefing phrasing the shortlist "
+            "above in prose (Claude API; numbers/verdicts come from the "
+            "engine only, never the model). Needs `uv sync --extra prose` "
+            "and an ANTHROPIC_API_KEY environment variable; only called "
+            "when this flag is passed, and fails loudly (not silently) "
+            "if the request can't complete."
+        ),
+    )
 
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
@@ -513,6 +552,7 @@ def main(argv: list[str] | None = None) -> int:
             args.chart_path,
             args.limit,
             args.best_rig,
+            args.prose,
         )
     if args.command == "sites":
         return _cmd_sites()

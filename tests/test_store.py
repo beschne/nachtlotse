@@ -350,3 +350,44 @@ def test_load_local_rigs_parses_optics_sensor_and_mount(
     assert record.rig.sensor.width_px == 1000
     assert record.rig.mount.kind == "eq"
     assert record.rig.mount.zenith_avoid_deg is None
+
+
+def test_load_prose_config_returns_none_when_file_is_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(store, "_LOCAL_PROSE_PATH", tmp_path / "does-not-exist.yaml")
+    assert store._load_local_prose() is None
+
+
+def test_load_prose_config_parses_api_key_and_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yaml_path = tmp_path / "prose_local.yaml"
+    yaml_path.write_text(
+        """
+api_key: "sk-ant-test-key"
+model: "claude-haiku-4-5-20251001"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(store, "_LOCAL_PROSE_PATH", yaml_path)
+
+    config = store._load_local_prose()
+
+    assert config == store.ProseConfig(
+        api_key="sk-ant-test-key", model="claude-haiku-4-5-20251001"
+    )
+
+
+def test_load_prose_config_allows_either_field_to_be_omitted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yaml_path = tmp_path / "prose_local.yaml"
+    yaml_path.write_text('model: "claude-haiku-4-5-20251001"\n', encoding="utf-8")
+    monkeypatch.setattr(store, "_LOCAL_PROSE_PATH", yaml_path)
+
+    config = store._load_local_prose()
+
+    assert config == store.ProseConfig(
+        api_key=None, model="claude-haiku-4-5-20251001"
+    )

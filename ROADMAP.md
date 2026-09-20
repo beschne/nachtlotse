@@ -8,16 +8,13 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **LLM prose (nightly briefing)** via the Claude API — numbers strictly from
-   the engine, never computed by the LLM. No longer optional; this is the
-   presentation layer that wraps the engine's numbers in readable prose.
-2. **Session log:** record what's already been captured, and when — total
+1. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-3. **Current events:** well-placed comets, supernova alerts; later also minor
+2. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-4. **Framing preview for selected targets:** render what a target would
+3. **Framing preview for selected targets:** render what a target would
    actually look like through the given rig — its angular size/shape
    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
    math) — rather than only the numeric `framing_score`/reach. A visual

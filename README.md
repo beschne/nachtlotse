@@ -14,7 +14,9 @@ open, testable engine. Targets close enough to share one frame of your rig
 (e.g. M81 + M82) are automatically suggested as a single co-visible group,
 not two separate shortlist entries. With more than one rig configured, a
 best-rig chooser can also pick whichever one frames each target best,
-instead of scoring for a single rig you name.
+instead of scoring for a single rig you name. An optional nightly
+briefing (Claude API, only when asked for) phrases the shortlist as
+prose — the engine's numbers and verdicts still decide everything.
 
 ## Guiding principle
 
@@ -89,6 +91,19 @@ uv sync --extra charts
 uv run lotse plan --chart
 uv run lotse plan --chart my-plan.png
 
+# --prose prints an LLM-written nightly briefing after the usual
+# shortlist/table — phrasing only, every number/verdict still comes from
+# the engine. Never called unless you pass this flag. Needs its own
+# extra plus an API key; fails loudly (not silently) if either is missing:
+uv sync --extra prose
+export ANTHROPIC_API_KEY=sk-...
+uv run lotse plan --prose
+
+# The API key (and, optionally, which Claude model to use) can live in
+# nachtlotse/data/prose_local.yaml instead of the environment variable —
+# gitignored, never committed. Copy the template to create it:
+cp nachtlotse/data/prose_local.template.yaml nachtlotse/data/prose_local.yaml
+
 # best-sky answers "where's the clearest night", not "what should I shoot":
 # it ranks your configured sites by forecast cloud cover in each site's own
 # dark window. --radius-km restricts the comparison to sites within that
@@ -123,6 +138,7 @@ nachtlotse/
 ├── charting.py # shared chart geometry, library-agnostic
 ├── chart_export.py  # CLI's --chart PNG export (matplotlib)
 ├── best_sky.py # cross-site weather comparison (`lotse best-sky`)
+├── prose.py    # LLM nightly briefing (`lotse plan --prose`, opt-in)
 └── cli.py      # the only front end for now — a native macOS app is
                 #   planned later, kept Python-only (see CLAUDE.md)
 ```

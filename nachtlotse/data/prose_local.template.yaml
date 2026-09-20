@@ -1,0 +1,26 @@
+# Template for `lotse plan --prose`'s local config.
+#
+# This file is NOT read by Nachtlotse (see store.py) — it's an example to
+# copy from:
+#
+#   cp nachtlotse/data/prose_local.template.yaml nachtlotse/data/prose_local.yaml
+#
+# `prose_local.yaml` is gitignored — it never gets committed. Unlike
+# sites_local.yaml/rigs_local.yaml, this file is entirely optional: with
+# no file at all, --prose falls back to the ANTHROPIC_API_KEY environment
+# variable for the key, and prose.DEFAULT_MODEL ("claude-sonnet-5") for
+# the model.
+#
+# Fields (both optional):
+#   api_key   Your Anthropic API key. Overrides ANTHROPIC_API_KEY when
+#             set here. This is a real secret — this file holds it in
+#             plain text on disk, so treat it with the same care you
+#             would any other credentials file (don't share it, don't
+#             back it up somewhere world-readable).
+#   model     Which Claude model to use for the nightly briefing, e.g.
+#             "claude-sonnet-5" or "claude-haiku-4-5-20251001". Only
+#             affects phrasing — every number/verdict still comes from
+#             the engine (see CLAUDE.md's Guiding principle).
+
+api_key: "sk-ant-your-key-here"
+model: "claude-sonnet-5"

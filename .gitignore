@@ -22,6 +22,11 @@ wheels/
 sites_local.yaml
 rigs_local.yaml
 
+# Your local --prose config (Anthropic API key, chosen model) — a real
+# secret, never committed. Copy prose_local.template.yaml to create it;
+# entirely optional, see nachtlotse/data/store.py.
+prose_local.yaml
+
 # Local secrets — never committed.
 secrets/
 scratch.md/

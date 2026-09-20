@@ -18,6 +18,12 @@ dependencies = [
 charts = [
     "matplotlib>=3.9",
 ]
+# `lotse plan --prose` nightly briefing (Claude API) — only for phrasing
+# the engine's own numbers, never for computing them (see CLAUDE.md's
+# Guiding principle). Install with `uv sync --extra prose`.
+prose = [
+    "anthropic>=0.69",
+]
 
 [project.scripts]
 lotse = "nachtlotse.cli:main"

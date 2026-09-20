@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from nachtlotse import chart_export, cli, planning
+from nachtlotse import chart_export, cli, planning, prose
 from nachtlotse.data import store
 
 
@@ -527,3 +527,69 @@ def test_plan_command_best_rig_shows_which_rig_won_each_target(
     assert any(
         record.rig.name in output for record in template_rigs
     )  # the winning rig's name is shown somewhere
+
+
+def test_plan_command_prose_prints_the_briefing_when_available(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        prose, "generate_nightly_briefing", lambda plan: "A clear night ahead."
+    )
+
+    assert cli.main(["plan", "--prose"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Nightly briefing" in output
+    assert "A clear night ahead." in output
+
+
+def test_plan_command_prose_fails_loudly_when_unavailable(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def _boom(plan):
+        raise prose.ProseUnavailable("no ANTHROPIC_API_KEY set")
+
+    monkeypatch.setattr(prose, "generate_nightly_briefing", _boom)
+
+    assert cli.main(["plan", "--prose"]) == 2
+    assert "no ANTHROPIC_API_KEY set" in capsys.readouterr().err
+
+
+def test_plan_command_prose_works_with_best_rig(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        prose, "generate_nightly_briefing", lambda plan: "Best-rig briefing text."
+    )
+
+    assert cli.main(["plan", "--best-rig", "--prose"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Best-rig briefing text." in output
+
+
+def test_plan_command_prose_is_not_requested_when_nothing_is_observable(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An empty shortlist means there's nothing to brief about — the LLM
+    shouldn't be called just because --prose was passed."""
+
+    def _fail_if_called(plan):
+        raise AssertionError("generate_nightly_briefing should not be called")
+
+    monkeypatch.setattr(prose, "generate_nightly_briefing", _fail_if_called)
+    monkeypatch.setattr(planning, "CATALOG", [])
+
+    assert cli.main(["plan", "--prose"]) == 0

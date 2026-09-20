@@ -324,6 +324,13 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
 - `load_rigs()` (mirroring the existing `load_sites()`) returns every
   configured `Rig`, plain — used by `--best-rig`, which needs the whole
   list rather than one resolved-by-name record.
+- `ProseConfig`/`load_prose_config()`: `--prose`'s own local config
+  (Anthropic API key, chosen model), loaded the same local+template way
+  as sites/rigs (`prose_local.yaml`/`prose_local.template.yaml`) but
+  genuinely optional even when the file is missing — `load_prose_config()`
+  returns None rather than the `require_sites`/`require_rigs` pattern of
+  raising, since no command needs this to run. See `prose.py` below for
+  how the key/model actually get resolved from it.
 
 ## `nachtlotse/weather/open_meteo.py`
 
@@ -332,6 +339,37 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
 - Optional by design — any failure (offline, bad response) raises
   `WeatherUnavailable`, which the CLI turns into "Weather: unavailable"
   rather than a crash; the ranking keeps working from sky geometry alone.
+
+## `nachtlotse/prose.py`
+
+- The LLM-prose roadmap item, now closed: the one module allowed to call
+  the Claude API (`anthropic`, a new optional extra — `uv sync --extra
+  prose`), and — unlike weather — never called unless `lotse plan
+  --prose` explicitly asks for it. `generate_nightly_briefing(plan)`
+  phrases `plan`'s already-decided facts (`build_briefing_facts`, built
+  straight from `NightPlan`/`NightPlanForBestRig`'s own fields, not from
+  `cli.py`'s print formatting) as a short prose briefing — a strict
+  system prompt forbids the model from stating any number, time, or
+  verdict beyond what's given, per CLAUDE.md's Guiding principle.
+- Deliberately fails loudly, not softly: `ProseUnavailable` (package not
+  installed, no API key configured, or the request itself failed)
+  propagates out to the CLI rather than degrading to "no briefing this
+  time" the way a missing weather forecast does — since the call only
+  ever happens because the user explicitly asked for it, silently
+  omitting the result would hide that they didn't get what they asked
+  for.
+- `_import_anthropic()`/`_request_briefing_text()` are the lazy-import
+  and API-call seams (mirroring `chart_export._import_matplotlib()`),
+  so the test suite exercises every failure path — and a scripted
+  "happy path" response — without the `anthropic` package installed or
+  any real network access.
+- The API key and model both resolve through `data/store.load_prose_config()`
+  first — `prose_local.yaml` (gitignored, `prose_local.template.yaml`
+  alongside it, same pattern as sites/rigs but entirely optional, per
+  `store.py`'s own docstring) — falling back to the `ANTHROPIC_API_KEY`
+  environment variable (key only) and `DEFAULT_MODEL` (model only) when
+  that file doesn't set them. `resolve_model()` is public so `cli.py`
+  can print which model actually ran, not just the constant default.
 
 ## `nachtlotse/engine/scoring.py`
 
@@ -383,6 +421,14 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   rig to name) and `--chart` (not wired up yet); the ranked table gets
   an extra "Rig" column, the shortlist labels each entry with its
   winning rig in parentheses.
+- `--prose`: prints an LLM-written nightly briefing after everything
+  else (`planning.py`'s numbers/verdicts print first regardless — prose
+  only ever supplements them, never replaces them), via
+  `prose.generate_nightly_briefing` (see `prose.py` above). Works with
+  `--best-rig` too. Only attempted when the shortlist is non-empty —
+  nothing to brief about otherwise; `prose.ProseUnavailable` turns into
+  an actionable stderr message and exit code 2, the same contract
+  `--chart` uses for a missing extra.
 
 ## `nachtlotse/charting.py` and `nachtlotse/chart_export.py`
 

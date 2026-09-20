@@ -207,9 +207,9 @@ closed.
 - **Rule of thumb:** Sonnet 5 as default, switch on Opus 5 as soon as a session
   gets think-heavy instead of type-heavy.
 
-The optional **LLM prose extension** (see [ROADMAP.md](./ROADMAP.md)) would
-call the Claude API (e.g. `claude-sonnet-5`) — only for phrasing, never for
-computing.
+`lotse plan --prose`'s nightly briefing (`nachtlotse/prose.py`) calls the
+Claude API (`claude-sonnet-5`) — only for phrasing, never for computing, and
+only when `--prose` is explicitly passed (see STATUS.md).
 
 ---
 
@@ -218,6 +218,7 @@ computing.
 ```bash
 uv sync                       # environment/dependencies
 uv sync --extra charts         # + matplotlib, needed for `lotse plan --chart`
+uv sync --extra prose          # + anthropic, needed for `lotse plan --prose`
 uv run pytest                 # tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
@@ -225,6 +226,7 @@ uv run lotse plan              # tonight's recommendation (from M0)
 uv run lotse plan --limit 20   # evaluate only the first 20 matching objects
 uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
+uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
 ```
 
 ---

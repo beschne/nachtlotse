@@ -1,4 +1,5 @@
-"""Persistence for known observing sites and rigs.
+"""Persistence for known observing sites and rigs (plus `--prose`'s own
+local config — see the note near the bottom of this docstring).
 
 No location or equipment data ships in code — this repo is meant to be
 cloned by anyone, anywhere, with any gear, and hardcoding one person's
@@ -24,6 +25,12 @@ Sky darkness: `bortle` stays a free-text field for display (e.g. "3-4
 optional real SQM measurement (zenith, new moon) that overrides the
 Bortle-derived estimate for that site — see `engine.framing.
 sky_brightness_mag_arcsec2`. Both are optional and independent.
+
+`--prose`'s own local config (Anthropic API key, chosen model) lives the
+same way — `prose_local.yaml` / `prose_local.template.yaml` — but stays
+optional even when the file is missing entirely: unlike sites/rigs
+(`require_sites`/`require_rigs`), no command needs it to run, so
+`load_prose_config()` returns None rather than raising.
 """
 
 from __future__ import annotations
@@ -55,6 +62,18 @@ class RigRecord:
 
     rig: Rig
     aliases: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ProseConfig:
+    """Local, optional config for `lotse plan --prose` — see
+    `prose_local.template.yaml`. Both fields are optional: `api_key`
+    still falls back to the `ANTHROPIC_API_KEY` environment variable if
+    left unset here, and `model` to `prose.DEFAULT_MODEL`.
+    """
+
+    api_key: str | None = None
+    model: str | None = None
 
 
 def _sector_to_points(
@@ -180,6 +199,8 @@ _LOCAL_SITES_PATH = _DATA_DIR / "sites_local.yaml"
 _TEMPLATE_SITES_PATH = _DATA_DIR / "sites_local.template.yaml"
 _LOCAL_RIGS_PATH = _DATA_DIR / "rigs_local.yaml"
 _TEMPLATE_RIGS_PATH = _DATA_DIR / "rigs_local.template.yaml"
+_LOCAL_PROSE_PATH = _DATA_DIR / "prose_local.yaml"
+_TEMPLATE_PROSE_PATH = _DATA_DIR / "prose_local.template.yaml"
 
 
 def _load_local_sites() -> list[SiteRecord]:
@@ -192,8 +213,26 @@ def _load_local_rigs() -> list[RigRecord]:
     return _parse_rigs_yaml(_LOCAL_RIGS_PATH)
 
 
+def _parse_prose_yaml(path: Path) -> ProseConfig | None:
+    """The user's local prose config, or None if the file doesn't exist.
+
+    Unlike sites/rigs, prose is an optional layer (see CLAUDE.md's
+    Guiding principle) — "not configured" is a normal, common state,
+    not an error to raise on.
+    """
+    if not path.exists():
+        return None
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return ProseConfig(api_key=raw.get("api_key"), model=raw.get("model"))
+
+
+def _load_local_prose() -> ProseConfig | None:
+    return _parse_prose_yaml(_LOCAL_PROSE_PATH)
+
+
 SITES: list[SiteRecord] = _load_local_sites()
 RIGS: list[RigRecord] = _load_local_rigs()
+PROSE_CONFIG: ProseConfig | None = _load_local_prose()
 
 
 def require_sites() -> None:
@@ -224,6 +263,13 @@ def load_sites() -> list[Site]:
 
 def load_rigs() -> list[Rig]:
     return [record.rig for record in RIGS]
+
+
+def load_prose_config() -> ProseConfig | None:
+    """The user's local `--prose` config, or None if `prose_local.yaml`
+    doesn't exist — callers fall back to the `ANTHROPIC_API_KEY`
+    environment variable and `prose.DEFAULT_MODEL` in that case."""
+    return PROSE_CONFIG
 
 
 def list_site_names() -> list[str]:
