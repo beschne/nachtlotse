@@ -8,15 +8,23 @@ importing PySide6 at all is what the `gui` extra exists to make optional
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from nachtlotse.data import store
 from nachtlotse.gui.main_window import MainWindow
 
+_APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "app_icon.png"
+
 
 def main() -> int:
     app = QApplication(sys.argv)
+    # QApplication.setWindowIcon() also updates the Dock tile on macOS at
+    # runtime (via NSApp), even though `lotse gui` isn't a bundled .app
+    # with its own Info.plist/.icns — no packaging step needed for this.
+    app.setWindowIcon(QIcon(str(_APP_ICON_PATH)))
 
     try:
         store.require_sites()
