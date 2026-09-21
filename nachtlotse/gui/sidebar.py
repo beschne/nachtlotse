@@ -20,10 +20,19 @@ from datetime import date
 
 from PySide6.QtCore import QDate, QLocale, Signal
 from PySide6.QtGui import QColor, QTextCharFormat
-from PySide6.QtWidgets import QComboBox, QDateEdit, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDateEdit,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+)
 
+from nachtlotse.data.catalog import CATALOG
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.gui.theme import COLORS, RoundedCard, label_style
+from nachtlotse.planning import DEFAULT_MAX_EVALUATED
 
 SIDEBAR_WIDTH = 300
 
@@ -32,7 +41,7 @@ class Sidebar(RoundedCard):
     """Emits `replan_requested` with the currently-staged (site record,
     rig record, date) when the user clicks Re-plan."""
 
-    replan_requested = Signal(object, object, date)
+    replan_requested = Signal(object, object, date, int)
 
     def __init__(self, sites: list[SiteRecord], rigs: list[RigRecord]) -> None:
         super().__init__()
@@ -72,7 +81,7 @@ class Sidebar(RoundedCard):
         layout.addWidget(copyright_label)
 
         picker_style = f"""
-            QComboBox, QDateEdit {{
+            QComboBox, QDateEdit, QSpinBox {{
                 background: {COLORS['cream']};
                 border: 1px solid {COLORS['border']};
                 border-radius: 8px;
@@ -98,6 +107,34 @@ class Sidebar(RoundedCard):
                 border-right: 4px solid transparent;
                 border-top: 5px solid {COLORS['ink_secondary']};
                 margin-right: 10px;
+            }}
+            QSpinBox::up-button, QSpinBox::down-button {{
+                border: none;
+                width: 18px;
+                subcontrol-origin: padding;
+            }}
+            QSpinBox::up-button {{ subcontrol-position: top right; }}
+            QSpinBox::down-button {{ subcontrol-position: bottom right; }}
+            QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+                background: {COLORS['cream_hover']};
+            }}
+            QSpinBox::up-arrow {{
+                image: none;
+                width: 0px;
+                height: 0px;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-bottom: 5px solid {COLORS['ink_secondary']};
+                margin-right: 6px;
+            }}
+            QSpinBox::down-arrow {{
+                image: none;
+                width: 0px;
+                height: 0px;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid {COLORS['ink_secondary']};
+                margin-right: 6px;
             }}
             QComboBox QAbstractItemView {{
                 background: {COLORS['paper']};
@@ -165,7 +202,42 @@ class Sidebar(RoundedCard):
         today_format.setFontWeight(700)
         self.date_edit.calendarWidget().setDateTextFormat(QDate.currentDate(), today_format)
 
-        for widget in (site_label, self.site_combo, rig_label, self.rig_combo, date_label, self.date_edit):
+        catalog_size = len(CATALOG)
+
+        limit_label = QLabel("EVALUATE")
+        limit_label.setStyleSheet(field_label_style)
+        self.limit_spin = QSpinBox()
+        # Capped to the catalog's own size, not some arbitrary headroom
+        # number — past that, every larger value would evaluate the exact
+        # same (whole) catalog anyway, so the spinbox shouldn't imply
+        # there's a difference. Grows with the catalog on its own, since
+        # this reads `len(CATALOG)` fresh at construction time.
+        self.limit_spin.setRange(0, catalog_size)
+        self.limit_spin.setSingleStep(10)
+        self.limit_spin.setValue(min(DEFAULT_MAX_EVALUATED, catalog_size))
+        self.limit_spin.setSuffix(f" / {catalog_size}")
+        # 0 is otherwise just "0 catalog objects", a pointless plan — reused
+        # as "no cap" instead, mirroring the CLI's own `--limit 0`
+        # ("evaluate every catalog object"). Qt drops the suffix above for
+        # this special value, so it's spelled out here instead.
+        self.limit_spin.setSpecialValueText(f"Unlimited ({catalog_size})")
+        self.limit_spin.setToolTip(
+            f"How many of the {catalog_size} catalog objects (matching any\n"
+            "type filter) get evaluated, not how many end up shortlisted.\n"
+            "0 evaluates every one of them — slower, but nothing is skipped."
+        )
+        self.limit_spin.setStyleSheet(picker_style)
+
+        for widget in (
+            site_label,
+            self.site_combo,
+            rig_label,
+            self.rig_combo,
+            date_label,
+            self.date_edit,
+            limit_label,
+            self.limit_spin,
+        ):
             layout.addWidget(widget)
 
         layout.addStretch(1)
@@ -200,6 +272,7 @@ class Sidebar(RoundedCard):
         self.site_combo.currentIndexChanged.connect(self._mark_dirty)
         self.rig_combo.currentIndexChanged.connect(self._mark_dirty)
         self.date_edit.dateChanged.connect(self._mark_dirty)
+        self.limit_spin.valueChanged.connect(self._mark_dirty)
 
     def _mark_dirty(self, *_args: object) -> None:
         self.replan_button.setEnabled(True)
@@ -208,7 +281,7 @@ class Sidebar(RoundedCard):
         site_record = self._sites[self.site_combo.currentIndex()]
         rig_record = self._rigs[self.rig_combo.currentIndex()]
         selected_date = self.date_edit.date().toPython()
-        self.replan_requested.emit(site_record, rig_record, selected_date)
+        self.replan_requested.emit(site_record, rig_record, selected_date, self.limit_spin.value())
         self.replan_button.setEnabled(False)
 
     def current_site_record(self) -> SiteRecord:
@@ -219,3 +292,6 @@ class Sidebar(RoundedCard):
 
     def current_date(self) -> date:
         return self.date_edit.date().toPython()
+
+    def current_limit(self) -> int:
+        return self.limit_spin.value()

@@ -111,7 +111,7 @@ def main() -> int:
     sidebar.date_edit.setDate(QDate(TARGET_DATE.year, TARGET_DATE.month, TARGET_DATE.day))
     sidebar.replan_button.setEnabled(False)
 
-    window._replan(site_record, rig_record, TARGET_DATE)
+    window._replan(site_record, rig_record, TARGET_DATE, sidebar.current_limit())
     _pump(app, window, 20.0)
 
     window_id = _find_window_id(window.windowTitle())

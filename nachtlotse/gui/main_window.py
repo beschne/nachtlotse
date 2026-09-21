@@ -156,15 +156,16 @@ class _PlanWorker(QThread):
     succeeded = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, site: Site, rig: Rig, when: datetime) -> None:
+    def __init__(self, site: Site, rig: Rig, when: datetime, limit: int) -> None:
         super().__init__()
         self._site = site
         self._rig = rig
         self._when = when
+        self._limit = limit
 
     def run(self) -> None:
         try:
-            plan = planning.plan_night(self._site, self._rig, self._when)
+            plan = planning.plan_night(self._site, self._rig, self._when, limit=self._limit)
         except Exception as exc:  # noqa: BLE001 — surface any failure to the UI, don't crash it
             self.failed.emit(str(exc))
             return
@@ -302,6 +303,7 @@ class MainWindow(QMainWindow):
             self.sidebar.current_site_record(),
             self.sidebar.current_rig_record(),
             self.sidebar.current_date(),
+            self.sidebar.current_limit(),
         )
 
     @staticmethod
@@ -414,7 +416,7 @@ class MainWindow(QMainWindow):
         return table
 
     def _replan(
-        self, site_record: SiteRecord, rig_record: RigRecord, selected_date: date
+        self, site_record: SiteRecord, rig_record: RigRecord, selected_date: date, limit: int
     ) -> None:
         site = site_record.site
         rig = rig_record.rig
@@ -429,7 +431,7 @@ class MainWindow(QMainWindow):
         self.hourly_cloud_bar.hide()
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
-        self._worker = _PlanWorker(site, rig, when)
+        self._worker = _PlanWorker(site, rig, when, limit)
         self._worker.succeeded.connect(
             lambda plan: self._on_plan_ready(plan, local_tz, site, rig, selected_date)
         )
