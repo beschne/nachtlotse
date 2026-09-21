@@ -195,6 +195,7 @@ def test_load_catalog_parses_magnitude_size_and_aliases_from_a_bin_file(
     assert target.magnitude == pytest.approx(4.2)
     assert target.size_arcmin == (5.0, 3.0)
     assert target.types == ("galaxy",)
+    assert target.favorite is False
 
 
 def test_load_catalog_parses_an_omitted_magnitude_as_none(
@@ -217,6 +218,38 @@ def test_load_catalog_parses_an_omitted_magnitude_as_none(
 
     assert target.magnitude is None
     assert target.size_arcmin == (30.0, 20.0)
+
+
+def test_load_catalog_parses_the_favorite_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "mag_10_11.yaml").write_text(
+        """
+- name: "Test Variable"
+  catalog_id: "T Test"
+  ra_deg: 10.0
+  dec_deg: 20.0
+  magnitude: 10.5
+  size_arcmin: [0.05, 0.05]
+  types: ["variable_star"]
+  favorite: true
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(catalog, "_CATALOG_DIR", tmp_path)
+
+    (target,) = catalog._load_catalog()
+
+    assert target.favorite is True
+
+
+def test_catalog_contains_t_crb_as_a_favorite_variable_star() -> None:
+    """T CrB (roadmap #1, "Favorites in the catalog") is the first target
+    that needs to show up regardless of ranking — a regression here means
+    the favorite flag silently stopped round-tripping from YAML."""
+    (t_crb,) = (target for target in CATALOG if target.catalog_id == "T CrB")
+    assert t_crb.favorite is True
+    assert t_crb.types == ("variable_star",)
 
 
 def test_load_catalog_picks_up_any_new_mag_bin_file_automatically(

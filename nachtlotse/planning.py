@@ -104,8 +104,11 @@ class NightPlan:
     moonset: datetime | None
     weather: WeatherSummary | None
     ranked: list[RankedEntry]
-    # The top SHORTLIST_SIZE of `ranked`, each with its own verdict. Empty
-    # only when no catalog target clears constraints tonight at all.
+    # The top SHORTLIST_SIZE of `ranked`, each with its own verdict, plus
+    # any favorite entries that didn't already make that cutoff — see
+    # `_fold_favorites_into_shortlist`; can run longer than SHORTLIST_SIZE
+    # when a favorite is why. Empty only when no catalog target clears
+    # constraints tonight at all.
     shortlist: list[ShortlistEntry]
 
 
@@ -403,6 +406,41 @@ def fetch_weather_summary(
     return open_meteo.summarize_window(hours, evening_start, morning_end)
 
 
+def _entry_targets(entry: object) -> tuple[Target, ...]:
+    """The one or more real catalog targets behind a ranked entry — a
+    `RankedGroup`'s members, or a single-target entry's own target.
+    Works for `RankedTargetForBestRig` too (same `.target` shape as
+    `RankedTarget`), so `is_favorite` below covers both `plan_night` and
+    `plan_night_for_best_rig`."""
+    if isinstance(entry, RankedGroup):
+        return entry.targets
+    return (entry.target,)  # type: ignore[attr-defined]
+
+
+def is_favorite(entry: object) -> bool:
+    """Whether any real target behind this ranked entry is starred
+    (`Target.favorite`) — a `RankedGroup` counts if any member does."""
+    return any(target.favorite for target in _entry_targets(entry))
+
+
+def _fold_favorites_into_shortlist(ranked: list) -> list:
+    """The top `SHORTLIST_SIZE` ranked entries, plus any favorite entries
+    that didn't already make that cut (ROADMAP.md's "Favorites in the
+    catalog": a favorite should keep showing up regardless of where its
+    current score would otherwise leave it, e.g. T CrB's fit score is
+    always ~0 since it's a point source).
+
+    Doesn't reorder anything: favorites beyond the cutoff are appended
+    after it, in their own ranked order — never promoted above a
+    higher-scoring non-favorite entry, and the top `SHORTLIST_SIZE`
+    themselves are always exactly `ranked[:SHORTLIST_SIZE]`, whether or
+    not any of them happen to be favorites too.
+    """
+    top = ranked[:SHORTLIST_SIZE]
+    extra_favorites = [entry for entry in ranked[SHORTLIST_SIZE:] if is_favorite(entry)]
+    return top + extra_favorites
+
+
 def _moon_rise_set(
     site: Site, evening_start: datetime, morning_end: datetime
 ) -> tuple[datetime | None, datetime | None]:
@@ -435,7 +473,7 @@ def plan_night(
 
     shortlist = [
         ShortlistEntry(row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather))
-        for row in ranked[:SHORTLIST_SIZE]
+        for row in _fold_favorites_into_shortlist(ranked)
     ]
 
     return NightPlan(
@@ -499,7 +537,7 @@ def plan_night_for_best_rig(
         BestRigShortlistEntry(
             row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather)
         )
-        for row in ranked[:SHORTLIST_SIZE]
+        for row in _fold_favorites_into_shortlist(ranked)
     ]
 
     return NightPlanForBestRig(

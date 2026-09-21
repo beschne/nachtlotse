@@ -34,7 +34,7 @@ from nachtlotse import charting
 from nachtlotse.engine import ephemeris
 from nachtlotse.gui import data_adapter
 from nachtlotse.gui.theme import COLORS, VERDICT_COLORS, RoundedCard
-from nachtlotse.planning import NightPlan, NightPlanForBestRig
+from nachtlotse.planning import NightPlan, NightPlanForBestRig, is_favorite
 
 # Chart-space coordinates from `charting.project()` range roughly -98..98
 # (the rim sits at r=90, compass labels a touch further out) — this is
@@ -94,6 +94,27 @@ def _moon_phase_path(cx: float, cy: float, r: float, phase_angle_deg: float) -> 
     if math.cos(theta) > 0:  # less than half lit
         return lit_half_disk.subtracted(terminator_disk)
     return lit_half_disk.united(terminator_disk).intersected(full_disk)
+
+
+def _star_path(cx: float, cy: float, outer_r: float) -> QPainterPath:
+    """A regular 5-pointed star centered at `(cx, cy)`, point-up — the
+    favorite marker's own shape (see `_paint_tracks`), so a favorite's
+    best-time position reads as "starred" even when its color happens to
+    repeat another entry's (only 5 colors in `charting.SHORTLIST_PALETTE`,
+    but a favorite can push a shortlist past 5 — see that module's own
+    comment on `SHORTLIST_PALETTE`)."""
+    inner_r = outer_r * 0.42
+    path = QPainterPath()
+    for i in range(10):
+        r = outer_r if i % 2 == 0 else inner_r
+        angle = math.radians(-90 + i * 36)
+        point = QPointF(cx + r * math.cos(angle), cy + r * math.sin(angle))
+        if i == 0:
+            path.moveTo(point)
+        else:
+            path.lineTo(point)
+    path.closeSubpath()
+    return path
 
 
 class SkyChartCanvas(QWidget):
@@ -231,12 +252,18 @@ class SkyChartCanvas(QWidget):
             # Mark the entry's scored best-time position with a filled dot,
             # in its own per-target color — the line above tells you the
             # verdict, this dot (and the matching legend entry) tells you
-            # which target it belongs to.
+            # which target it belongs to. A favorite gets a star instead
+            # of a plain dot (matching the legend's own "★ " prefix), so
+            # it's still unmistakable even if its color happens to repeat
+            # another entry's — see `_star_path`.
             ranked = entry.ranked
             best_point = to_px(charting.project(ranked.pos.alt_deg, ranked.pos.az_deg))
             painter.setPen(Qt.NoPen)
             painter.setBrush(dot_color)
-            painter.drawEllipse(best_point, 4.0, 4.0)
+            if is_favorite(ranked):
+                painter.drawPath(_star_path(best_point.x(), best_point.y(), 6.0))
+            else:
+                painter.drawEllipse(best_point, 4.0, 4.0)
 
     def _paint_moon(self, painter: QPainter, to_px) -> None:
         track = charting.moon_track(
@@ -343,8 +370,15 @@ class SkyChartCard(RoundedCard):
 
         rows = data_adapter.build_shortlist_rows(plan, local_tz)
         for index, row in enumerate(rows):
+            # entry_label() (gui/data_adapter.py) already prefixed "★ "
+            # for a favorite — redundant once the legend draws its own
+            # star-shaped marker below instead of a plain dot, so it
+            # comes back off here rather than showing twice.
+            favorite = is_favorite(plan.shortlist[index].ranked)
+            label_text = row.label.removeprefix("★ ") if favorite else row.label
             self._legend_layout.insertWidget(
-                self._legend_layout.count() - 1, self._legend_row(row.label, _track_color(index))
+                self._legend_layout.count() - 1,
+                self._legend_row(label_text, _track_color(index), favorite=favorite),
             )
 
         # The Moon is drawn on the canvas (track + phase icon) whenever it
@@ -355,11 +389,12 @@ class SkyChartCard(RoundedCard):
         moon_track = charting.moon_track(plan.site, plan.evening_start, plan.morning_end)
         if moon_track.segments:
             self._legend_layout.insertWidget(
-                self._legend_layout.count() - 1, self._legend_row("Moon", QColor("#000000"))
+                self._legend_layout.count() - 1,
+                self._legend_row("Moon", QColor("#000000"), favorite=False),
             )
 
     @staticmethod
-    def _legend_row(label: str, color: QColor) -> QWidget:
+    def _legend_row(label: str, color: QColor, *, favorite: bool) -> QWidget:
         container = QWidget()
         container.setStyleSheet("background: transparent;")
         row_layout = QHBoxLayout(container)
@@ -367,8 +402,18 @@ class SkyChartCard(RoundedCard):
         row_layout.setSpacing(8)
 
         dot = QLabel()
-        dot.setFixedSize(10, 10)
-        dot.setStyleSheet(f"background: {color.name()}; border-radius: 5px;")
+        if favorite:
+            # The same star shape _paint_tracks draws on the canvas for
+            # this entry's best-time marker — a plain Unicode glyph is
+            # enough here since it's just a small legend swatch, not
+            # the chart itself.
+            dot.setText("★")
+            dot.setAlignment(Qt.AlignCenter)
+            dot.setFixedSize(14, 14)
+            dot.setStyleSheet(f"color: {color.name()}; background: transparent; font-size: 14px;")
+        else:
+            dot.setFixedSize(10, 10)
+            dot.setStyleSheet(f"background: {color.name()}; border-radius: 5px;")
         row_layout.addWidget(dot)
 
         name = QLabel(label)

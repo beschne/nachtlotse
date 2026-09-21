@@ -52,8 +52,12 @@ def _entry_targets(ranked: object) -> tuple[Target, ...]:
 def entry_label(ranked: object) -> str:
     """Joined member names for a `RankedGroup` (e.g. "M81, M82"), the
     target's own name otherwise — comma-separated here, unlike `cli.py`'s
-    `_entry_label`, which joins with " + " for its plain-text table."""
-    return ", ".join(target_label(target) for target in _entry_targets(ranked))
+    `_entry_label`, which joins with " + " for its plain-text table. A
+    "★ " prefix marks a favorite (ROADMAP.md's "Favorites in the
+    catalog"), same convention as `cli.py`'s own `_entry_label`."""
+    targets = _entry_targets(ranked)
+    prefix = "★ " if any(target.favorite for target in targets) else ""
+    return prefix + ", ".join(target_label(target) for target in targets)
 
 
 def entry_type_label(ranked: object) -> str:

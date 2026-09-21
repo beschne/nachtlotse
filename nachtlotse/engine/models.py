@@ -129,6 +129,7 @@ TargetType = Literal[
     "galaxy_group",
     "open_cluster",
     "globular_cluster",
+    "variable_star",
 ]
 
 # Human-readable labels for TargetType, shared by every front end so
@@ -142,6 +143,7 @@ TARGET_TYPE_LABELS: dict[TargetType, str] = {
     "galaxy_group": "Galaxy Group",
     "open_cluster": "Open Cluster",
     "globular_cluster": "Globular Cluster",
+    "variable_star": "Variable Star",
 }
 
 
@@ -167,11 +169,27 @@ class Target:
     # SKIPPED-OBJECTS.md) — treated as unconstrained by anything that
     # filters/ranks on brightness, the same convention as size_arcmin ==
     # (0.0, 0.0) for unknown size. Never a stand-in for "very faint".
+    #
+    # Exception: a recurrent nova like T CrB spends effectively all its
+    # time at quiescence and only reaches its "brighter extreme" during a
+    # once-a-lifetime eruption (T CrB: quiescent ~10.2, eruption ~2.0) —
+    # recording the eruption peak here would misrepresent what the object
+    # actually looks like on all but a handful of nights, so those entries
+    # use the quiescent value instead and rely on `favorite` (below) to
+    # guarantee they're still shown regardless of where that leaves them
+    # in the ranking. A comment on the entry itself notes the real range.
     magnitude: float | None = None
     # What kind of object this is, for filtering/search — see TargetType.
     # Empty only for a target not yet classified; every catalog entry is
     # expected to carry at least one (enforced by a catalog test).
     types: tuple[TargetType, ...] = ()
+    # Starred independent of ranking/score — e.g. a variable star under
+    # photometric monitoring that should still show up even when its
+    # current brightness would otherwise leave it out of the shortlist
+    # cutoff. `planning` is what actually has to honor this (see
+    # ROADMAP.md); the catalog/model side just needs somewhere to record
+    # it as a real, sourced fact about the target, not a UI-only toggle.
+    favorite: bool = False
 
 
 @dataclass(frozen=True)

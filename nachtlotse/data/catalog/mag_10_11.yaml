@@ -125,6 +125,30 @@
   size_arcmin: [6.89, 6.56]
   types: ["galaxy"]
 
+- name: "T Coronae Borealis"
+  catalog_id: "T CrB"
+  aliases: ["HD 143454", "Blaze Star"]
+  ra_deg: 239.8757
+  dec_deg: 25.9202
+  # SIMBAD: quiescent V 10.247 (this project's own convention of "the
+  # brighter of a variable's known extremes" doesn't apply here — see
+  # Target.magnitude's own docstring): a recurrent nova/symbiotic binary,
+  # normally sitting here at 10th magnitude for decades between
+  # eruptions, not the ~2.0 it briefly reached in its last two known
+  # eruptions (1866, 1946) and is predicted to reach again around 2025-26
+  # (Schaefer 2023, arXiv:2303.04933). `favorite: true` below is what
+  # actually keeps this on the shortlist regardless — filing it under
+  # its rare eruption peak instead would misrepresent what it looks like
+  # on all but a handful of nights, see Target.magnitude's docstring.
+  magnitude: 10.2
+  # Point source, not an extended object — size_arcmin isn't physically
+  # meaningful for a star. A nominal seeing-limited disk (not a real
+  # angular diameter) so the catalog's "size is never unknown" invariant
+  # (test_catalog_sizes_are_always_populated) still holds.
+  size_arcmin: [0.05, 0.05]
+  types: ["variable_star"]
+  favorite: true
+
 - name: "Little Pinwheel Galaxy"
   catalog_id: "NGC 3184"
   ra_deg: 154.570

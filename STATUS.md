@@ -27,10 +27,29 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   magnitude was rejected as exactly the "fabricated fact" the Guiding
   Principle rules out.
 - `Target.types`: one or more of `TargetType` (emission/reflection/
-  planetary/dark nebula, galaxy, galaxy group, open/globular cluster), with
-  a shared `TARGET_TYPE_LABELS` display-name map so every front end spells
-  a category the same way. An object can carry more than one (M42 is both
-  an emission and a reflection nebula).
+  planetary/dark nebula, galaxy, galaxy group, open/globular cluster,
+  variable star), with a shared `TARGET_TYPE_LABELS` display-name map so
+  every front end spells a category the same way. An object can carry
+  more than one (M42 is both an emission and a reflection nebula).
+- `Target.favorite: bool` (ROADMAP.md's "Favorites in the catalog",
+  done) — starred independent of ranking/score. First (and so far only)
+  user: T CrB, a recurrent nova that's ~10th magnitude for decades
+  between eruptions and would otherwise get crowded out of the shortlist
+  entirely. `planning._fold_favorites_into_shortlist` appends any
+  favorite left outside the normal `SHORTLIST_SIZE` cutoff onto the end
+  of `plan.shortlist` (never reordering the top N themselves) for both
+  `plan_night` and `plan_night_for_best_rig` — so a favorite reaches
+  every front end that already reads `plan.shortlist` (CLI table, GUI
+  Shortlist/All ranked tabs, sky chart + its legend) with no per-UI
+  special-casing needed. `cli.py`'s `_entry_label`/`_best_rig_target_
+  label` and `gui/data_adapter.py`'s `entry_label` prefix a "★ " so it
+  reads as a favorite, not just a lucky top-N slot; the sky chart draws
+  a favorite's best-time marker as a 5-point star (`sky_chart._star_
+  path`) instead of a plain dot, so it stays identifiable even when
+  `charting.SHORTLIST_PALETTE` (5 colors) has to cycle and repeats
+  another entry's color — the reason this came up at all. A dedicated GUI
+  Catalog tab for browsing/toggling favorites in-app (rather than
+  hand-editing YAML) is still open — see ROADMAP.md.
 
 ## `nachtlotse/engine/ephemeris.py`
 

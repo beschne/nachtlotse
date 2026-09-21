@@ -86,7 +86,8 @@ uv run lotse plan --site Feldberg --date 2026-11-14
 
 # --type keeps only targets of that category (repeatable — matches any
 # one of them): emission_nebula, reflection_nebula, planetary_nebula,
-# dark_nebula, galaxy, galaxy_group, open_cluster, globular_cluster.
+# dark_nebula, galaxy, galaxy_group, open_cluster, globular_cluster,
+# variable_star.
 uv run lotse plan --type galaxy --type globular_cluster
 
 # Co-visible targets (close enough to share one frame of your rig, e.g.
@@ -159,13 +160,14 @@ uv run lotse gui
 It computes real plans against your own `sites_local.yaml`/`rigs_local.yaml`
 (no illustrative/fake data) across five tabs: the shortlist, the full
 ranked table, a polar sky chart (tracks colored by verdict, each
-target's best-time dot its own color, plus a real Moon track and phase
-icon), a nightly-briefing screen (same Claude API opt-in/fail-loud
-contract as `--prose` — nothing is sent to Anthropic until you click
-Generate), and a read-only sites/rigs reference. See
-[ROADMAP.md](./ROADMAP.md) for the toolkit decision (PySide6 over
-PyObjC/AppKit) and what's still open (an in-app sites/rigs editor, a
-favorites section, GUI-side exports, among others).
+target's best-time dot its own color — a star instead of a dot for a
+favorite, e.g. T CrB — plus a real Moon track and phase icon), a
+nightly-briefing screen (same Claude API opt-in/fail-loud contract as
+`--prose` — nothing is sent to Anthropic until you click Generate), and
+a read-only sites/rigs reference. See [ROADMAP.md](./ROADMAP.md) for the
+toolkit decision (PySide6 over PyObjC/AppKit) and what's still open (an
+in-app sites/rigs editor, a GUI catalog/favorites tab, GUI-side exports,
+among others).
 
 ## Architecture
 

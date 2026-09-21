@@ -25,7 +25,7 @@ from nachtlotse.engine.models import (
     TargetType,
     WeatherSummary,
 )
-from nachtlotse.planning import RankedEntry, RankedGroup
+from nachtlotse.planning import RankedEntry, RankedGroup, RankedTargetForBestRig
 
 _TARGET_TYPE_CHOICES = sorted(get_args(TargetType))
 
@@ -40,10 +40,14 @@ def _target_label(target: Target) -> str:
 
 def _entry_label(entry: RankedEntry) -> str:
     """Display label for one ranked entry — joined member names for a
-    `RankedGroup` (e.g. "M81 + M82"), the target's own name otherwise."""
+    `RankedGroup` (e.g. "M81 + M82"), the target's own name otherwise.
+    A "★ " prefix marks a favorite (ROADMAP.md's "Favorites in the
+    catalog") — the reason it's still here even outside the normal
+    shortlist cutoff (see `planning._fold_favorites_into_shortlist`)."""
+    prefix = "★ " if planning.is_favorite(entry) else ""
     if isinstance(entry, RankedGroup):
-        return " + ".join(_target_label(member) for member in entry.targets)
-    return _target_label(entry.target)
+        return prefix + " + ".join(_target_label(member) for member in entry.targets)
+    return prefix + _target_label(entry.target)
 
 
 def _entry_types(entry: RankedEntry) -> tuple[str, ...]:
@@ -206,6 +210,15 @@ def _cmd_plan(
     return 0
 
 
+def _best_rig_target_label(row: RankedTargetForBestRig) -> str:
+    """`_target_label`, with the same "★ " favorite prefix `_entry_label`
+    uses — the best-rig chooser never groups (see
+    `planning.rank_targets_for_best_rig`), so there's no `RankedGroup`
+    case to handle here."""
+    prefix = "★ " if planning.is_favorite(row) else ""
+    return prefix + _target_label(row.target)
+
+
 def _cmd_plan_best_rig(
     site: Site,
     when: datetime,
@@ -248,7 +261,7 @@ def _cmd_plan_best_rig(
 
     print("Shortlist:")
     for rank, (row, verdict) in enumerate(plan.shortlist, start=1):
-        label = _target_label(row.target)
+        label = _best_rig_target_label(row)
         print(f"  {rank}. Verdict: {verdict.level} — {label} ({row.rig.name})")
         for reason in verdict.reasons:
             print(f"       {reason}")
@@ -261,7 +274,7 @@ def _cmd_plan_best_rig(
     for row in plan.ranked:
         local_time = row.best_time.astimezone(local_tz)
         print(
-            f"{_target_label(row.target):<32} {row.rig.name:<24} "
+            f"{_best_rig_target_label(row):<32} {row.rig.name:<24} "
             f"{_format_types(row.target.types):<28} {row.pos.alt_deg:7.1f}° "
             f"{row.pos.az_deg:6.1f}° {row.fit:5.2f} {row.reach:6.2f}  "
             f"{local_time:%Y-%m-%d %H:%M %Z}"

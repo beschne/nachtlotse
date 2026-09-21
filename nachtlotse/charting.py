@@ -40,7 +40,11 @@ _RING_RESOLUTION_DEG = 3.0
 
 # Validated categorical palette (dataviz skill's palette.md, light-mode
 # steps, slots 1-5 — CVD-safe on the adjacent-pairlist up to 5 series).
-# SHORTLIST_SIZE targets max, so 5 slots covers every shortlist.
+# Covers every shortlist in the common case (SHORTLIST_SIZE = 5 targets
+# max) — a favorite folded in beyond that cutoff (ROADMAP.md's
+# "Favorites in the catalog") can push a shortlist past 5, in which case
+# whichever renderer uses this cycles back to the first color instead of
+# erroring (sky_chart.py's `_track_color` does exactly that).
 SHORTLIST_PALETTE = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4")
 
 # Muted, recessive chrome — grid rings and the horizon-blocked wedge —

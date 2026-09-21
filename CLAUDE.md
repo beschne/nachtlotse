@@ -121,7 +121,7 @@ class Rig:
 # A target can carry more than one type (M42 is emission + reflection).
 TargetType = Literal[
     "emission_nebula", "reflection_nebula", "planetary_nebula", "dark_nebula",
-    "galaxy", "galaxy_group", "open_cluster", "globular_cluster",
+    "galaxy", "galaxy_group", "open_cluster", "globular_cluster", "variable_star",
 ]
 TARGET_TYPE_LABELS: dict[TargetType, str]  # shared display labels
 
@@ -135,6 +135,7 @@ class Target:
     size_arcmin: tuple[float, float] = (0.0, 0.0)  # (0.0, 0.0) = unknown
     magnitude: float | None = None         # None = no reliably sourced value
     types: tuple[TargetType, ...] = ()
+    favorite: bool = False                 # starred independent of ranking, e.g. T CrB
 
 @dataclass(frozen=True)
 class WeatherSummary:

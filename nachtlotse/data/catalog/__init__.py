@@ -34,9 +34,13 @@ a legitimate magnitude or a documented reason it has none.
 
 Every entry also carries `types` — one or more of `Target.TargetType`
 (emission/reflection/planetary/dark nebula, galaxy, galaxy group, open/
-globular cluster) — so targets can be filtered by category. An object can
-be more than one at once (M42 is both an emission and a reflection
-nebula).
+globular cluster, variable star) — so targets can be filtered by
+category. An object can be more than one at once (M42 is both an
+emission and a reflection nebula).
+
+`favorite: true` marks an entry to always show regardless of ranking
+(ROADMAP.md's "Favorites in the catalog") — rare, and expected to stay
+that way; omit the key entirely rather than writing `favorite: false`.
 """
 
 from __future__ import annotations
@@ -63,6 +67,7 @@ def _target_from_dict(raw: dict[str, Any]) -> Target:
         size_arcmin=(float(size[0]), float(size[1])) if size else (0.0, 0.0),
         magnitude=float(magnitude) if magnitude is not None else None,
         types=tuple(raw.get("types", [])),
+        favorite=bool(raw.get("favorite", False)),
     )
 
 

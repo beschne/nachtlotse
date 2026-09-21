@@ -417,10 +417,16 @@ def test_plan_night_carries_dark_window_moon_weather_and_a_shortlist(
     assert plan.weather is not None  # offline fixture always provides one
     assert plan.ranked, "the default site/rig should have observable targets tonight"
     assert plan.shortlist, "a non-empty ranking should yield a shortlist"
-    assert len(plan.shortlist) <= planning.SHORTLIST_SIZE
-    assert [entry.ranked for entry in plan.shortlist] == plan.ranked[
-        : planning.SHORTLIST_SIZE
-    ]
+    # The top SHORTLIST_SIZE are always exactly ranked[:SHORTLIST_SIZE];
+    # against the real catalog (unlike the synthetic ones elsewhere in
+    # this file) a favorite outside that cutoff — e.g. T CrB, whose fit
+    # score is always ~0 as a point source — can legitimately push the
+    # shortlist longer, so this doesn't assert an upper bound or a plain
+    # slice equality the way it did before favorites existed.
+    shortlisted = [entry.ranked for entry in plan.shortlist]
+    assert shortlisted[: planning.SHORTLIST_SIZE] == plan.ranked[: planning.SHORTLIST_SIZE]
+    for extra in shortlisted[planning.SHORTLIST_SIZE :]:
+        assert planning.is_favorite(extra)
     for entry in plan.shortlist:
         assert entry.verdict.level in ("GO", "MARGINAL", "SKIP")
 
@@ -499,6 +505,102 @@ def test_plan_night_gives_each_shortlisted_target_its_own_verdict(
     ]
     high_entry, low_entry = plan.shortlist
     assert high_entry.verdict.level != low_entry.verdict.level
+
+
+def test_is_favorite_checks_the_underlying_target_or_group_members() -> None:
+    from nachtlotse.engine import ephemeris
+    from nachtlotse.engine.models import Target
+
+    now = datetime.now(UTC)
+    pos = ephemeris.AltAz(alt_deg=0.0, az_deg=0.0, distance_au=0.0)
+    plain = Target(name="plain", ra_deg=0.0, dec_deg=0.0)
+    starred = Target(name="starred", ra_deg=0.0, dec_deg=0.0, favorite=True)
+
+    assert (
+        planning.is_favorite(
+            planning.RankedTarget(target=plain, best_time=now, pos=pos, fit=0.0, reach=0.0)
+        )
+        is False
+    )
+    assert (
+        planning.is_favorite(
+            planning.RankedTarget(target=starred, best_time=now, pos=pos, fit=0.0, reach=0.0)
+        )
+        is True
+    )
+    # A group counts as a favorite if any one member does — same "any
+    # member" convention cli.py's _entry_types already uses for a
+    # group's categories.
+    assert (
+        planning.is_favorite(
+            planning.RankedGroup(
+                targets=(plain, starred), best_time=now, pos=pos, fit=0.0, reach=0.0
+            )
+        )
+        is True
+    )
+    assert (
+        planning.is_favorite(
+            planning.RankedGroup(targets=(plain,), best_time=now, pos=pos, fit=0.0, reach=0.0)
+        )
+        is False
+    )
+
+
+def test_plan_night_keeps_a_favorite_in_the_shortlist_past_the_normal_cutoff(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A favorite (T CrB's own reason for existing — see ROADMAP.md's
+    "Favorites in the catalog") must still show up in the shortlist even
+    when its score leaves it well outside SHORTLIST_SIZE."""
+    from nachtlotse.engine.constraints import build_observer
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site  # unrestricted horizon
+    rig = store.default_rig_record().rig
+    observer = build_observer(site)
+    night_reference = Time(datetime(2026, 9, 12, 22, 0, tzinfo=UTC))
+    lst_deg = night_reference.sidereal_time(
+        "apparent", longitude=observer.location.lon
+    ).deg
+
+    # SHORTLIST_SIZE higher-scoring, non-favorite targets, each nearer
+    # zenith than the favorite below, so the favorite always ranks last.
+    # Spaced 10° apart in declination (same RA) — well beyond the
+    # default rig's ~4°x2° FOV, so engine.grouping doesn't fold any of
+    # these into a co-visible RankedGroup; a group would still count as
+    # a favorite via is_favorite's "any member" rule, but this test is
+    # about the plain single-target fold-in, so it avoids that case.
+    fillers = [
+        Target(
+            name=f"filler {i}",
+            ra_deg=lst_deg,
+            dec_deg=site.lat_deg - 5.0 - 10.0 * i,
+            size_arcmin=(10.0, 10.0),
+        )
+        for i in range(planning.SHORTLIST_SIZE)
+    ]
+    favorite = Target(
+        name="favorite variable",
+        ra_deg=lst_deg,
+        dec_deg=site.lat_deg - 55.0,  # max alt ~35° — below every filler
+        size_arcmin=(0.05, 0.05),
+        favorite=True,
+    )
+    monkeypatch.setattr(planning, "CATALOG", [*fillers, favorite])
+
+    plan = planning.plan_night(site, rig, night_reference.to_datetime(timezone=UTC))
+
+    assert len(plan.ranked) == planning.SHORTLIST_SIZE + 1
+    assert plan.ranked[-1].target.name == "favorite variable", (
+        "the favorite should rank last on altitude alone, to actually test "
+        "the fold-in rather than it winning a normal top-N slot"
+    )
+    assert len(plan.shortlist) == planning.SHORTLIST_SIZE + 1
+    assert plan.shortlist[-1].ranked.target.name == "favorite variable"
+    assert planning.is_favorite(plan.shortlist[-1].ranked)
 
 
 def test_rank_targets_limits_evaluated_count(

@@ -8,42 +8,32 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Favorites in the catalog:** a starred/favorite flag on a target,
-   independent of ranking — motivated by variable-star photometry (e.g.
-   T Coronae Borealis, "T CrB") that should be measured and shown every
-   session regardless of where it'd normally fall in the shortlist cutoff.
-   Touches more than the GUI: the catalog/engine model needs the flag
-   itself, `planning` needs to fold favorites into (or alongside) the
-   shortlist rather than let them get crowded out, and the GUI needs
-   somewhere to show them — a pinned section within Shortlist, or their
-   own tab — plus the sky chart should plot favorite tracks even when
-   they're not otherwise part of the top-ranked shortlist.
-2. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
-   a PNG (reusing `chart_export.py`'s matplotlib path, or a direct
-   `QWidget.grab()` of the canvas), the briefing as `.txt`, and Sites/Rigs
-   as `.txt`.
-3. **Hourly cloud cover for the astro-night:** `weather/open_meteo.py`
+1. **Hourly cloud cover for the astro-night:** `weather/open_meteo.py`
    currently aggregates cloud cover over the whole dark window into one
    `WeatherSummary` (`max_cloud_cover_pct`/`avg_cloud_cover_pct`). Instead,
    surface the hour-by-hour Open-Meteo series, clipped to the astronomical
    dark window (`constraints.dark_window`) rather than the full calendar
    night, so a fully-clear window that closes early or a socked-in window
    that clears at 2am shows up as a shape, not one averaged number.
-4. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
+2. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
+   a PNG (reusing `chart_export.py`'s matplotlib path, or a direct
+   `QWidget.grab()` of the canvas), the briefing as `.txt`, and Sites/Rigs
+   as `.txt`.
+3. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
    without a `limit`, so it already inherits the same
    `DEFAULT_MAX_EVALUATED` (50) cap the CLI defaults to — but unlike the
    CLI's own `--limit` flag, there's no sidebar control to change it
    (evaluate more, fewer, or 0/unlimited).
-5. **Session log:** record what's already been captured, and when — total
+4. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-6. **Current events:** well-placed comets, supernova alerts; later also minor
+5. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-7. **Multilingual UI/CLI text** (at minimum German and English). Everything
+6. **Multilingual UI/CLI text** (at minimum German and English). Everything
    user-facing is English-only for now; this stays parked until there's a
    reason to localize.
-8. **Framing preview for selected targets:** render what a target would
+7. **Framing preview for selected targets:** render what a target would
    actually look like through the given rig — its angular size/shape
    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
    math) — rather than only the numeric `framing_score`/reach. A visual
@@ -90,6 +80,44 @@ up when it fits, not in any particular order.
   `sites_local.yaml`/`rigs_local.yaml` stay hand-edited for now. An
   editor that round-trips them without mangling existing comments/
   formatting is real, separate scope.
+- **Catalog tab (GUI), with in-app favorite toggling:** a "Catalog" tab
+  listing every catalog target — not just what's ranked/shortlisted
+  tonight — sortable/filterable by type and magnitude. The concrete
+  place to flip a target's `favorite` flag (see "Favorites in the
+  catalog", done) from the GUI instead of hand-editing a `mag_*.yaml`
+  file directly, which still works today and stays the source of truth
+  either way. Shares the same open problem as the in-app sites/rigs
+  editor idea just above: writing back into YAML without mangling
+  existing comments/formatting is real, separate scope.
+- **EQ mount "danger zone" — counterweight-required region (rig
+  "ZWO Seestar S30 Pro (EQ wedge)" / "S30P-EQ"):** unlike the alt-az
+  field-rotation gate `framing.has_safe_field_rotation` already models,
+  nothing accounts for EQ-mount mechanical strain yet. West of the
+  meridian, this rig's worm/gear mesh loses tracking engagement at lower
+  altitude — from ~5 logged sessions: above 55° stays safe; 50-55° is an
+  untested "transition" band; 40-50° loses ~10-30% of tracking rate
+  ("moderate"); at or below 40° loses over 30% ("severe"). East of the
+  meridian is always safe. A counterweight only softens the effect,
+  never removes it — ~6% residual error remained at 25° altitude even
+  with a 195 g counterweight — so this should never collapse into a
+  binary "counterweight fitted = safe" toggle.
+
+  Caveats worth keeping as an explicit comment in any real
+  implementation, not presented as settled fact: the thresholds are
+  provisional (only ~5 sessions behind them, refinable later from a
+  real session log); the high-west corner (above 55°, past transit) is
+  untested, so "safe" there is assumed, not measured; and high northern
+  declinations (circumpolar from this site, dec above 60°) never dip
+  low enough to enter the zone at all — the altitude check already
+  handles that automatically.
+
+  Its only surfaced effect is meant to be visual, on the sky chart
+  (`gui/sky_chart.py`): shade the danger-zone region red (severity-graded,
+  deeper red for "severe"), the same way `_paint_horizon_wedge` already
+  shades the horizon-blocked wedge — no separate text warning. Needs
+  hour angle (from RA + local sidereal time, not currently exposed by
+  `engine.ephemeris`) or an equivalent azimuth check (west sector,
+  roughly 180-360° past transit).
 - **Structured `lotse plan --json` output**, alongside the existing
   human-readable table (not replacing it) — for external tooling
   (scripts, NINA, a future integration) to consume instead of parsing
