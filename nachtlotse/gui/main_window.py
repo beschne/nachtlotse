@@ -24,15 +24,18 @@ Re-plan can't be staged while one is already in flight.
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QProgressBar,
     QTableWidget,
     QTableWidgetItem,
@@ -46,12 +49,19 @@ from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine.models import Rig, Site
 from nachtlotse.gui import data_adapter
+from nachtlotse.gui import export as gui_export
 from nachtlotse.gui.briefing import BriefingCard
 from nachtlotse.gui.hourly_cloud_bar import HourlyCloudCoverBar
 from nachtlotse.gui.sidebar import Sidebar
 from nachtlotse.gui.sites_rigs import RigsCard, SitesCard
 from nachtlotse.gui.sky_chart import SkyChartCard
-from nachtlotse.gui.theme import COLORS, RoundedCard, VerdictBadge, label_style
+from nachtlotse.gui.theme import (
+    COLORS,
+    RoundedCard,
+    VerdictBadge,
+    label_style,
+    secondary_button,
+)
 from nachtlotse.planning import NightPlan
 
 _SHORTLIST_COLUMNS = [
@@ -85,11 +95,11 @@ _ALIGN = {"left": Qt.AlignLeft, "right": Qt.AlignRight, "center": Qt.AlignCenter
 _COLUMN_TOOLTIPS = {
     "alt_text": (
         "Alt — altitude at the target's Best time (this row's\n"
-        "\"Best\" column), not right now or at plan time."
+        '"Best" column), not right now or at plan time.'
     ),
     "az_text": (
         "Az — azimuth at the target's Best time (this row's\n"
-        "\"Best\" column), not right now or at plan time."
+        '"Best" column), not right now or at plan time.'
     ),
     "fit_text": (
         "Fit — how well the target's angular size fills\n"
@@ -132,7 +142,7 @@ def local_when(selected_date: date, local_tz: ZoneInfo) -> datetime:
 
 
 def title_for_date(selected_date: date, local_tz: ZoneInfo) -> str:
-    """"Tonight" for today (in the *site's* timezone, not the machine's
+    """ "Tonight" for today (in the *site's* timezone, not the machine's
     own) — otherwise the actual date, so planning ahead doesn't keep
     reading "Tonight" for a night that isn't tonight at all."""
     if selected_date == datetime.now(local_tz).date():
@@ -206,13 +216,15 @@ class MainWindow(QMainWindow):
         self.hourly_cloud_bar = HourlyCloudCoverBar()
 
         self.progress = QProgressBar()
-        self.progress.setRange(0, 0)  # indeterminate: we don't know how long a plan will take
+        self.progress.setRange(
+            0, 0
+        )  # indeterminate: we don't know how long a plan will take
         self.progress.setFixedHeight(4)
         self.progress.setTextVisible(False)
         self.progress.setStyleSheet(
             f"""
-            QProgressBar {{ background: {COLORS['border']}; border: none; border-radius: 2px; }}
-            QProgressBar::chunk {{ background: {COLORS['clay']}; border-radius: 2px; }}
+            QProgressBar {{ background: {COLORS["border"]}; border: none; border-radius: 2px; }}
+            QProgressBar::chunk {{ background: {COLORS["clay"]}; border-radius: 2px; }}
             """
         )
         self.progress.hide()
@@ -229,11 +241,11 @@ class MainWindow(QMainWindow):
             f"""
             QTabWidget::pane {{ border: none; }}
             QTabBar::tab {{
-                background: transparent; color: {COLORS['ink_secondary']};
+                background: transparent; color: {COLORS["ink_secondary"]};
                 padding: 6px 4px; margin-right: 18px; font-size: 12px;
                 font-weight: 600; letter-spacing: 0.5px; border-bottom: 2px solid transparent;
             }}
-            QTabBar::tab:selected {{ color: {COLORS['ink']}; border-bottom: 2px solid {COLORS['clay']}; }}
+            QTabBar::tab:selected {{ color: {COLORS["ink"]}; border-bottom: 2px solid {COLORS["clay"]}; }}
             """
         )
 
@@ -248,6 +260,10 @@ class MainWindow(QMainWindow):
         shortlist_card = RoundedCard()
         shortlist_layout = QVBoxLayout(shortlist_card)
         shortlist_layout.setContentsMargins(*([_CARD_CONTENT_MARGIN] * 4))
+        self.shortlist_export_button = secondary_button("Export CSV…")
+        self.shortlist_export_button.setEnabled(False)
+        self.shortlist_export_button.clicked.connect(self._on_export_shortlist_csv)
+        shortlist_layout.addLayout(self._export_row(self.shortlist_export_button))
         self.shortlist_table = self._build_table(_SHORTLIST_COLUMNS)
         shortlist_layout.addWidget(self.shortlist_table)
         self.tabs.addTab(shortlist_card, "Shortlist")
@@ -255,6 +271,10 @@ class MainWindow(QMainWindow):
         ranked_card = RoundedCard()
         ranked_layout = QVBoxLayout(ranked_card)
         ranked_layout.setContentsMargins(*([_CARD_CONTENT_MARGIN] * 4))
+        self.ranked_export_button = secondary_button("Export CSV…")
+        self.ranked_export_button.setEnabled(False)
+        self.ranked_export_button.clicked.connect(self._on_export_ranked_csv)
+        ranked_layout.addLayout(self._export_row(self.ranked_export_button))
         self.ranked_table = self._build_table(_RANKED_COLUMNS)
         ranked_layout.addWidget(self.ranked_table)
         self.tabs.addTab(ranked_card, "All ranked")
@@ -271,11 +291,62 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.tabs, stretch=1)
 
         self._worker: _PlanWorker | None = None
+        # Staged by `_on_plan_ready` for the Export CSV buttons — rebuilding
+        # `ShortlistRow`/`RankedRow` from the plan on click, rather than
+        # keeping a separate copy of the already-populated table's cell
+        # text, is what `_populate_table` itself does too (`shortlist_rows`/
+        # `ranked_rows` computed fresh from `plan` each replan).
+        self._plan: NightPlan | None = None
+        self._local_tz: ZoneInfo | None = None
         self._replan(
             self.sidebar.current_site_record(),
             self.sidebar.current_rig_record(),
             self.sidebar.current_date(),
         )
+
+    @staticmethod
+    def _export_row(button: QWidget) -> QHBoxLayout:
+        """A right-aligned single-button row above a table — same shape
+        `sky_chart.ChartPanel`'s own zoom row uses for its Export PNG
+        button, so all three Export actions sit in a consistent spot."""
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(button)
+        return row
+
+    def _on_export_shortlist_csv(self) -> None:
+        self._export_csv(
+            gui_export.shortlist_csv_text(
+                data_adapter.build_shortlist_rows(self._plan, self._local_tz)
+            ),
+            gui_export.DEFAULT_SHORTLIST_CSV_FILENAME,
+            "Export Shortlist",
+        )
+
+    def _on_export_ranked_csv(self) -> None:
+        self._export_csv(
+            gui_export.ranked_csv_text(
+                data_adapter.build_ranked_rows(self._plan, self._local_tz)
+            ),
+            gui_export.DEFAULT_RANKED_CSV_FILENAME,
+            "Export All Ranked",
+        )
+
+    def _export_csv(
+        self, csv_text: str, default_filename: str, dialog_title: str
+    ) -> None:
+        if self._plan is None or self._local_tz is None:
+            return
+        default_path = str(gui_export.default_export_dir() / default_filename)
+        path_str, _ = QFileDialog.getSaveFileName(
+            self, dialog_title, default_path, "CSV files (*.csv)"
+        )
+        if not path_str:
+            return
+        try:
+            gui_export.write_text(csv_text, Path(path_str))
+        except OSError as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
 
     def _build_table(self, columns: list[tuple[str, str, str]]) -> QTableWidget:
         table = QTableWidget(0, len(columns))
@@ -291,14 +362,14 @@ class MainWindow(QMainWindow):
         table.setFocusPolicy(Qt.NoFocus)
         table.setStyleSheet(
             f"""
-            QTableWidget {{ background: {COLORS['paper']}; border: none; font-size: 13px; }}
+            QTableWidget {{ background: {COLORS["paper"]}; border: none; font-size: 13px; }}
             QHeaderView::section {{
-                background: {COLORS['paper']}; color: {COLORS['ink_secondary']};
-                border: none; border-bottom: 1px solid {COLORS['border']};
+                background: {COLORS["paper"]}; color: {COLORS["ink_secondary"]};
+                border: none; border-bottom: 1px solid {COLORS["border"]};
                 padding: 8px; font-size: 11px; font-weight: 600; letter-spacing: 1px;
             }}
-            QTableWidget::item {{ padding: 6px 8px; border-bottom: 1px solid {COLORS['border']}; }}
-            QTableWidget::item:selected {{ background: {COLORS['cream']}; color: {COLORS['ink']}; }}
+            QTableWidget::item {{ padding: 6px 8px; border-bottom: 1px solid {COLORS["border"]}; }}
+            QTableWidget::item:selected {{ background: {COLORS["cream"]}; color: {COLORS["ink"]}; }}
             """
         )
         # Only the Target column stretches to absorb leftover width — every
@@ -342,7 +413,9 @@ class MainWindow(QMainWindow):
         table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         return table
 
-    def _replan(self, site_record: SiteRecord, rig_record: RigRecord, selected_date: date) -> None:
+    def _replan(
+        self, site_record: SiteRecord, rig_record: RigRecord, selected_date: date
+    ) -> None:
         site = site_record.site
         rig = rig_record.rig
         local_tz = ZoneInfo(site.tz)
@@ -364,13 +437,22 @@ class MainWindow(QMainWindow):
         self._worker.start()
 
     def _on_plan_ready(
-        self, plan: NightPlan, local_tz: ZoneInfo, site: Site, rig: Rig, selected_date: date
+        self,
+        plan: NightPlan,
+        local_tz: ZoneInfo,
+        site: Site,
+        rig: Rig,
+        selected_date: date,
     ) -> None:
         self._finish_replan()
+        self._plan = plan
+        self._local_tz = local_tz
 
         summary = data_adapter.build_header_summary(plan, local_tz)
         shortlist_rows = data_adapter.build_shortlist_rows(plan, local_tz)
         ranked_rows = data_adapter.build_ranked_rows(plan, local_tz)
+        self.shortlist_export_button.setEnabled(bool(shortlist_rows))
+        self.ranked_export_button.setEnabled(bool(ranked_rows))
 
         self.eyebrow.setText(
             f"{site.name} · {rig.name} · {selected_date:%a %d %b}".upper()
@@ -409,7 +491,9 @@ class MainWindow(QMainWindow):
         for row_index, row in enumerate(rows):
             for col_index, (key, _label, align) in enumerate(columns):
                 if key == "verdict":
-                    table.setCellWidget(row_index, col_index, self._verdict_cell(row.verdict_level))
+                    table.setCellWidget(
+                        row_index, col_index, self._verdict_cell(row.verdict_level)
+                    )
                     continue
                 item = QTableWidgetItem(getattr(row, key))
                 item.setTextAlignment(_ALIGN[align] | Qt.AlignVCenter)

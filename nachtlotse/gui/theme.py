@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel
+from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QPushButton
 
 LIGHT_COLORS = {
     "cream": "#f6f2ea",
@@ -116,6 +116,32 @@ class RoundedCard(QFrame):
         shadow.setOffset(0, 6)
         shadow.setColor(QColor(0, 0, 0, 35))
         self.setGraphicsEffect(shadow)
+
+
+def secondary_button(text: str) -> QPushButton:
+    """A small outline button for a repeatable, secondary control (chart
+    zoom, an Export action) — deliberately quieter than a filled clay
+    button (Re-plan, Generate briefing), which is a tab's one primary
+    action and shouldn't have to compete with this for attention.
+    Originally `sky_chart.py`'s own private `_zoom_button`, promoted here
+    once Export buttons needed the identical style in several more
+    screens."""
+    button = QPushButton(text)
+    button.setFixedHeight(26)
+    button.setCursor(Qt.PointingHandCursor)
+    button.setStyleSheet(
+        f"""
+        QPushButton {{
+            background: transparent; color: {COLORS["ink_secondary"]};
+            border: 1px solid {COLORS["border_strong"]}; border-radius: 6px;
+            font-size: 12px; font-weight: 600; padding: 0 10px;
+        }}
+        QPushButton:hover {{ background: {COLORS["cream_hover"]}; color: {COLORS["ink"]}; }}
+        QPushButton:pressed {{ background: {COLORS["border"]}; }}
+        QPushButton:disabled {{ color: {COLORS["ink_muted"]}; border-color: {COLORS["border"]}; }}
+        """
+    )
+    return button
 
 
 class VerdictBadge(QLabel):

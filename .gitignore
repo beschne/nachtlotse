@@ -30,9 +30,11 @@ prose_local.yaml
 # Local secrets — never committed.
 scratch.md/
 
-# `lotse plan --chart`'s default PNG output — generated on demand into
-# whatever directory you run it from, never a build artifact to commit.
-nachtlotse-shortlist.png
+# `lotse plan --chart`'s default PNG output at the repo root — generated
+# on demand wherever you run it from, never a build artifact to commit.
+# Anchored: `exports/nachtlotse-shortlist.png` is the GUI's own same-named
+# export and, unlike this one, is deliberately tracked (see exports/).
+/nachtlotse-shortlist.png
 
 # Desktop-launcher .app bundle — bakes in an absolute path to this
 # checkout and the local `uv` binary, so it's machine-specific, not

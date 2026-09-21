@@ -1,0 +1,25 @@
+Nachtlotse — known rigs
+
+ZWO Seestar S30 Pro (EQ wedge)  (aka S30P-EQ)
+    160 mm f/5.3 (30 mm aperture)
+    3840×2160 px, 2.90 µm · mount: eq
+    FoV 3.99° × 2.24° · sampling 3.74″/px
+    Rough limiting magnitude (stacked, tunable estimate): Bortle 2 ~17.5 mag, Bortle 5 ~16.0 mag
+
+ZWO Seestar S30 Pro  (aka S30P)
+    160 mm f/5.3 (30 mm aperture)
+    3840×2160 px, 2.90 µm · mount: altaz
+    FoV 3.99° × 2.24° · sampling 3.74″/px
+    Rough limiting magnitude (stacked, tunable estimate): Bortle 2 ~17.5 mag, Bortle 5 ~16.0 mag
+
+Redcat 51 with ASI2600MC Duo  (aka Redcat51)
+    250 mm f/4.9 (51 mm aperture)
+    6248×4176 px, 3.76 µm · mount: eq
+    FoV 5.38° × 3.60° · sampling 3.10″/px
+    Rough limiting magnitude (stacked, tunable estimate): Bortle 2 ~18.6 mag, Bortle 5 ~17.1 mag
+
+TEC AP 160/1120 f/7 FL  (aka TEC160FL)
+    1120 mm f/7.0 (160 mm aperture)
+    6248×4176 px, 3.76 µm · mount: eq
+    FoV 1.20° × 0.80° · sampling 0.69″/px
+    Rough limiting magnitude (stacked, tunable estimate): Bortle 2 ~21.1 mag, Bortle 5 ~19.6 mag

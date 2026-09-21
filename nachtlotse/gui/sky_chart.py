@@ -25,22 +25,31 @@ principle, CLAUDE.md): both come from skyfield, not an approximation.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLabel,
-    QPushButton,
+    QMessageBox,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
-from nachtlotse import charting
+from nachtlotse import chart_export, charting
 from nachtlotse.engine import ephemeris
 from nachtlotse.gui import data_adapter
-from nachtlotse.gui.theme import COLORS, VERDICT_COLORS, RoundedCard, label_style
+from nachtlotse.gui import export as gui_export
+from nachtlotse.gui.theme import (
+    COLORS,
+    VERDICT_COLORS,
+    RoundedCard,
+    label_style,
+    secondary_button,
+)
 from nachtlotse.planning import NightPlan, NightPlanForBestRig, is_favorite
 
 # Chart-space coordinates from `charting.project()` range roughly -98..98
@@ -65,7 +74,9 @@ def _verdict_line_color(level: str) -> QColor:
     return QColor(fg)
 
 
-def _moon_phase_path(cx: float, cy: float, r: float, phase_angle_deg: float) -> QPainterPath:
+def _moon_phase_path(
+    cx: float, cy: float, r: float, phase_angle_deg: float
+) -> QPainterPath:
     """The outline of the Moon's *illuminated* region for a small phase
     icon, given the real phase angle (`ephemeris.moon_phase_angle_deg`:
     0° new, 180° full, waxing 0-180°, waning 180-360°) — not just an
@@ -157,6 +168,10 @@ class SkyChartCanvas(QWidget):
     def zoom(self) -> float:
         return self._zoom
 
+    @property
+    def plan(self) -> NightPlan | NightPlanForBestRig | None:
+        return self._plan
+
     def zoom_in(self) -> None:
         self._zoom = min(self._ZOOM_MAX, round(self._zoom + self._ZOOM_STEP, 2))
         self.update()
@@ -180,7 +195,9 @@ class SkyChartCanvas(QWidget):
 
         if self._plan is None or not self._plan.shortlist:
             painter.setPen(QColor(COLORS["ink_secondary"]))
-            painter.drawText(self.rect(), Qt.AlignCenter, "No shortlisted targets to chart tonight.")
+            painter.drawText(
+                self.rect(), Qt.AlignCenter, "No shortlisted targets to chart tonight."
+            )
             painter.end()
             return
 
@@ -213,7 +230,9 @@ class SkyChartCanvas(QWidget):
         painter.drawPath(path)
 
     def _paint_grid(self, painter: QPainter, to_px) -> None:
-        painter.setBrush(Qt.NoBrush)  # else the wedge's leftover fill bleeds into these outlines
+        painter.setBrush(
+            Qt.NoBrush
+        )  # else the wedge's leftover fill bleeds into these outlines
         font = QFont()
         font.setPointSizeF(8.0)
         painter.setFont(font)
@@ -246,7 +265,9 @@ class SkyChartCanvas(QWidget):
         painter.setPen(QColor(COLORS["ink"]))
         for label, az_deg in charting.COMPASS_LABELS:
             point = to_px(charting.compass_label_point(az_deg, rim_r=97.0))
-            painter.drawText(QRectF(point.x() - 12, point.y() - 10, 24, 20), Qt.AlignCenter, label)
+            painter.drawText(
+                QRectF(point.x() - 12, point.y() - 10, 24, 20), Qt.AlignCenter, label
+            )
 
     def _paint_tracks(self, painter: QPainter, to_px) -> None:
         tracks = charting.shortlist_tracks(self._plan)
@@ -339,35 +360,14 @@ class SkyChartCanvas(QWidget):
         painter.setBrush(QColor(COLORS["ink_muted"]))
         painter.drawEllipse(center, icon_r, icon_r)
         painter.setBrush(QColor("#f3efe4"))
-        painter.drawPath(_moon_phase_path(center.x(), center.y(), icon_r, phase_angle_deg))
+        painter.drawPath(
+            _moon_phase_path(center.x(), center.y(), icon_r, phase_angle_deg)
+        )
         outline_pen = QPen(QColor(COLORS["ink_secondary"]))
         outline_pen.setWidthF(0.8)
         painter.setPen(outline_pen)
         painter.setBrush(Qt.NoBrush)
         painter.drawEllipse(center, icon_r, icon_r)
-
-
-def _zoom_button(text: str) -> QPushButton:
-    """A small outline button for the chart panel's zoom row — deliberately
-    quieter than `theme`'s filled clay buttons (Re-plan, Generate briefing):
-    those are the tab's one primary action, this is a secondary, repeatable
-    control that shouldn't compete with it for attention."""
-    button = QPushButton(text)
-    button.setFixedHeight(26)
-    button.setCursor(Qt.PointingHandCursor)
-    button.setStyleSheet(
-        f"""
-        QPushButton {{
-            background: transparent; color: {COLORS['ink_secondary']};
-            border: 1px solid {COLORS['border_strong']}; border-radius: 6px;
-            font-size: 12px; font-weight: 600; padding: 0 10px;
-        }}
-        QPushButton:hover {{ background: {COLORS['cream_hover']}; color: {COLORS['ink']}; }}
-        QPushButton:pressed {{ background: {COLORS['border']}; }}
-        QPushButton:disabled {{ color: {COLORS['ink_muted']}; border-color: {COLORS['border']}; }}
-        """
-    )
-    return button
 
 
 class ChartPanel(RoundedCard):
@@ -389,14 +389,17 @@ class ChartPanel(RoundedCard):
 
         zoom_row = QHBoxLayout()
         zoom_row.setSpacing(6)
+        self._export_button = secondary_button("Export PNG…")
+        self._export_button.setEnabled(False)
+        zoom_row.addWidget(self._export_button)
         zoom_row.addStretch(1)
         self._zoom_label = QLabel("100%")
         self._zoom_label.setStyleSheet(
             label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px;")
         )
-        self._zoom_out_button = _zoom_button("−")
-        self._zoom_reset_button = _zoom_button("Fit")
-        self._zoom_in_button = _zoom_button("+")
+        self._zoom_out_button = secondary_button("−")
+        self._zoom_reset_button = secondary_button("Fit")
+        self._zoom_in_button = secondary_button("+")
         zoom_row.addWidget(self._zoom_out_button)
         zoom_row.addWidget(self._zoom_label)
         zoom_row.addWidget(self._zoom_in_button)
@@ -409,7 +412,33 @@ class ChartPanel(RoundedCard):
         self._zoom_out_button.clicked.connect(self._on_zoom_out)
         self._zoom_in_button.clicked.connect(self._on_zoom_in)
         self._zoom_reset_button.clicked.connect(self._on_zoom_reset)
+        self._export_button.clicked.connect(self._on_export_clicked)
         self._update_zoom_label()
+
+    def set_plan(self, plan: NightPlan | NightPlanForBestRig) -> None:
+        self.canvas.set_plan(plan)
+        # Same condition `chart_export.save_shortlist_chart` itself
+        # enforces (a `ValueError` on an empty shortlist) — disabled
+        # rather than left to fail on click, so there's nothing to
+        # explain in a dialog for a plan that simply has nothing to chart.
+        self._export_button.setEnabled(bool(plan.shortlist))
+
+    def _on_export_clicked(self) -> None:
+        plan = self.canvas.plan
+        if plan is None:
+            return
+        default_path = str(
+            gui_export.default_export_dir() / chart_export.DEFAULT_CHART_FILENAME
+        )
+        path_str, _ = QFileDialog.getSaveFileName(
+            self, "Export Sky Chart", default_path, "PNG images (*.png)"
+        )
+        if not path_str:
+            return
+        try:
+            chart_export.save_shortlist_chart(plan, Path(path_str))
+        except (chart_export.ChartExportUnavailable, ValueError, OSError) as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
 
     def _on_zoom_out(self) -> None:
         self.canvas.zoom_out()
@@ -466,7 +495,9 @@ class LegendPanel(RoundedCard):
         # makes before drawing anything — so the legend should list it too,
         # not just the shortlisted targets, or it's the one thing on the
         # chart nobody can identify.
-        moon_track = charting.moon_track(plan.site, plan.evening_start, plan.morning_end)
+        moon_track = charting.moon_track(
+            plan.site, plan.evening_start, plan.morning_end
+        )
         if moon_track.segments:
             self._legend_layout.insertWidget(
                 self._legend_layout.count() - 1,
@@ -490,7 +521,9 @@ class LegendPanel(RoundedCard):
             dot.setText("★")
             dot.setAlignment(Qt.AlignCenter)
             dot.setFixedSize(14, 14)
-            dot.setStyleSheet(f"color: {color.name()}; background: transparent; font-size: 14px;")
+            dot.setStyleSheet(
+                f"color: {color.name()}; background: transparent; font-size: 14px;"
+            )
         else:
             dot.setFixedSize(10, 10)
             dot.setStyleSheet(f"background: {color.name()}; border-radius: 5px;")
@@ -498,7 +531,9 @@ class LegendPanel(RoundedCard):
 
         name = QLabel(label)
         name.setWordWrap(True)
-        name.setStyleSheet(f"color: {COLORS['ink']}; font-size: 11px; background: transparent;")
+        name.setStyleSheet(
+            f"color: {COLORS['ink']}; font-size: 11px; background: transparent;"
+        )
         row_layout.addWidget(name, stretch=1)
         return container
 
@@ -533,5 +568,5 @@ class SkyChartCard(QWidget):
         layout.addWidget(self.legend_panel, stretch=1)
 
     def set_plan(self, plan: NightPlan | NightPlanForBestRig, local_tz) -> None:
-        self.chart_panel.canvas.set_plan(plan)
+        self.chart_panel.set_plan(plan)
         self.legend_panel.rebuild(plan, local_tz)

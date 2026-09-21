@@ -1,0 +1,66 @@
+Nachtlotse — known sites
+
+Volkssternwarte Hochtaunus  (aka Sternwarte, Kuppel)
+    50.23709°N 8.55088°E, 316 m
+    Taunus · Bortle 5 (heavily light-polluted, urban fringe) · Horizon: measured
+    Elisabethenschneise 2, 61350 Bad Homburg vor der Höhe
+
+Balkon, Tannenwaldallee  (aka Balkon)
+    50.23046°N 8.59337°E, 219 m
+    Taunus · Bortle 4-5 · Horizon: flat/sector
+    Tannenwaldallee 60c, 61348 Bad Homburg vor der Höhe
+
+Oberhalb Sportplatz Mönstadt  (aka Mönstadt)
+    50.39122°N 8.42225°E, 346 m
+    Hintertaunus · Bortle 3–4 · Horizon: flat/sector
+    Sportplatz Mönstadt, Am Feldweg, 61279 Grävenwiesbach
+
+FriedWald Weilrod
+    50.31880°N 8.42992°E, 450 m
+    Hintertaunus · Bortle 3–4 (moderately light-polluted; higher elevation helps) · Horizon: flat/sector
+    An der Hohl, 61276 Weilrod
+
+Beobachtungsplatz Pfaffenwiesbach
+    50.32469°N 8.61212°E, 340 m
+    Hintertaunus · Bortle 4–5 (light-polluted; forest cover helps to the south) · Horizon: measured
+    Kapersburgstraße 24, 61273 Wehrheim
+
+Schöner Platz  (aka Am Schlink, Modelflugplatz)
+    50.31292°N 8.57732°E, 370 m
+    Hintertaunus · Bortle 4 (light-polluted, but somewhat better than PSH) · Horizon: flat/sector
+    Parkplatz "Am Schlink", 61273 Wehrheim
+
+Großer Feldberg  (aka Feldberg)
+    50.23243°N 8.45750°E, 873 m
+    Taunus · Bortle 4 · Horizon: flat/sector
+    Plateau Großer Feldberg, 61389 Schmitten - Niederreifenberg
+
+Grüninger Warte
+    50.51076°N 8.71950°E, 277 m
+    Taunus · Bortle 5 (light-polluted, close to Gießen and Wetzlar) · Horizon: flat/sector
+    Grüninger Warte, 35415 Pohlheim
+
+Beobachtungsplatz Kissinger Hütte  (aka Kissinger Hütte)
+    50.34143°N 9.94116°E, 820 m
+    Rhön · Bortle 2–3 (dark to moderately dark, an excellent observing site) · Horizon: flat/sector
+    Kissinger Hütte 1, 97657 Sandberg
+
+Beobachtungsplatz Heidelstein  (aka Heidelstein)
+    50.46952°N 10.02447°E, 820 m
+    Rhön · Bortle 1–2 (dark to very dark, one of the best sites in the region) · Horizon: flat/sector
+    Parkplatz Schornhecke, 97656 Oberelsbach
+
+Schwedenhaus Rhön  (aka Schwedenhaus)
+    50.55500°N 9.92434°E, 539 m
+    Rhön · Bortle 1–2 (dark to very dark) · Horizon: flat/sector
+    Meisenweg 14, 36115 Hilders-Steinbach
+
+Beobachtungsplatz Herchenheimer Höhe  (aka Herchenheimer Höhe)
+    50.48697°N 9.27322°E, 733 m
+    Vogelsberg · Bortle 2–3 (dark to moderately dark, a good observing site) · Horizon: flat/sector
+    36355 Grebenhain
+
+Wolfursprung
+    48.47683°N 8.27133°E, 957 m
+    Schwarzwald · Bortle 1–2 (dark to very dark) · Horizon: flat/sector
+    Bundestraße 28, südlich Alexanderschanze, Bad Peterstal-Griesbach

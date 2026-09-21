@@ -16,11 +16,22 @@ these aren't rebuilt on Re-plan.
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QLabel, QScrollArea, QVBoxLayout, QWidget
+from pathlib import Path
+
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.gui import data_adapter
-from nachtlotse.gui.theme import COLORS, RoundedCard, label_style
+from nachtlotse.gui import export as gui_export
+from nachtlotse.gui.theme import COLORS, RoundedCard, label_style, secondary_button
 
 
 def _heading(text: str) -> QLabel:
@@ -37,14 +48,18 @@ def _heading(text: str) -> QLabel:
 def _detail_label(text: str) -> QLabel:
     label = QLabel(text)
     label.setWordWrap(True)
-    label.setStyleSheet(label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px;"))
+    label.setStyleSheet(
+        label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px;")
+    )
     return label
 
 
 def _name_label(text: str) -> QLabel:
     label = QLabel(text)
     label.setWordWrap(True)
-    label.setStyleSheet(label_style(f"color: {COLORS['ink']}; font-size: 14px; font-weight: 600;"))
+    label.setStyleSheet(
+        label_style(f"color: {COLORS['ink']}; font-size: 14px; font-weight: 600;")
+    )
     return label
 
 
@@ -80,14 +95,25 @@ def _rig_card(record: RigRecord) -> QWidget:
     return card
 
 
-def _list_content(heading_text: str, cards: list[QWidget]) -> QWidget:
-    """A single scrollable column's content: a heading, then one card per record."""
+def _list_content(
+    heading_text: str, cards: list[QWidget], export_button: QWidget
+) -> QWidget:
+    """A single scrollable column's content: a heading + Export button row,
+    then one card per record. The button sits in the heading row (not
+    scrolled away with the cards) since it acts on the whole list, not
+    any one record."""
     content = QWidget()
     content.setStyleSheet(f"background: {COLORS['cream']};")
     column = QVBoxLayout(content)
     column.setContentsMargins(4, 4, 4, 4)
     column.setSpacing(10)
-    column.addWidget(_heading(heading_text))
+
+    heading_row = QHBoxLayout()
+    heading_row.addWidget(_heading(heading_text))
+    heading_row.addStretch(1)
+    heading_row.addWidget(export_button)
+    column.addLayout(heading_row)
+
     for card in cards:
         column.addWidget(card)
     column.addStretch(1)
@@ -98,19 +124,59 @@ class _ListScrollArea(QScrollArea):
     def __init__(self, content: QWidget) -> None:
         super().__init__()
         self.setWidgetResizable(True)
-        self.setStyleSheet(f"QScrollArea {{ background: {COLORS['cream']}; border: none; }}")
+        self.setStyleSheet(
+            f"QScrollArea {{ background: {COLORS['cream']}; border: none; }}"
+        )
         self.setWidget(content)
+
+    def _export(self, text: str, default_filename: str, dialog_title: str) -> None:
+        default_path = str(gui_export.default_export_dir() / default_filename)
+        path_str, _ = QFileDialog.getSaveFileName(
+            self, dialog_title, default_path, "Text files (*.txt)"
+        )
+        if not path_str:
+            return
+        try:
+            gui_export.write_text(text, Path(path_str))
+        except OSError as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
 
 
 class SitesCard(_ListScrollArea):
     """Every configured site, one card each — built once from `store.SITES`."""
 
     def __init__(self, sites: list[SiteRecord]) -> None:
-        super().__init__(_list_content(f"SITES ({len(sites)})", [_site_card(r) for r in sites]))
+        export_button = secondary_button("Export .txt…")
+        export_button.setEnabled(bool(sites))
+        super().__init__(
+            _list_content(
+                f"SITES ({len(sites)})", [_site_card(r) for r in sites], export_button
+            )
+        )
+        export_button.clicked.connect(
+            lambda: self._export(
+                gui_export.sites_text(sites),
+                gui_export.DEFAULT_SITES_TXT_FILENAME,
+                "Export Sites",
+            )
+        )
 
 
 class RigsCard(_ListScrollArea):
     """Every configured rig, one card each — built once from `store.RIGS`."""
 
     def __init__(self, rigs: list[RigRecord]) -> None:
-        super().__init__(_list_content(f"RIGS ({len(rigs)})", [_rig_card(r) for r in rigs]))
+        export_button = secondary_button("Export .txt…")
+        export_button.setEnabled(bool(rigs))
+        super().__init__(
+            _list_content(
+                f"RIGS ({len(rigs)})", [_rig_card(r) for r in rigs], export_button
+            )
+        )
+        export_button.clicked.connect(
+            lambda: self._export(
+                gui_export.rigs_text(rigs),
+                gui_export.DEFAULT_RIGS_TXT_FILENAME,
+                "Export Rigs",
+            )
+        )

@@ -108,7 +108,12 @@ def save_shortlist_chart(plan: NightPlan, path: Path) -> None:
             )
 
     ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), fontsize=8, frameon=False)
-    ax.set_title(f"{plan.site.name} — shortlist tonight", fontsize=11)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
+    # Not `fig.tight_layout()`: it pre-shrinks the axes to fit everything
+    # inside the original figsize, and an `aspect="equal"` polar axes
+    # combined with a legend placed outside the axes (`bbox_to_anchor`)
+    # made it massively over-shrink the circle to make room — most of the
+    # saved PNG was blank margin. `bbox_inches="tight"` instead crops the
+    # *saved* image to whatever content (circle + legend) actually drew,
+    # leaving the axes themselves untouched.
+    fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)

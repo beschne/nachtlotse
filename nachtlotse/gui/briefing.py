@@ -18,11 +18,22 @@ of its own, just like `cli.py` doesn't.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QThread, Signal
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QTextEdit, QVBoxLayout
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+)
 
 from nachtlotse import prose
-from nachtlotse.gui.theme import COLORS, RoundedCard, label_style
+from nachtlotse.gui import export as gui_export
+from nachtlotse.gui.theme import COLORS, RoundedCard, label_style, secondary_button
 from nachtlotse.planning import NightPlan, NightPlanForBestRig
 
 _PLACEHOLDER = (
@@ -85,20 +96,24 @@ class BriefingCard(RoundedCard):
         self.generate_button.setStyleSheet(
             f"""
             QPushButton {{
-                background: {COLORS['clay']}; color: {COLORS['text_on_accent']};
+                background: {COLORS["clay"]}; color: {COLORS["text_on_accent"]};
                 border: none; border-radius: 8px; padding: 8px 16px;
                 font-size: 13px; font-weight: 600;
             }}
-            QPushButton:hover {{ background: {COLORS['clay_hover']}; }}
-            QPushButton:pressed {{ background: {COLORS['clay_press']}; }}
+            QPushButton:hover {{ background: {COLORS["clay_hover"]}; }}
+            QPushButton:pressed {{ background: {COLORS["clay_press"]}; }}
             QPushButton:disabled {{
-                background: {COLORS['border_strong']}; color: {COLORS['ink_muted']};
+                background: {COLORS["border_strong"]}; color: {COLORS["ink_muted"]};
             }}
             """
         )
         self.generate_button.clicked.connect(self._on_generate_clicked)
+        self.export_button = secondary_button("Export .txt…")
+        self.export_button.setEnabled(False)
+        self.export_button.clicked.connect(self._on_export_clicked)
         button_row = QHBoxLayout()
         button_row.addWidget(self.generate_button)
+        button_row.addWidget(self.export_button)
         button_row.addStretch(1)
         layout.addLayout(button_row)
 
@@ -118,6 +133,7 @@ class BriefingCard(RoundedCard):
         self.output.setPlaceholderText(_PLACEHOLDER)
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate briefing")
+        self.export_button.setEnabled(False)
 
     def _on_generate_clicked(self) -> None:
         if self._plan is None:
@@ -136,9 +152,28 @@ class BriefingCard(RoundedCard):
         self.output.setPlainText(text)
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Regenerate")
+        self.export_button.setEnabled(True)
+
+    def _on_export_clicked(self) -> None:
+        text = self.output.toPlainText()
+        if not text:
+            return
+        default_path = str(
+            gui_export.default_export_dir() / gui_export.DEFAULT_BRIEFING_TXT_FILENAME
+        )
+        path_str, _ = QFileDialog.getSaveFileName(
+            self, "Export Briefing", default_path, "Text files (*.txt)"
+        )
+        if not path_str:
+            return
+        try:
+            gui_export.write_text(text, Path(path_str))
+        except OSError as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
 
     def _on_failed(self, message: str) -> None:
         self.output.setStyleSheet(_output_style(error=True))
         self.output.setPlainText(message)
         self.generate_button.setEnabled(True)
+        self.export_button.setEnabled(False)
         self.generate_button.setText("Generate briefing")

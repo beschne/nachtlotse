@@ -8,25 +8,18 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
-   a PNG (reusing `chart_export.py`'s matplotlib path, or a direct
-   `QWidget.grab()` of the canvas), the briefing as `.txt`, and Sites/Rigs
-   as `.txt`.
-2. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
+1. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
    without a `limit`, so it already inherits the same
    `DEFAULT_MAX_EVALUATED` (50) cap the CLI defaults to — but unlike the
    CLI's own `--limit` flag, there's no sidebar control to change it
    (evaluate more, fewer, or 0/unlimited).
-3. **Session log:** record what's already been captured, and when — total
+2. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-4. **Current events:** well-placed comets, supernova alerts; later also minor
+3. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-5. **Multilingual UI/CLI text** (at minimum German and English). Everything
-   user-facing is English-only for now; this stays parked until there's a
-   reason to localize.
-6. **Framing preview for selected targets:** render what a target would
+4. **Framing preview for selected targets:** render what a target would
    actually look like through the given rig — its angular size/shape
    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
    math) — rather than only the numeric `framing_score`/reach. A visual
@@ -39,6 +32,9 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 Worth doing eventually, but not ranked against the list above — pick one
 up when it fits, not in any particular order.
 
+- **Multilingual UI/CLI text** (at minimum German and English). Everything
+  user-facing is English-only for now; this stays parked until there's a
+  reason to localize.
 - **Catalog object cross-references + descriptions:** a sub-feature or
   companion object embedded within another catalog entry (the Squid
   Nebula/OU4 inside Sh2-129, IC 1318b inside IC 1318, the NGC 6820 knot
@@ -65,6 +61,23 @@ up when it fits, not in any particular order.
   plots `plan.shortlist` (5 entries) by default — a toggle to plot the
   full `plan.ranked` list instead (or as well) would show what's just
   outside the shortlist cutoff.
+- **Sky chart PNG export: match the GUI canvas, Moon included.** The
+  Sky chart tab's "Export PNG…" (see "Export from the GUI" above)
+  reuses `chart_export.save_shortlist_chart` — the same render
+  `lotse plan --chart` produces, chart and legend baked into one
+  matplotlib figure so they land in the same PNG. But that render
+  doesn't match what the tab itself is showing: `chart_export.py`
+  never draws the Moon (track or phase icon, both real
+  `engine.ephemeris` output already reused elsewhere — `charting.
+  moon_track`, `gui/sky_chart.py`'s `_moon_phase_path` — just not
+  wired into this module), colors each track by a rotating palette
+  index rather than by verdict (`gui/sky_chart.py`'s
+  `_verdict_line_color`), and doesn't star-mark favorites the way
+  `LegendPanel._legend_row` does on screen. Closing the gap means
+  teaching `chart_export.py` to draw all three, not switching the
+  export to a `QWidget.grab()` of the live canvas (that would drop
+  the legend, which lives in a separate card/widget — see the "not
+  trivial" note on the Export item above).
 - **"Best sky" in the GUI:** `best_sky.py`/`lotse best-sky` (cross-site
   forecast cloud-cover comparison) has no GUI surface yet — the GUI can
   only plan for whichever single site is picked in the sidebar, not
