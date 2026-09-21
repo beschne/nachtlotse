@@ -28,12 +28,19 @@ import math
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from nachtlotse import charting
 from nachtlotse.engine import ephemeris
 from nachtlotse.gui import data_adapter
-from nachtlotse.gui.theme import COLORS, VERDICT_COLORS, RoundedCard
+from nachtlotse.gui.theme import COLORS, VERDICT_COLORS, RoundedCard, label_style
 from nachtlotse.planning import NightPlan, NightPlanForBestRig, is_favorite
 
 # Chart-space coordinates from `charting.project()` range roughly -98..98
@@ -122,27 +129,45 @@ class SkyChartCanvas(QWidget):
     `set_plan` — nothing is drawn until a plan with a non-empty
     shortlist arrives.
 
-    Kept square and pinned to the card's left edge: vertical size policy
-    is Expanding (fills the card's height, same as any QHBoxLayout
-    child), horizontal is Fixed — `resizeEvent` locks the width to match
-    the height on every resize (capped at `_MAX_SIZE`, so a tall window
-    doesn't inflate the chart far past a readable size), so the drawing
-    (already computed from `min(width, height)`, see `paintEvent`) never
-    sits in a canvas wider than it needs, and the legend column gets
-    that leftover width instead of empty card background.
+    Lives alone in its own `ChartPanel` card now (the legend moved out
+    to a separate `LegendPanel`), so both size policies are Expanding —
+    it simply fills whatever space that panel has, square or not
+    (`paintEvent` centers the circle and scales it from
+    `min(width, height)`, so any leftover width/height either side of
+    the drawn circle just reads as card padding). `_zoom` is an
+    additional multiplier on top of that fit-to-panel scale, driven by
+    `ChartPanel`'s +/Fit/− buttons — auto-fit alone (no cap, no manual
+    control) turned out not to be enough: a maximized window still left
+    users wanting a *specific* size, not just "as big as the panel
+    allows."
     """
 
-    _MAX_SIZE = 460
+    _ZOOM_MIN = 0.5
+    _ZOOM_MAX = 3.0
+    _ZOOM_STEP = 0.25
 
     def __init__(self) -> None:
         super().__init__()
         self._plan: NightPlan | NightPlanForBestRig | None = None
-        self.setMinimumSize(320, 320)
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self._zoom = 1.0
+        self.setMinimumSize(240, 240)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self.setFixedWidth(min(self.height(), self._MAX_SIZE))
+    @property
+    def zoom(self) -> float:
+        return self._zoom
+
+    def zoom_in(self) -> None:
+        self._zoom = min(self._ZOOM_MAX, round(self._zoom + self._ZOOM_STEP, 2))
+        self.update()
+
+    def zoom_out(self) -> None:
+        self._zoom = max(self._ZOOM_MIN, round(self._zoom - self._ZOOM_STEP, 2))
+        self.update()
+
+    def zoom_reset(self) -> None:
+        self._zoom = 1.0
+        self.update()
 
     def set_plan(self, plan: NightPlan | NightPlanForBestRig) -> None:
         self._plan = plan
@@ -160,7 +185,8 @@ class SkyChartCanvas(QWidget):
             return
 
         cx, cy = self.width() / 2.0, self.height() / 2.0
-        scale = (min(self.width(), self.height()) / 2.0 - 12) / _CHART_HALF_EXTENT
+        fit_scale = (min(self.width(), self.height()) / 2.0 - 12) / _CHART_HALF_EXTENT
+        scale = fit_scale * self._zoom
 
         def to_px(point: tuple[float, float]) -> QPointF:
             x, y = point
@@ -321,48 +347,102 @@ class SkyChartCanvas(QWidget):
         painter.drawEllipse(center, icon_r, icon_r)
 
 
-class SkyChartCard(RoundedCard):
-    """The chart canvas plus a legend column naming each shortlisted
-    entry and its track color."""
+def _zoom_button(text: str) -> QPushButton:
+    """A small outline button for the chart panel's zoom row — deliberately
+    quieter than `theme`'s filled clay buttons (Re-plan, Generate briefing):
+    those are the tab's one primary action, this is a secondary, repeatable
+    control that shouldn't compete with it for attention."""
+    button = QPushButton(text)
+    button.setFixedHeight(26)
+    button.setCursor(Qt.PointingHandCursor)
+    button.setStyleSheet(
+        f"""
+        QPushButton {{
+            background: transparent; color: {COLORS['ink_secondary']};
+            border: 1px solid {COLORS['border_strong']}; border-radius: 6px;
+            font-size: 12px; font-weight: 600; padding: 0 10px;
+        }}
+        QPushButton:hover {{ background: {COLORS['cream_hover']}; color: {COLORS['ink']}; }}
+        QPushButton:pressed {{ background: {COLORS['border']}; }}
+        QPushButton:disabled {{ color: {COLORS['ink_muted']}; border-color: {COLORS['border']}; }}
+        """
+    )
+    return button
+
+
+class ChartPanel(RoundedCard):
+    """The polar chart canvas plus a zoom row (−/Fit/+) above it — its own
+    card now, not sharing a row with the legend (see `SkyChartCard`), so
+    the canvas can fill the full panel in both directions instead of being
+    tied to height alone."""
 
     def __init__(self) -> None:
         super().__init__()
-        layout = QHBoxLayout(self)
-        # >= RoundedCard's own 16px border-radius: the canvas paints a
-        # square fillRect right to its own widget edges (QPainter has no
-        # idea the parent frame is rounded), so a smaller margin here
-        # lets that square corner visibly poke out past the frame's
-        # curve — same bug already fixed on the table cards
-        # (main_window._CARD_CONTENT_MARGIN).
+        layout = QVBoxLayout(self)
+        # >= RoundedCard's own 16px border-radius — see the matching note
+        # on `LegendPanel`/`main_window._CARD_CONTENT_MARGIN`: the canvas
+        # paints a square fillRect right to its own edges, so a smaller
+        # margin here would let that square corner poke out past the
+        # card's rounded curve.
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        layout.setSpacing(8)
+
+        zoom_row = QHBoxLayout()
+        zoom_row.setSpacing(6)
+        zoom_row.addStretch(1)
+        self._zoom_label = QLabel("100%")
+        self._zoom_label.setStyleSheet(
+            label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px;")
+        )
+        self._zoom_out_button = _zoom_button("−")
+        self._zoom_reset_button = _zoom_button("Fit")
+        self._zoom_in_button = _zoom_button("+")
+        zoom_row.addWidget(self._zoom_out_button)
+        zoom_row.addWidget(self._zoom_label)
+        zoom_row.addWidget(self._zoom_in_button)
+        zoom_row.addWidget(self._zoom_reset_button)
+        layout.addLayout(zoom_row)
 
         self.canvas = SkyChartCanvas()
-        # No stretch: the canvas is square (see its own docstring) and
-        # takes only the width its Fixed size policy gives it — all
-        # leftover horizontal space goes to the legend below instead.
-        layout.addWidget(self.canvas)
+        layout.addWidget(self.canvas, stretch=1)
 
-        self._legend_layout = QVBoxLayout()
-        self._legend_layout.setContentsMargins(0, 4, 4, 4)
+        self._zoom_out_button.clicked.connect(self._on_zoom_out)
+        self._zoom_in_button.clicked.connect(self._on_zoom_in)
+        self._zoom_reset_button.clicked.connect(self._on_zoom_reset)
+        self._update_zoom_label()
+
+    def _on_zoom_out(self) -> None:
+        self.canvas.zoom_out()
+        self._update_zoom_label()
+
+    def _on_zoom_in(self) -> None:
+        self.canvas.zoom_in()
+        self._update_zoom_label()
+
+    def _on_zoom_reset(self) -> None:
+        self.canvas.zoom_reset()
+        self._update_zoom_label()
+
+    def _update_zoom_label(self) -> None:
+        zoom = self.canvas.zoom
+        self._zoom_label.setText(f"{round(zoom * 100)}%")
+        self._zoom_out_button.setEnabled(zoom > SkyChartCanvas._ZOOM_MIN)
+        self._zoom_in_button.setEnabled(zoom < SkyChartCanvas._ZOOM_MAX)
+
+
+class LegendPanel(RoundedCard):
+    """A column naming each shortlisted entry and its track color — split
+    out from the chart into its own card (see `SkyChartCard`) so the chart
+    panel isn't forced to share width with it."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._legend_layout = QVBoxLayout(self)
+        self._legend_layout.setContentsMargins(16, 16, 16, 16)
         self._legend_layout.setSpacing(8)
         self._legend_layout.addStretch(1)
-        legend_container = QWidget()
-        # Same Qt quirk `theme.label_style` works around for QLabel and
-        # main_window._verdict_cell works around for its own container: a
-        # plain QWidget with no stylesheet of its own picks up an opaque
-        # default-palette background once any stylesheet exists anywhere
-        # in the app, instead of staying transparent over the card.
-        legend_container.setStyleSheet("background: transparent;")
-        legend_container.setLayout(self._legend_layout)
-        legend_container.setMinimumWidth(180)
-        layout.addWidget(legend_container, stretch=1)
 
-    def set_plan(self, plan: NightPlan | NightPlanForBestRig, local_tz) -> None:
-        self.canvas.set_plan(plan)
-        self._rebuild_legend(plan, local_tz)
-
-    def _rebuild_legend(self, plan: NightPlan | NightPlanForBestRig, local_tz) -> None:
+    def rebuild(self, plan: NightPlan | NightPlanForBestRig, local_tz) -> None:
         while self._legend_layout.count() > 1:
             item = self._legend_layout.takeAt(0)
             if item.widget():
@@ -421,3 +501,37 @@ class SkyChartCard(RoundedCard):
         name.setStyleSheet(f"color: {COLORS['ink']}; font-size: 11px; background: transparent;")
         row_layout.addWidget(name, stretch=1)
         return container
+
+
+class SkyChartCard(QWidget):
+    """The Sky chart tab's own content: `ChartPanel` and `LegendPanel`
+    side by side as two independent cards, not one shared card split by
+    an internal row — the chart previously had to fit itself into
+    whatever width the legend left over; as its own card it can fill the
+    panel fully in both directions (see `SkyChartCanvas`), and gets a
+    manual zoom control besides (`ChartPanel`'s −/Fit/+ row) rather than
+    relying on auto-fit-to-window alone.
+
+    A plain container, not itself a `RoundedCard` — `main_window.py`
+    hands this straight to `QTabWidget.addTab`, the same way it hands
+    other tabs a bare `RoundedCard`; here that's two cards side by side
+    instead of one, so this widget is just the QHBoxLayout gluing them
+    together, transparent over the tab pane.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(24)  # matches MainWindow's own root.setSpacing(24)
+
+        self.chart_panel = ChartPanel()
+        layout.addWidget(self.chart_panel, stretch=2)
+
+        self.legend_panel = LegendPanel()
+        self.legend_panel.setMinimumWidth(220)
+        layout.addWidget(self.legend_panel, stretch=1)
+
+    def set_plan(self, plan: NightPlan | NightPlanForBestRig, local_tz) -> None:
+        self.chart_panel.canvas.set_plan(plan)
+        self.legend_panel.rebuild(plan, local_tz)
