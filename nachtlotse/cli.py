@@ -274,6 +274,25 @@ def _cmd_plan_best_rig(
     return 0
 
 
+def _cmd_gui() -> int:
+    """Launches the native GUI — lazily imports `nachtlotse.gui`, whose
+    only real dependency (PySide6) is the `gui` extra, so plain `lotse
+    plan` never needs it installed. Same contract as `--chart`'s missing
+    `matplotlib` / `--prose`'s missing `anthropic`: an actionable stderr
+    message and exit code 2, not a traceback."""
+    try:
+        from nachtlotse.gui.app import main as gui_main
+    except ImportError as exc:
+        print(
+            "The GUI needs the `PySide6` package, which isn't installed — "
+            "run `uv sync --extra gui` and try again.",
+            file=sys.stderr,
+        )
+        print(f"({exc})", file=sys.stderr)
+        return 2
+    return gui_main()
+
+
 def _format_site_line(record: SiteRecord) -> str:
     site = record.site
     profile = "measured" if len(site.horizon.points) > 4 else "flat/sector"
@@ -508,6 +527,9 @@ def main(argv: list[str] | None = None) -> int:
 
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
+    subparsers.add_parser(
+        "gui", help="Launch the native GUI (needs `uv sync --extra gui`)"
+    )
 
     best_sky_parser = subparsers.add_parser(
         "best-sky",
@@ -560,6 +582,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_rigs()
     if args.command == "best-sky":
         return _cmd_best_sky(args.site, args.radius_km, args.date)
+    if args.command == "gui":
+        return _cmd_gui()
     parser.error(f"unknown command: {args.command}")
     return 2
 

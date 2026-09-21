@@ -40,9 +40,9 @@ At a dark site, the core decision runs **offline** (weather is an optional layer
 - **UI:** the CLI is the only front end for now. A Streamlit MVP (M5) was
   built and later retired — maintaining two front ends against the same
   engine wasn't worth it while the CLI is still the active focus. The
-  longer-term goal is a **native macOS app, in Python** (Swift is
-  explicitly out of scope; exact toolkit — e.g. PySide6/Qt — not yet
-  decided) — see [ROADMAP.md](./ROADMAP.md).
+  longer-term goal is a **native macOS app, in Python, on PySide6/Qt**
+  (Swift is explicitly out of scope; PySide6 was chosen over PyObjC/AppKit
+  after a hands-on side-by-side spike — see [ROADMAP.md](./ROADMAP.md)).
 
 ---
 
@@ -219,6 +219,7 @@ only when `--prose` is explicitly passed (see STATUS.md).
 uv sync                       # environment/dependencies
 uv sync --extra charts         # + matplotlib, needed for `lotse plan --chart`
 uv sync --extra prose          # + anthropic, needed for `lotse plan --prose`
+uv sync --extra gui            # + PySide6, needed for `lotse gui` (early, in progress)
 uv run pytest                 # tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
@@ -227,6 +228,7 @@ uv run lotse plan --limit 20   # evaluate only the first 20 matching objects
 uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
+uv run lotse gui                # the early native GUI (see ROADMAP.md)
 ```
 
 ---

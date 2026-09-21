@@ -1,6 +1,6 @@
 [project]
 name = "nachtlotse"
-version = "2.4.0"
+version = "2.5.0"
 description = "Deterministic astrophotography session planner: scores sky, site, and equipment into a shortlist with a GO/MARGINAL/SKIP verdict per target"
 requires-python = ">=3.12"
 dependencies = [
@@ -23,6 +23,13 @@ charts = [
 # Guiding principle). Install with `uv sync --extra prose`.
 prose = [
     "anthropic>=0.69",
+]
+# `lotse gui` — the native macOS app (ROADMAP.md), not needed for the
+# text-only CLI. PySide6 was chosen over PyObjC/AppKit after a hands-on
+# framework spike (see ROADMAP.md's "Native macOS app" entry). Install
+# with `uv sync --extra gui`.
+gui = [
+    "pyside6>=6.7",
 ]
 
 [project.scripts]

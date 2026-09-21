@@ -68,14 +68,38 @@ up when it fits, not in any particular order.
   `planning.rank_targets_for_best_rig`'s own docstring).
 - **Native macOS app** — the long-term UI goal now that Nachtlotse's GitHub
   presence is explicitly a portfolio piece, not just a personal tool.
-  Python throughout (Swift is deliberately out of scope); exact toolkit
-  undecided (PySide6/Qt is the leading candidate) — to be designed once
-  the CLI's own feature set (the prioritized list above) has matured
-  further. Whatever it consumes — `--json` output, or the engine/`planning`
-  layer directly if it's Python-native — the same `cli.py` →
-  `engine`/`data` dependency direction applies; see the Streamlit MVP's
-  retirement (M5, in [STATUS.md](./STATUS.md#mvp-roadmap-milestones-detail))
-  for why this project doesn't maintain two front ends at once.
+  Python throughout (Swift is deliberately out of scope). **Toolkit
+  decided: PySide6 (Qt)**, not PyObjC/AppKit — settled by building the
+  same "Tonight" shortlist screen in both (a throwaway `macos-app-spike/`
+  comparison, not committed) against the Claude Design system's own
+  planner UI kit as the visual reference. PySide6 won on ergonomics: its
+  QSS stylesheets get rounded cards, soft shadows, colored verdict pills,
+  and a styled combo-box popup essentially for free, where AppKit needed
+  manual `CALayer` poking per custom-styled element and hit real
+  friction (bridged Cocoa objects need a module-level strong-reference
+  list to survive; target-action wiring is a colon-suffixed selector
+  string per control, not a `.connect()` call). The tradeoff accepted:
+  Qt's "native-ish" macOS look, not AppKit's pixel-exact native chrome —
+  judged an acceptable price for the ergonomics, but not fully polished
+  yet (some Qt-on-macOS combo-box/label default-styling quirks surfaced
+  and were fixed in the spike; expect more when building the real thing).
+  **Scaffolding underway** in `nachtlotse/gui/` (`lotse gui`, behind the
+  `gui` extra — PySide6 is never imported at `cli.py` module level, only
+  lazily from its `gui` subcommand handler): a `data_adapter.py` with zero
+  PySide6 dependency (unit-tested without the extra installed) feeds five
+  screens — the shortlist, the full ranked table, a `QPainter`-rendered
+  polar sky chart reusing `charting.py`'s own geometry (colored by
+  verdict, not `--chart`'s categorical palette), the LLM nightly briefing
+  (`prose.generate_nightly_briefing`, same "only if the user explicitly
+  asks, fail loudly if unavailable" contract as `--prose`, run off the UI
+  thread), and a read-only sites/rigs reference screen (`sites_local.yaml`
+  /`rigs_local.yaml` stay hand-edited YAML for now — an in-app editor
+  that round-trips them without mangling comments/formatting is separate,
+  not-yet-scoped work). Consumes the engine/`planning` layer directly,
+  since it's Python-native — the same `cli.py` → `engine`/`data`
+  dependency direction applies; see the Streamlit MVP's retirement (M5,
+  in [STATUS.md](./STATUS.md#mvp-roadmap-milestones-detail)) for why this
+  project doesn't maintain two front ends at once.
 
 ## Out of scope (deliberately excluded)
 - Mount control / session automation

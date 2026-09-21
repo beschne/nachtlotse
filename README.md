@@ -16,7 +16,9 @@ not two separate shortlist entries. With more than one rig configured, a
 best-rig chooser can also pick whichever one frames each target best,
 instead of scoring for a single rig you name. An optional nightly
 briefing (Claude API, only when asked for) phrases the shortlist as
-prose — the engine's numbers and verdicts still decide everything.
+prose — the engine's numbers and verdicts still decide everything. An
+early native GUI (PySide6) is also under active development — see
+[Native GUI (early, in progress)](#native-gui-early-in-progress) below.
 
 ## Guiding principle
 
@@ -128,6 +130,27 @@ Every Open-Meteo forecast is cached per site for 1 hour in
 `best-sky` run within that hour reuses it instead of hitting the network
 again.
 
+## Native GUI (early, in progress)
+
+A native macOS app (PySide6/Qt, no Swift) is being built alongside the
+CLI — the long-term UI goal, not a replacement for `lotse plan` yet. It's
+early and rough around the edges; the CLI remains the primary, complete
+front end.
+
+```bash
+uv sync --extra gui   # needs PySide6, not installed by default
+uv run lotse gui
+```
+
+It computes real plans against your own `sites_local.yaml`/`rigs_local.yaml`
+(no illustrative/fake data) across five tabs: the shortlist, the full
+ranked table, a polar sky chart (colored by verdict), a nightly-briefing
+screen (same Claude API opt-in/fail-loud contract as `--prose` — nothing
+is sent to Anthropic until you click Generate), and a read-only sites/rigs
+reference. See [ROADMAP.md](./ROADMAP.md) for the toolkit decision
+(PySide6 over PyObjC/AppKit) and what's still missing (an in-app
+sites/rigs editor, among others).
+
 ## Architecture
 
 ```
@@ -139,16 +162,17 @@ nachtlotse/
 ├── chart_export.py  # CLI's --chart PNG export (matplotlib)
 ├── best_sky.py # cross-site weather comparison (`lotse best-sky`)
 ├── prose.py    # LLM nightly briefing (`lotse plan --prose`, opt-in)
-└── cli.py      # the only front end for now — a native macOS app is
-                #   planned later, kept Python-only (see CLAUDE.md)
+├── gui/        # early native app (PySide6, `lotse gui`, opt-in extra)
+└── cli.py      # the primary, complete front end (see CLAUDE.md)
 ```
 
-Dependency direction: `cli.py` → `engine`/`data`. The `engine` core imports
-nothing from `cli.py`, `data`, or `weather`.
+Dependency direction: `cli.py`/`gui/` → `engine`/`data`. The `engine` core
+imports nothing from `cli.py`, `gui/`, `data`, or `weather`.
 
 ## Tech stack
 
 Python 3.12+ · `uv` · `skyfield` / `astroplan` / `astropy` · `pytest` · `ruff`
+· `PySide6` (optional, native GUI)
 
 ## License
 
