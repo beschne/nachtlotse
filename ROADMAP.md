@@ -8,14 +8,10 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Sky chart: Moon in the legend.** The Moon is drawn on the chart
-   (track + phase icon) but has no legend row of its own, unlike every
-   shortlisted target — add one so the legend actually lists everything
-   the chart draws.
-2. **App icon** for the Dock and menu bar — `lotse gui` currently runs
+1. **App icon** for the Dock and menu bar — `lotse gui` currently runs
    with whatever generic icon Python/PySide6 falls back to. Needs an
    actual `.icns` asset, not just code.
-3. **Favorites in the catalog:** a starred/favorite flag on a target,
+2. **Favorites in the catalog:** a starred/favorite flag on a target,
    independent of ranking — motivated by variable-star photometry (e.g.
    T Coronae Borealis, "T CrB") that should be measured and shown every
    session regardless of where it'd normally fall in the shortlist cutoff.
@@ -25,38 +21,38 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
    somewhere to show them — a pinned section within Shortlist, or their
    own tab — plus the sky chart should plot favorite tracks even when
    they're not otherwise part of the top-ranked shortlist.
-4. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
+3. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
    a PNG (reusing `chart_export.py`'s matplotlib path, or a direct
    `QWidget.grab()` of the canvas), the briefing as `.txt`, and Sites/Rigs
    as `.txt`.
-5. **Hourly cloud cover for the astro-night:** `weather/open_meteo.py`
+4. **Hourly cloud cover for the astro-night:** `weather/open_meteo.py`
    currently aggregates cloud cover over the whole dark window into one
    `WeatherSummary` (`max_cloud_cover_pct`/`avg_cloud_cover_pct`). Instead,
    surface the hour-by-hour Open-Meteo series, clipped to the astronomical
    dark window (`constraints.dark_window`) rather than the full calendar
    night, so a fully-clear window that closes early or a socked-in window
    that clears at 2am shows up as a shape, not one averaged number.
-6. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
+5. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
    without a `limit`, so it already inherits the same
    `DEFAULT_MAX_EVALUATED` (50) cap the CLI defaults to — but unlike the
    CLI's own `--limit` flag, there's no sidebar control to change it
    (evaluate more, fewer, or 0/unlimited).
-7. **Session log:** record what's already been captured, and when — total
+6. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-8. **Current events:** well-placed comets, supernova alerts; later also minor
+7. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-9. **Multilingual UI/CLI text** (at minimum German and English). Everything
+8. **Multilingual UI/CLI text** (at minimum German and English). Everything
    user-facing is English-only for now; this stays parked until there's a
    reason to localize.
-10. **Framing preview for selected targets:** render what a target would
-    actually look like through the given rig — its angular size/shape
-    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
-    math) — rather than only the numeric `framing_score`/reach. A visual
-    check for "does this actually fit, and how tightly" for a target picked
-    off the shortlist, complementing (not replacing) the existing polar
-    `--chart`, which shows where in the sky, not how it frames.
+9. **Framing preview for selected targets:** render what a target would
+   actually look like through the given rig — its angular size/shape
+   against the rig's field of view (from `framing.py`'s FoV/fill-fraction
+   math) — rather than only the numeric `framing_score`/reach. A visual
+   check for "does this actually fit, and how tightly" for a target picked
+   off the shortlist, complementing (not replacing) the existing polar
+   `--chart`, which shows where in the sky, not how it frames.
 
 ## Non-prioritized ideas
 

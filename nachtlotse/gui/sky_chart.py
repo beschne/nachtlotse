@@ -344,11 +344,22 @@ class SkyChartCard(RoundedCard):
         rows = data_adapter.build_shortlist_rows(plan, local_tz)
         for index, row in enumerate(rows):
             self._legend_layout.insertWidget(
-                self._legend_layout.count() - 1, self._legend_row(row, _track_color(index))
+                self._legend_layout.count() - 1, self._legend_row(row.label, _track_color(index))
+            )
+
+        # The Moon is drawn on the canvas (track + phase icon) whenever it
+        # clears the horizon during the window — same check `_paint_moon`
+        # makes before drawing anything — so the legend should list it too,
+        # not just the shortlisted targets, or it's the one thing on the
+        # chart nobody can identify.
+        moon_track = charting.moon_track(plan.site, plan.evening_start, plan.morning_end)
+        if moon_track.segments:
+            self._legend_layout.insertWidget(
+                self._legend_layout.count() - 1, self._legend_row("Moon", QColor("#000000"))
             )
 
     @staticmethod
-    def _legend_row(row: data_adapter.ShortlistRow, color: QColor) -> QWidget:
+    def _legend_row(label: str, color: QColor) -> QWidget:
         container = QWidget()
         container.setStyleSheet("background: transparent;")
         row_layout = QHBoxLayout(container)
@@ -360,7 +371,7 @@ class SkyChartCard(RoundedCard):
         dot.setStyleSheet(f"background: {color.name()}; border-radius: 5px;")
         row_layout.addWidget(dot)
 
-        name = QLabel(row.label)
+        name = QLabel(label)
         name.setWordWrap(True)
         name.setStyleSheet(f"color: {COLORS['ink']}; font-size: 11px; background: transparent;")
         row_layout.addWidget(name, stretch=1)
