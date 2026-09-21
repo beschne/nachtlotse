@@ -12,19 +12,26 @@ ships through difficult waters, but for clear nights and telescopes.)*
 > My pilot through clear nights. Answers the oldest question in astrophotography:
 > **"What should I shoot tonight?"** — and delivers an honest verdict.
 
-A deterministic session planner for astrophotography, native on macOS. It scores
-tonight's sky over a given site against a given equipment rig and distills the
-result down to a short, score-ranked **shortlist** of targets — each with its
-own verdict: **GO / MARGINAL / SKIP** — with a traceable rationale, built on an
-open, testable engine. Targets close enough to share one frame of your rig
-(e.g. M81 + M82) are automatically suggested as a single co-visible group,
-not two separate shortlist entries. With more than one rig configured, a
-best-rig chooser can also pick whichever one frames each target best,
-instead of scoring for a single rig you name. An optional nightly
-briefing (Claude API, only when asked for) phrases the shortlist as
-prose — the engine's numbers and verdicts still decide everything. A
-native GUI (PySide6) is also available — see
+A deterministic session planner **built for astrophotographers**, native on
+macOS. It scores tonight's sky over a given site against a given equipment
+rig and distills the result down to a short, score-ranked **shortlist** of
+targets — each with its own verdict: **GO / MARGINAL / SKIP** — with a
+traceable rationale, built on an open, testable engine. Targets close enough
+to share one frame of your rig (e.g. M81 + M82) are automatically suggested
+as a single co-visible group, not two separate shortlist entries. With more
+than one rig configured, a best-rig chooser can also pick whichever one
+frames each target best, instead of scoring for a single rig you name. An
+optional nightly briefing (Claude API, only when asked for) phrases the
+shortlist as prose — the engine's numbers and verdicts still decide
+everything. A native GUI (PySide6) is also available — see
 [Native GUI](#native-gui) below.
+
+<p align="center">
+  <img src="screenshots/gui-shortlist.png" alt="Nachtlotse GUI: the Shortlist tab" width="49%">
+  <img src="screenshots/gui-sky-chart.png" alt="Nachtlotse GUI: the Sky chart tab" width="49%">
+</p>
+
+<p align="center"><sub>Same plan, two views — Volkssternwarte Hochtaunus, TEC AP 160/1120 f/7 FL, the night of Friday, September 25.</sub></p>
 
 ## Guiding principle
 
@@ -146,6 +153,8 @@ the CLI remains the primary front end.
 uv sync --extra gui   # needs PySide6, not installed by default
 uv run lotse gui
 ```
+
+(Screenshots at the top of this README.)
 
 It computes real plans against your own `sites_local.yaml`/`rigs_local.yaml`
 (no illustrative/fake data) across five tabs: the shortlist, the full
