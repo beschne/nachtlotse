@@ -6,7 +6,8 @@ unconditionally, unlike anything that touches real Qt widgets.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from nachtlotse.data.store import RigRecord, SiteRecord
@@ -90,6 +91,8 @@ def _night_plan(shortlist_ranked) -> NightPlan:
         evening_start=_WHEN,
         morning_end=_WHEN,
         moon_illumination_pct=42.0,
+        moonrise=None,
+        moonset=None,
         weather=_WEATHER,
         ranked=list(shortlist_ranked),
         shortlist=shortlist,
@@ -155,6 +158,8 @@ def test_build_shortlist_rows_names_each_entrys_own_rig_for_best_rig_plans() -> 
         evening_start=_WHEN,
         morning_end=_WHEN,
         moon_illumination_pct=10.0,
+        moonrise=None,
+        moonset=None,
         weather=None,
         ranked=[row],
         shortlist=[BestRigShortlistEntry(row, Verdict(level="MARGINAL", reasons=["x"]))],
@@ -189,6 +194,8 @@ def test_build_header_summary_counts_verdicts_and_formats_the_dark_window() -> N
         evening_start=_WHEN,
         morning_end=_WHEN,
         moon_illumination_pct=66.0,
+        moonrise=None,
+        moonset=None,
         weather=_WEATHER,
         ranked=[go_row, skip_row],
         shortlist=[
@@ -204,6 +211,34 @@ def test_build_header_summary_counts_verdicts_and_formats_the_dark_window() -> N
     assert "1 skip" in summary.counts_text
     assert "2 shortlisted" in summary.counts_text
     assert "2026-09-21" in summary.dark_window_text  # UTC 22:00 -> next-day CEST
+
+
+def test_build_header_summary_appends_whichever_moon_events_are_present() -> None:
+    go_row = RankedTarget(
+        target=_TARGET_A, best_time=_WHEN, pos=_pos(55.0, 180.0), fit=1.0, reach=1.0
+    )
+    base_plan = NightPlan(
+        site=SITE,
+        rig=RIG,
+        evening_start=_WHEN,
+        morning_end=_WHEN,
+        moon_illumination_pct=66.0,
+        moonrise=None,
+        moonset=None,
+        weather=_WEATHER,
+        ranked=[go_row],
+        shortlist=[ShortlistEntry(go_row, Verdict(level="GO", reasons=["fine"]))],
+    )
+
+    both = data_adapter.build_header_summary(
+        replace(base_plan, moonrise=_WHEN, moonset=_WHEN + timedelta(hours=8)), BERLIN
+    )
+    rise_only = data_adapter.build_header_summary(replace(base_plan, moonrise=_WHEN), BERLIN)
+    neither = data_adapter.build_header_summary(base_plan, BERLIN)
+
+    assert "rises" in both.moon_text and "sets" in both.moon_text
+    assert "rises" in rise_only.moon_text and "sets" not in rise_only.moon_text
+    assert neither.moon_text == "66% illuminated"
 
 
 def test_build_site_info_covers_aliases_region_bortle_and_address() -> None:

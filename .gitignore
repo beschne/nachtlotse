@@ -28,7 +28,6 @@ rigs_local.yaml
 prose_local.yaml
 
 # Local secrets — never committed.
-secrets/
 scratch.md/
 
 # `lotse plan --chart`'s default PNG output — generated on demand into

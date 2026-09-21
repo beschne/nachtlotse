@@ -63,21 +63,6 @@ DARK_COLORS = {
     "skip_tint": "#33211d",
 }
 
-# The dark polar sky chart stays dark regardless of app theme — a night
-# sky doesn't get a light-mode variant. Values from tokens/colors.css.
-SKY_COLORS = {
-    "canvas": "#0b1120",
-    "rim": "#1b2740",
-    "grid": "rgba(150,168,208,0.16)",
-    "grid_strong": "rgba(150,168,208,0.32)",
-    "label": "#8ea0c6",
-    "star": "#f3efe4",
-    "go": "#7fb36a",
-    "marginal": "#e2b45c",
-    "skip": "#cc8578",
-    "moon": "#ddcf94",
-}
-
 # Only light mode is wired up in this first scaffold — swap this binding
 # once a theme toggle exists.
 COLORS = LIGHT_COLORS
@@ -163,4 +148,12 @@ class VerdictBadge(QLabel):
             }}
             """
         )
+        # sizeHint() right after setStyleSheet() can still reflect the
+        # pre-stylesheet font metrics — Qt only guarantees the QSS (here,
+        # the bold 11px font and padding) has actually been applied once
+        # the widget is polished. Skipping this made every badge a hair
+        # narrower than its real text needs, worst for the longest word
+        # ("MARGINAL" was clipped to "MARGINA") since the shortfall is a
+        # fixed number of pixels regardless of label length.
+        self.ensurePolished()
         self.setFixedSize(self.sizeHint())

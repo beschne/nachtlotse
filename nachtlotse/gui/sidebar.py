@@ -52,9 +52,24 @@ class Sidebar(RoundedCard):
 
         wordmark = QLabel("Nachtlotse")
         wordmark.setStyleSheet(
-            label_style(f"color: {COLORS['ink']}; font-size: 19px; font-weight: 600; margin-bottom: 18px;")
+            label_style(f"color: {COLORS['ink']}; font-size: 19px; font-weight: 600;")
         )
         layout.addWidget(wordmark)
+
+        about = QLabel("My pilot through clear nights.")
+        about.setWordWrap(True)
+        about.setStyleSheet(
+            label_style(f"color: {COLORS['ink_secondary']}; font-size: 11px; margin-top: 2px;")
+        )
+        layout.addWidget(about)
+
+        copyright_label = QLabel("© 2026 Benno Schneider")
+        copyright_label.setStyleSheet(
+            label_style(
+                f"color: {COLORS['ink_muted']}; font-size: 10px; margin-top: 2px; margin-bottom: 16px;"
+            )
+        )
+        layout.addWidget(copyright_label)
 
         picker_style = f"""
             QComboBox, QDateEdit {{
@@ -119,7 +134,7 @@ class Sidebar(RoundedCard):
         self.date_edit = QDateEdit(QDate.currentDate())
         self.date_edit.setLocale(QLocale(QLocale.English, QLocale.UnitedStates))
         self.date_edit.setCalendarPopup(True)
-        self.date_edit.setDisplayFormat("ddd d MMMM")
+        self.date_edit.setDisplayFormat("dddd, MMMM d")
         self.date_edit.setStyleSheet(picker_style)
         self.date_edit.calendarWidget().setLocale(self.date_edit.locale())
         self.date_edit.calendarWidget().setStyleSheet(

@@ -122,6 +122,8 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
         evening_start=base,
         morning_end=base + timedelta(hours=6),
         moon_illumination_pct=0.0,
+        moonrise=None,
+        moonset=None,
         weather=None,
         ranked=[ranked],
         shortlist=[entry],
@@ -139,14 +141,49 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
         assert math.hypot(x, y) <= 90.0 + 1e-9
 
 
-def test_shortlist_tracks_combines_every_member_of_a_group_into_one_track(
+def test_moon_track_clips_below_horizon_and_splits_into_segments(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same clipping/splitting contract as `shortlist_tracks`, for the
+    Moon's own path (`engine.ephemeris.moon_altaz_series`, a real
+    solar-system body, not a catalog `Target`)."""
+    site = store.default_site_record().site
+    base = datetime(2026, 6, 1, 22, 0, tzinfo=UTC)
+    fake_series = [
+        (base + timedelta(hours=i), ephemeris.AltAz(alt_deg=alt, az_deg=az, distance_au=0.0025))
+        for i, (alt, az) in enumerate(
+            [(-5.0, 10.0), (-2.0, 20.0), (5.0, 30.0), (10.0, 40.0), (5.0, 50.0), (-3.0, 60.0), (-8.0, 70.0)]
+        )
+    ]
+    monkeypatch.setattr(
+        charting.ephemeris,
+        "moon_altaz_series",
+        lambda *args, **kwargs: fake_series,
+    )
+
+    track = charting.moon_track(site, base, base + timedelta(hours=6))
+
+    assert track.name == "Moon"
+    assert len(track.segments) == 1
+    (segment,) = track.segments
+    assert len(segment) == 3
+    for x, y in segment:
+        assert math.hypot(x, y) <= 90.0 + 1e-9
+
+
+def test_shortlist_tracks_draws_a_single_line_for_a_group_not_one_per_member(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A `RankedGroup`'s track carries every member's own altitude curve
-    — one legend entry/color for the whole group, not one per member
-    (`SHORTLIST_PALETTE` has a slot per shortlist entry, not per target)."""
+    """A `RankedGroup`'s track is one line from its centroid position
+    (`engine.grouping.centroid_target`), not one overlaid curve per
+    member — members are co-visible/close together by construction, so
+    stacking near-identical curves just clutters the chart, and one
+    legend entry/color for the whole group already implies one line
+    (`SHORTLIST_PALETTE` has a slot per shortlist entry, not per
+    target)."""
     site = store.default_site_record().site
     rig = store.default_rig_record().rig
     target_a = Target(name="group member a", ra_deg=10.0, dec_deg=20.0)
@@ -157,8 +194,10 @@ def test_shortlist_tracks_combines_every_member_of_a_group_into_one_track(
         (base + timedelta(hours=i), ephemeris.AltAz(alt_deg=30.0, az_deg=40.0, distance_au=1.0))
         for i in range(3)
     ]
+    calls: list[Target] = []
 
     def fake_altitude_series(_site, target, *_args, **_kwargs):
+        calls.append(target)
         return always_above_horizon
 
     monkeypatch.setattr(charting.ephemeris, "altitude_series", fake_altitude_series)
@@ -177,6 +216,8 @@ def test_shortlist_tracks_combines_every_member_of_a_group_into_one_track(
         evening_start=base,
         morning_end=base + timedelta(hours=3),
         moon_illumination_pct=0.0,
+        moonrise=None,
+        moonset=None,
         weather=None,
         ranked=[ranked],
         shortlist=[entry],
@@ -186,7 +227,11 @@ def test_shortlist_tracks_combines_every_member_of_a_group_into_one_track(
 
     assert len(tracks) == 1
     (track,) = tracks
+    # The legend/name still names every member ...
     assert track.name == "group member a + group member b"
-    # One 3-point segment per member, both above the horizon throughout.
-    assert len(track.segments) == 2
-    assert all(len(segment) == 3 for segment in track.segments)
+    # ... but the plotted line itself came from one altitude_series call
+    # (the centroid), not one per member.
+    assert len(calls) == 1
+    assert calls[0] not in (target_a, target_b)
+    assert len(track.segments) == 1
+    assert len(track.segments[0]) == 3

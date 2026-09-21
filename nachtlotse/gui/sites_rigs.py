@@ -1,21 +1,22 @@
-"""The "Sites & Rigs" reference screen — what `lotse sites`/`lotse rigs`
-print, shown side by side instead.
+"""The "Sites" and "Rigs" reference screens — what `lotse sites`/
+`lotse rigs` print, as their own tabs.
 
 Read-only, deliberately: `store.SITES`/`store.RIGS` come from
 `sites_local.yaml`/`rigs_local.yaml`, hand-authored YAML files with
 their own comments and formatting (see `store.py`) — round-tripping an
 in-app editor through those without mangling them is real, separate
-scope, not part of this first scaffold. This screen only surfaces what's
-already configured, same as the CLI's own `sites`/`rigs` commands.
+scope, not part of this first scaffold. These screens only surface
+what's already configured, same as the CLI's own `sites`/`rigs`
+commands.
 
 Static once built: `store.SITES`/`store.RIGS` are loaded once at import
-time and don't change while the app runs, so unlike the other tabs this
-one isn't rebuilt on Re-plan.
+time and don't change while the app runs, so unlike the other tabs
+these aren't rebuilt on Re-plan.
 """
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.gui import data_adapter
@@ -79,35 +80,37 @@ def _rig_card(record: RigRecord) -> QWidget:
     return card
 
 
-class SitesRigsCard(QScrollArea):
-    """Two scrollable columns: every configured site, every configured
-    rig — built once from `store.SITES`/`store.RIGS`."""
+def _list_content(heading_text: str, cards: list[QWidget]) -> QWidget:
+    """A single scrollable column's content: a heading, then one card per record."""
+    content = QWidget()
+    content.setStyleSheet(f"background: {COLORS['cream']};")
+    column = QVBoxLayout(content)
+    column.setContentsMargins(4, 4, 4, 4)
+    column.setSpacing(10)
+    column.addWidget(_heading(heading_text))
+    for card in cards:
+        column.addWidget(card)
+    column.addStretch(1)
+    return content
 
-    def __init__(self, sites: list[SiteRecord], rigs: list[RigRecord]) -> None:
+
+class _ListScrollArea(QScrollArea):
+    def __init__(self, content: QWidget) -> None:
         super().__init__()
         self.setWidgetResizable(True)
         self.setStyleSheet(f"QScrollArea {{ background: {COLORS['cream']}; border: none; }}")
-
-        content = QWidget()
-        content.setStyleSheet(f"background: {COLORS['cream']};")
-        columns = QHBoxLayout(content)
-        columns.setContentsMargins(4, 4, 4, 4)
-        columns.setSpacing(20)
-
-        sites_column = QVBoxLayout()
-        sites_column.setSpacing(10)
-        sites_column.addWidget(_heading(f"SITES ({len(sites)})"))
-        for record in sites:
-            sites_column.addWidget(_site_card(record))
-        sites_column.addStretch(1)
-        columns.addLayout(sites_column, stretch=1)
-
-        rigs_column = QVBoxLayout()
-        rigs_column.setSpacing(10)
-        rigs_column.addWidget(_heading(f"RIGS ({len(rigs)})"))
-        for record in rigs:
-            rigs_column.addWidget(_rig_card(record))
-        rigs_column.addStretch(1)
-        columns.addLayout(rigs_column, stretch=1)
-
         self.setWidget(content)
+
+
+class SitesCard(_ListScrollArea):
+    """Every configured site, one card each — built once from `store.SITES`."""
+
+    def __init__(self, sites: list[SiteRecord]) -> None:
+        super().__init__(_list_content(f"SITES ({len(sites)})", [_site_card(r) for r in sites]))
+
+
+class RigsCard(_ListScrollArea):
+    """Every configured rig, one card each — built once from `store.RIGS`."""
+
+    def __init__(self, rigs: list[RigRecord]) -> None:
+        super().__init__(_list_content(f"RIGS ({len(rigs)})", [_rig_card(r) for r in rigs]))

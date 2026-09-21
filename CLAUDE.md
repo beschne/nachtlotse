@@ -37,12 +37,16 @@ At a dark site, the core decision runs **offline** (weather is an optional layer
 - **Lint/format:** `ruff`
 - **Type checking:** `mypy` (recommended; not currently in `pyproject.toml` —
   add it before relying on it)
-- **UI:** the CLI is the only front end for now. A Streamlit MVP (M5) was
-  built and later retired — maintaining two front ends against the same
-  engine wasn't worth it while the CLI is still the active focus. The
-  longer-term goal is a **native macOS app, in Python, on PySide6/Qt**
-  (Swift is explicitly out of scope; PySide6 was chosen over PyObjC/AppKit
-  after a hands-on side-by-side spike — see [ROADMAP.md](./ROADMAP.md)).
+- **UI:** two front ends, both against the same engine directly (no
+  serialization in between): `cli.py` (the original, still the primary
+  one) and a **native macOS app, in Python, on PySide6/Qt** (`lotse gui`,
+  behind the `gui` extra — Swift is explicitly out of scope; PySide6 was
+  chosen over PyObjC/AppKit after a hands-on side-by-side spike, see
+  [ROADMAP.md](./ROADMAP.md)), ready for use, not a preview. A third
+  front end, a Streamlit MVP (M5), was built and later retired —
+  maintaining that alongside the CLI wasn't worth it; the GUI's own
+  dependency direction (`gui/` → `engine`/`data`, PySide6 never imported
+  at `cli.py` module level) keeps it from repeating that mistake.
 
 ---
 
@@ -67,14 +71,17 @@ nachtlotse/
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
 ├── charting.py      # shared polar-chart geometry, no charting-library dependency
 ├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
-├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs` — the only front end
+├── best_sky.py      # cross-site weather comparison (`lotse best-sky`)
+├── prose.py         # LLM nightly briefing (`lotse plan --prose`, opt-in)
+├── gui/             # native app (PySide6, `lotse gui`, opt-in `gui` extra)
+├── cli.py           # `lotse plan`, `lotse sites`, `lotse rigs`, ... — the original front end
 └── tests/
 ```
 
-**Dependency direction:** `cli.py` → `engine`/`data`. The `engine` core imports
-*nothing* from `cli.py`, `data`, or `weather`. This is the most important rule in
-the project — whatever front end comes next (see [ROADMAP.md](./ROADMAP.md)) plugs
-in the same way.
+**Dependency direction:** `cli.py`/`gui/` → `engine`/`data`. The `engine` core
+imports *nothing* from `cli.py`, `gui/`, `data`, or `weather` — the rule both
+front ends plug in by (PySide6 itself is never imported at `cli.py` module
+level, only lazily from its `gui` subcommand handler).
 
 ---
 

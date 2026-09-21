@@ -176,6 +176,22 @@ class HeaderSummary:
     counts_text: str
 
 
+def _moon_event_text(
+    moonrise: datetime | None, moonset: datetime | None, local_tz: ZoneInfo
+) -> str:
+    """"rises HH:MM", "sets HH:MM", both, or "" — either can be absent:
+    the Moon doesn't necessarily cross the horizon during a given dark
+    window (see `planning._moon_rise_set`), and this makes no claim
+    about "up"/"down" all night without actually checking, so it just
+    omits whichever event didn't happen."""
+    parts = []
+    if moonrise is not None:
+        parts.append(f"rises {moonrise.astimezone(local_tz):%H:%M}")
+    if moonset is not None:
+        parts.append(f"sets {moonset.astimezone(local_tz):%H:%M}")
+    return " · ".join(parts)
+
+
 def build_header_summary(
     plan: NightPlan | NightPlanForBestRig, local_tz: ZoneInfo
 ) -> HeaderSummary:
@@ -183,12 +199,17 @@ def build_header_summary(
     for entry in plan.shortlist:
         counts[entry.verdict.level] += 1
 
+    moon_text = f"{plan.moon_illumination_pct:.0f}% illuminated"
+    event_text = _moon_event_text(plan.moonrise, plan.moonset, local_tz)
+    if event_text:
+        moon_text = f"{moon_text} · {event_text}"
+
     return HeaderSummary(
         dark_window_text=(
             f"{plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
             f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}"
         ),
-        moon_text=f"{plan.moon_illumination_pct:.0f}% illuminated",
+        moon_text=moon_text,
         weather_text=weather_line(plan.weather),
         counts_text=(
             f"{len(plan.shortlist)} shortlisted · {counts['GO']} GO · "

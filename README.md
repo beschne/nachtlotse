@@ -1,5 +1,11 @@
 # Nachtlotse
 
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
+![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
+![UI: PySide6/Qt](https://img.shields.io/badge/UI-PySide6%2FQt-41cd52)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Vibe Coding: Claude Sonnet 5](https://img.shields.io/badge/Vibe%20Coding-Claude%20Sonnet%205-c96442)
+
 *("Nachtlotse" is German for "night pilot" — like a harbor pilot who guides
 ships through difficult waters, but for clear nights and telescopes.)*
 
@@ -16,9 +22,9 @@ not two separate shortlist entries. With more than one rig configured, a
 best-rig chooser can also pick whichever one frames each target best,
 instead of scoring for a single rig you name. An optional nightly
 briefing (Claude API, only when asked for) phrases the shortlist as
-prose — the engine's numbers and verdicts still decide everything. An
-early native GUI (PySide6) is also under active development — see
-[Native GUI (early, in progress)](#native-gui-early-in-progress) below.
+prose — the engine's numbers and verdicts still decide everything. A
+native GUI (PySide6) is also available — see
+[Native GUI](#native-gui) below.
 
 ## Guiding principle
 
@@ -130,12 +136,11 @@ Every Open-Meteo forecast is cached per site for 1 hour in
 `best-sky` run within that hour reuses it instead of hitting the network
 again.
 
-## Native GUI (early, in progress)
+## Native GUI
 
-A native macOS app (PySide6/Qt, no Swift) is being built alongside the
-CLI — the long-term UI goal, not a replacement for `lotse plan` yet. It's
-early and rough around the edges; the CLI remains the primary, complete
-front end.
+A native macOS app (PySide6/Qt, no Swift) runs alongside the CLI — ready
+for use, not a work-in-progress preview. It doesn't replace `lotse plan`;
+the CLI remains the primary front end.
 
 ```bash
 uv sync --extra gui   # needs PySide6, not installed by default
@@ -144,12 +149,14 @@ uv run lotse gui
 
 It computes real plans against your own `sites_local.yaml`/`rigs_local.yaml`
 (no illustrative/fake data) across five tabs: the shortlist, the full
-ranked table, a polar sky chart (colored by verdict), a nightly-briefing
-screen (same Claude API opt-in/fail-loud contract as `--prose` — nothing
-is sent to Anthropic until you click Generate), and a read-only sites/rigs
-reference. See [ROADMAP.md](./ROADMAP.md) for the toolkit decision
-(PySide6 over PyObjC/AppKit) and what's still missing (an in-app
-sites/rigs editor, among others).
+ranked table, a polar sky chart (tracks colored by verdict, each
+target's best-time dot its own color, plus a real Moon track and phase
+icon), a nightly-briefing screen (same Claude API opt-in/fail-loud
+contract as `--prose` — nothing is sent to Anthropic until you click
+Generate), and a read-only sites/rigs reference. See
+[ROADMAP.md](./ROADMAP.md) for the toolkit decision (PySide6 over
+PyObjC/AppKit) and what's still open (an in-app sites/rigs editor, a
+favorites section, GUI-side exports, among others).
 
 ## Architecture
 
@@ -162,8 +169,8 @@ nachtlotse/
 ├── chart_export.py  # CLI's --chart PNG export (matplotlib)
 ├── best_sky.py # cross-site weather comparison (`lotse best-sky`)
 ├── prose.py    # LLM nightly briefing (`lotse plan --prose`, opt-in)
-├── gui/        # early native app (PySide6, `lotse gui`, opt-in extra)
-└── cli.py      # the primary, complete front end (see CLAUDE.md)
+├── gui/        # native app (PySide6, `lotse gui`, opt-in extra)
+└── cli.py      # the primary front end (see CLAUDE.md)
 ```
 
 Dependency direction: `cli.py`/`gui/` → `engine`/`data`. The `engine` core

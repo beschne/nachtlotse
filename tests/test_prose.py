@@ -89,6 +89,8 @@ def _night_plan(shortlist_ranked, ranked=None) -> planning.NightPlan:
         evening_start=_WHEN,
         morning_end=_WHEN,
         moon_illumination_pct=42.0,
+        moonrise=None,
+        moonset=None,
         weather=_WEATHER,
         ranked=ranked if ranked is not None else list(shortlist_ranked),
         shortlist=shortlist,
@@ -145,6 +147,8 @@ def test_build_briefing_facts_for_best_rig_plan_names_each_entrys_own_rig() -> N
         evening_start=_WHEN,
         morning_end=_WHEN,
         moon_illumination_pct=10.0,
+        moonrise=None,
+        moonset=None,
         weather=None,
         ranked=[row],
         shortlist=[

@@ -23,6 +23,7 @@ _load = Loader(str(_CACHE_DIR))
 _timescale = _load.timescale()
 _ephemeris = _load("de421.bsp")
 _earth = _ephemeris["earth"]
+_moon = _ephemeris["moon"]
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,52 @@ def altitude_series(
         )
         for i in range(num_samples)
     ]
+
+
+def moon_altaz_series(
+    site: Site, start: datetime, end: datetime, num_samples: int = 49
+) -> list[tuple[datetime, AltAz]]:
+    """Altitude/azimuth of the Moon at `num_samples` evenly spaced points
+    across [start, end] — mirrors `altitude_series`, but observes the
+    Moon body directly (real orbital motion) instead of treating it as a
+    fixed `Star` the way every catalog target is."""
+    observer = _earth + _topos(site)
+    times = _timescale.tt_jd(np.linspace(_time(start).tt, _time(end).tt, num_samples))
+    apparent = observer.at(times).observe(_moon).apparent()
+    alt, az, distance = apparent.altaz()
+    sample_datetimes = times.utc_datetime()
+
+    return [
+        (
+            sample_datetimes[i],
+            AltAz(
+                alt_deg=alt.degrees[i], az_deg=az.degrees[i], distance_au=distance.au[i]
+            ),
+        )
+        for i in range(num_samples)
+    ]
+
+
+def moon_rise_set_events(
+    site: Site, start: datetime, end: datetime
+) -> list[tuple[datetime, bool]]:
+    """Moonrise (True) / moonset (False) events within [start, end],
+    time-ordered. Empty if the Moon doesn't cross the horizon in this
+    window at all — up the whole time, or down the whole time; check
+    `moon_altaz_series`'s altitude to tell those two cases apart."""
+    f = almanac.risings_and_settings(_ephemeris, _moon, _topos(site))
+    times, events = almanac.find_discrete(_time(start), _time(end), f)
+    return [(t.utc_datetime(), bool(e)) for t, e in zip(times, events)]
+
+
+def moon_phase_angle_deg(when: datetime) -> float:
+    """The Moon's real phase angle at `when`, 0-360°: 0° new, 180° full
+    (`skyfield.almanac.moon_phase` — the geocentric ecliptic-longitude
+    difference between Moon and Sun). Unlike a bare illumination
+    fraction, this also carries waxing (0-180°) vs. waning (180-360°),
+    so a phase icon can show the correct crescent/gibbous shape, not
+    just how much of the disk is lit."""
+    return almanac.moon_phase(_ephemeris, _time(when)).degrees
 
 
 def find_transit(

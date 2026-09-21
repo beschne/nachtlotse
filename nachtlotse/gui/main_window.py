@@ -8,8 +8,8 @@ decision — see ROADMAP.md).
 
 Every screen from the original scaffolding plan is now here: the
 shortlist, the full ranked table, the polar sky chart, the LLM
-briefing, and a read-only sites/rigs reference screen (see
-`sites_rigs.py`'s own docstring for why it's read-only, not an editor).
+briefing, and read-only Sites/Rigs reference screens (see
+`sites_rigs.py`'s own docstring for why they're read-only, not an editor).
 
 `planning.plan_night` runs on a background `QThread` (`_PlanWorker`),
 same reasoning as `briefing._BriefingWorker`: it's not instant (catalog
@@ -48,7 +48,7 @@ from nachtlotse.engine.models import Rig, Site
 from nachtlotse.gui import data_adapter
 from nachtlotse.gui.briefing import BriefingCard
 from nachtlotse.gui.sidebar import Sidebar
-from nachtlotse.gui.sites_rigs import SitesRigsCard
+from nachtlotse.gui.sites_rigs import RigsCard, SitesCard
 from nachtlotse.gui.sky_chart import SkyChartCard
 from nachtlotse.gui.theme import COLORS, RoundedCard, VerdictBadge, label_style
 from nachtlotse.planning import NightPlan
@@ -76,12 +76,67 @@ _RANKED_COLUMNS = [
 
 _ALIGN = {"left": Qt.AlignLeft, "right": Qt.AlignRight, "center": Qt.AlignCenter}
 
+# Column headers whose meaning isn't self-evident from a two-line QSS
+# header — see `engine.framing.framing_score`/`reach_factor` for the
+# real definitions this paraphrases. Qt tooltips don't wrap plain text
+# on their own, so line breaks are placed by hand rather than left to
+# render as one very long line.
+_COLUMN_TOOLTIPS = {
+    "alt_text": (
+        "Alt — altitude at the target's Best time (this row's\n"
+        "\"Best\" column), not right now or at plan time."
+    ),
+    "az_text": (
+        "Az — azimuth at the target's Best time (this row's\n"
+        "\"Best\" column), not right now or at plan time."
+    ),
+    "fit_text": (
+        "Fit — how well the target's angular size fills\n"
+        "the rig's field of view (0-1). Low doesn't exclude\n"
+        "a target, it just means a small subject in a big frame."
+    ),
+    "reach_text": (
+        "Reach — how reachable the target's surface brightness\n"
+        "is against this site's sky darkness (0-1). Fades for a\n"
+        "diffuse target under a brighter sky, but never to zero —\n"
+        "the surface-brightness estimate is a starting heuristic,\n"
+        "not a hard cutoff. 1.0 whenever magnitude, size, or the\n"
+        "site's sky brightness isn't known."
+    ),
+}
+
+
+def _verdict_column_width() -> int:
+    """The Verdict column's fixed width — measured from a throwaway
+    `VerdictBadge("MARGINAL")`, the widest of the three verdict words.
+    See `_build_table`'s own comment for why this column can't just use
+    `ResizeToContents` like the others.
+
+    +16, not a small margin: `QTableWidget::item`'s own QSS `padding:
+    6px 8px` (8px each side) gets applied by Qt's internal editor/cell-
+    widget geometry pass even though a cell *widget* never paints via
+    that stylesheet rule itself — confirmed by measurement, not
+    documented behavior. Size the column short of that and the actual
+    widget geometry ends up 16px narrower than the column, clipping
+    "MARGINAL" to "MARGINA" no matter how wide the column claims to be.
+    """
+    return VerdictBadge("MARGINAL").sizeHint().width() + 16 + 4
+
 
 def local_when(selected_date: date, local_tz: ZoneInfo) -> datetime:
     """Noon local time on `selected_date` — unambiguously daytime, so
     `constraints.dark_window` picks the night starting that evening.
     Mirrors `cli.py`'s `_resolve_when`."""
     return datetime.combine(selected_date, time(12, 0), tzinfo=local_tz)
+
+
+def title_for_date(selected_date: date, local_tz: ZoneInfo) -> str:
+    """"Tonight" for today (in the *site's* timezone, not the machine's
+    own) — otherwise the actual date, so planning ahead doesn't keep
+    reading "Tonight" for a night that isn't tonight at all."""
+    if selected_date == datetime.now(local_tz).date():
+        return "Tonight"
+    return f"{selected_date:%A, %B %-d}"
 
 
 class _PlanWorker(QThread):
@@ -179,16 +234,24 @@ class MainWindow(QMainWindow):
             """
         )
 
+        # Margin between a card and any opaque, square-cornered child
+        # (a QTableWidget's own background, here) must be at least the
+        # card's own border-radius (theme.RoundedCard: 16px) — Qt doesn't
+        # clip children to a rounded parent on its own, so a smaller
+        # margin lets the child's square corners visibly poke out past
+        # the card's curve, worst at the bottom two corners.
+        _CARD_CONTENT_MARGIN = 16
+
         shortlist_card = RoundedCard()
         shortlist_layout = QVBoxLayout(shortlist_card)
-        shortlist_layout.setContentsMargins(8, 8, 8, 8)
+        shortlist_layout.setContentsMargins(*([_CARD_CONTENT_MARGIN] * 4))
         self.shortlist_table = self._build_table(_SHORTLIST_COLUMNS)
         shortlist_layout.addWidget(self.shortlist_table)
         self.tabs.addTab(shortlist_card, "Shortlist")
 
         ranked_card = RoundedCard()
         ranked_layout = QVBoxLayout(ranked_card)
-        ranked_layout.setContentsMargins(8, 8, 8, 8)
+        ranked_layout.setContentsMargins(*([_CARD_CONTENT_MARGIN] * 4))
         self.ranked_table = self._build_table(_RANKED_COLUMNS)
         ranked_layout.addWidget(self.ranked_table)
         self.tabs.addTab(ranked_card, "All ranked")
@@ -199,7 +262,8 @@ class MainWindow(QMainWindow):
         self.briefing = BriefingCard()
         self.tabs.addTab(self.briefing, "Briefing")
 
-        self.tabs.addTab(SitesRigsCard(store.SITES, store.RIGS), "Sites & Rigs")
+        self.tabs.addTab(SitesCard(store.SITES), "Sites")
+        self.tabs.addTab(RigsCard(store.RIGS), "Rigs")
 
         content_layout.addWidget(self.tabs, stretch=1)
 
@@ -213,6 +277,10 @@ class MainWindow(QMainWindow):
     def _build_table(self, columns: list[tuple[str, str, str]]) -> QTableWidget:
         table = QTableWidget(0, len(columns))
         table.setHorizontalHeaderLabels([label for _key, label, _align in columns])
+        for col_index, (key, _label, _align) in enumerate(columns):
+            tooltip = _COLUMN_TOOLTIPS.get(key)
+            if tooltip is not None:
+                table.horizontalHeaderItem(col_index).setToolTip(tooltip)
         table.verticalHeader().setVisible(False)
         table.setShowGrid(False)
         table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -254,6 +322,17 @@ class MainWindow(QMainWindow):
                 # without eliding.
                 header.setSectionResizeMode(col_index, QHeaderView.Interactive)
                 table.setColumnWidth(col_index, 140)
+            elif key == "verdict":
+                # Fixed, not ResizeToContents: this column holds cell
+                # *widgets* (`setCellWidget`), not item text, and Qt's
+                # automatic ResizeToContents recompute doesn't reliably
+                # apply to those — a column sized for an all-GO/SKIP plan
+                # can stay too narrow for a later MARGINAL badge even
+                # after an explicit resize. Sized once for the widest
+                # possible badge instead, so it's never wrong regardless
+                # of what the previous plan needed.
+                header.setSectionResizeMode(col_index, QHeaderView.Fixed)
+                table.setColumnWidth(col_index, _verdict_column_width())
             else:
                 header.setSectionResizeMode(col_index, QHeaderView.ResizeToContents)
         table.setWordWrap(True)
@@ -292,7 +371,7 @@ class MainWindow(QMainWindow):
         self.eyebrow.setText(
             f"{site.name} · {rig.name} · {selected_date:%a %d %b}".upper()
         )
-        self.title.setText("Tonight")
+        self.title.setText(title_for_date(selected_date, local_tz))
         self.sub.setText(
             f"{summary.dark_window_text}  ·  Moon {summary.moon_text}  ·  "
             f"{summary.counts_text}"
@@ -329,7 +408,14 @@ class MainWindow(QMainWindow):
                     continue
                 item = QTableWidgetItem(getattr(row, key))
                 item.setTextAlignment(_ALIGN[align] | Qt.AlignVCenter)
-                if hasattr(row, "verdict_reasons"):
+                # Fit/Reach explain the metric itself, since that's what
+                # a value under the cursor actually calls for — checked
+                # first, since `verdict_reasons` below would otherwise
+                # overwrite it on every column of a shortlist row.
+                column_tooltip = _COLUMN_TOOLTIPS.get(key)
+                if column_tooltip is not None:
+                    item.setToolTip(column_tooltip)
+                elif hasattr(row, "verdict_reasons"):
                     item.setToolTip("\n".join(row.verdict_reasons))
                 table.setItem(row_index, col_index, item)
         # setCellWidget/setItem can shift the "current" cell to whatever

@@ -7,7 +7,9 @@ textbook astronomy (Polaris altitude ~ site latitude; transit altitude =
 
 from __future__ import annotations
 
+import math
 from datetime import UTC, datetime, timedelta
+from itertools import pairwise
 
 import pytest
 
@@ -126,3 +128,74 @@ def test_altaz_requires_timezone_aware_datetime() -> None:
     naive = datetime(2026, 9, 12, 22, 0)  # noqa: DTZ001 -- test case for the guard
     with pytest.raises(ValueError):
         ephemeris.altaz(BAD_HOMBURG, POLARIS, naive)
+
+
+def test_moon_altaz_series_spans_the_window_with_plausible_positions() -> None:
+    start = datetime(2026, 9, 12, 20, 0, tzinfo=UTC)
+    end = start + timedelta(hours=8)
+
+    series = ephemeris.moon_altaz_series(BAD_HOMBURG, start, end, num_samples=17)
+
+    assert len(series) == 17
+    assert series[0][0].timestamp() == pytest.approx(start.timestamp(), abs=1.0)
+    assert series[-1][0].timestamp() == pytest.approx(end.timestamp(), abs=1.0)
+    for _when, pos in series:
+        assert -90.0 <= pos.alt_deg <= 90.0
+        assert 0.0 <= pos.az_deg < 360.0
+    # The Moon is close enough that geocentric vs. topocentric distance
+    # differs measurably (unlike the "infinitely far" catalog stars) —
+    # a sanity check that this is really observing the Moon body, not
+    # accidentally reusing the fixed-star code path.
+    assert all(0.0022 < pos.distance_au < 0.0028 for _when, pos in series)
+
+
+def test_moon_rise_set_events_alternate_and_fall_within_the_window() -> None:
+    start = datetime(2026, 9, 12, 0, 0, tzinfo=UTC)
+    end = start + timedelta(days=3)
+
+    events = ephemeris.moon_rise_set_events(BAD_HOMBURG, start, end)
+
+    assert len(events) >= 4, "3 days should contain several rise/set events"
+    for when, _is_rising in events:
+        assert start <= when <= end
+    # Rise/set alternate strictly (a rise is always followed by a set and
+    # vice versa) — the Moon can't rise twice without setting in between.
+    risings = [is_rising for _when, is_rising in events]
+    for is_rising, next_is_rising in pairwise(risings):
+        assert is_rising != next_is_rising
+
+
+def test_moon_rise_set_events_empty_when_moon_never_crosses_the_horizon() -> None:
+    # The Moon set at 17:53 UTC on 2026-09-12 and doesn't rise again until
+    # 07:49 UTC the next day (see the 3-day sweep above) — this window
+    # sits entirely inside that down period.
+    start = datetime(2026, 9, 12, 19, 0, tzinfo=UTC)
+    end = datetime(2026, 9, 13, 5, 0, tzinfo=UTC)
+
+    assert ephemeris.moon_rise_set_events(BAD_HOMBURG, start, end) == []
+
+
+def test_moon_phase_angle_matches_astroplans_illumination_fraction() -> None:
+    """Cross-checked against an independent library (astroplan), not
+    against this engine's own output — same policy `test_ephemeris.py`'s
+    module docstring states for every other value in this file.
+
+    `moon_phase_angle_deg` (0° new, 180° full) implies an illuminated
+    fraction of (1 - cos(angle)) / 2; astroplan's `moon_illumination`
+    computes that fraction its own way. They should closely agree
+    regardless of date (new moon, full moon, or in between).
+    """
+    from astroplan import moon_illumination
+    from astropy.time import Time
+
+    for when in (
+        datetime(2026, 9, 12, 22, 0, tzinfo=UTC),  # near new moon
+        datetime(2026, 9, 26, 3, 0, tzinfo=UTC),  # near full moon
+        datetime(2026, 10, 5, 1, 0, tzinfo=UTC),  # in between
+    ):
+        angle_deg = ephemeris.moon_phase_angle_deg(when)
+        assert 0.0 <= angle_deg < 360.0
+
+        implied_fraction = (1 - math.cos(math.radians(angle_deg))) / 2
+        expected_fraction = float(moon_illumination(Time(when)))
+        assert implied_fraction == pytest.approx(expected_fraction, abs=0.02)

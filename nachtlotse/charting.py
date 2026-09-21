@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from datetime import datetime
 
 import numpy as np
 
-from nachtlotse.engine import ephemeris
+from nachtlotse.engine import ephemeris, grouping
 from nachtlotse.engine.models import Site, Target
 from nachtlotse.planning import NightPlan, RankedGroup
 
@@ -84,39 +85,62 @@ def _entry_name(entry: object) -> str:
     return " + ".join(t.name for t in targets)
 
 
-def shortlist_tracks(plan: NightPlan, num_samples: int = 49) -> list[Track]:
-    """One `Track` per shortlisted entry, points clipped to alt >= 0
-    (below the true horizon isn't part of the visible sky dome).
+def _entry_track_target(entry: object) -> Target:
+    """The single position to plot this shortlist entry's track from —
+    a `RankedGroup`'s centroid (members are co-visible/close together by
+    construction, see `engine.grouping.co_visible_group`, so their own
+    curves would nearly overlap anyway; one line reads far better than
+    stacking every member's near-identical curve), or a single-target
+    entry's own target otherwise."""
+    if isinstance(entry, RankedGroup):
+        return grouping.centroid_target(entry.targets)
+    return entry.target
 
-    A group's track carries every member's segments together — members
-    sit close enough to share one frame of the rig (see
-    `engine.grouping`), so their curves stay visually close too, and one
-    legend entry/color for the whole group beats a separate slot per
-    member (`SHORTLIST_PALETTE` has one slot per shortlist entry, not
-    per target).
-    """
+
+def shortlist_tracks(plan: NightPlan, num_samples: int = 49) -> list[Track]:
+    """One `Track` per shortlisted entry — a single line even for a
+    `RankedGroup` (see `_entry_track_target`) — points clipped to alt >=
+    0 (below the true horizon isn't part of the visible sky dome)."""
     tracks = []
     for entry in plan.shortlist:
+        target = _entry_track_target(entry.ranked)
+        series = ephemeris.altitude_series(
+            plan.site, target, plan.evening_start, plan.morning_end, num_samples=num_samples
+        )
         segments: list[list[tuple[float, float]]] = []
-        for target in _entry_targets(entry.ranked):
-            series = ephemeris.altitude_series(
-                plan.site,
-                target,
-                plan.evening_start,
-                plan.morning_end,
-                num_samples=num_samples,
-            )
-            current: list[tuple[float, float]] = []
-            for _when, pos in series:
-                if pos.alt_deg >= 0.0:
-                    current.append(project(pos.alt_deg, pos.az_deg))
-                elif current:
-                    segments.append(current)
-                    current = []
-            if current:
+        current: list[tuple[float, float]] = []
+        for _when, pos in series:
+            if pos.alt_deg >= 0.0:
+                current.append(project(pos.alt_deg, pos.az_deg))
+            elif current:
                 segments.append(current)
+                current = []
+        if current:
+            segments.append(current)
         tracks.append(Track(name=_entry_name(entry.ranked), segments=segments))
     return tracks
+
+
+def moon_track(
+    site: Site, evening_start: datetime, morning_end: datetime, num_samples: int = 49
+) -> Track:
+    """The Moon's own alt/az path across the dark window, clipped to
+    alt >= 0 exactly like `shortlist_tracks` — a real, computed position
+    (`engine.ephemeris.moon_altaz_series`), not a target from the
+    catalog, so this stays a standalone function rather than another
+    branch inside `shortlist_tracks`."""
+    series = ephemeris.moon_altaz_series(site, evening_start, morning_end, num_samples=num_samples)
+    segments: list[list[tuple[float, float]]] = []
+    current: list[tuple[float, float]] = []
+    for _when, pos in series:
+        if pos.alt_deg >= 0.0:
+            current.append(project(pos.alt_deg, pos.az_deg))
+        elif current:
+            segments.append(current)
+            current = []
+    if current:
+        segments.append(current)
+    return Track(name="Moon", segments=segments)
 
 
 def grid_ring(alt_deg: float, resolution_deg: float = _RING_RESOLUTION_DEG) -> list[tuple[float, float]]:

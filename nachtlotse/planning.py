@@ -97,6 +97,11 @@ class NightPlan:
     evening_start: datetime
     morning_end: datetime
     moon_illumination_pct: float
+    # Either can be None: the Moon doesn't necessarily cross the horizon
+    # during a given dark window (up all night, or down all night) — see
+    # `_moon_rise_set`.
+    moonrise: datetime | None
+    moonset: datetime | None
     weather: WeatherSummary | None
     ranked: list[RankedEntry]
     # The top SHORTLIST_SIZE of `ranked`, each with its own verdict. Empty
@@ -398,6 +403,18 @@ def fetch_weather_summary(
     return open_meteo.summarize_window(hours, evening_start, morning_end)
 
 
+def _moon_rise_set(
+    site: Site, evening_start: datetime, morning_end: datetime
+) -> tuple[datetime | None, datetime | None]:
+    """The first moonrise and first moonset within the dark window, or
+    None for either that doesn't occur in it (the Moon already up at
+    evening_start and not setting before morning_end, for example)."""
+    events = ephemeris.moon_rise_set_events(site, evening_start, morning_end)
+    rise = next((when for when, is_rising in events if is_rising), None)
+    set_ = next((when for when, is_rising in events if not is_rising), None)
+    return rise, set_
+
+
 def plan_night(
     site: Site,
     rig: Rig,
@@ -412,6 +429,7 @@ def plan_night(
     """
     evening_start, morning_end = constraints.dark_window(site, when)
     illumination_pct = moon_illumination(Time(when)) * 100
+    moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
     ranked = rank_targets(site, rig, when, types=types, limit=limit)
 
@@ -426,6 +444,8 @@ def plan_night(
         evening_start=evening_start,
         morning_end=morning_end,
         moon_illumination_pct=illumination_pct,
+        moonrise=moonrise,
+        moonset=moonset,
         weather=weather,
         ranked=ranked,
         shortlist=shortlist,
@@ -451,6 +471,8 @@ class NightPlanForBestRig:
     evening_start: datetime
     morning_end: datetime
     moon_illumination_pct: float
+    moonrise: datetime | None
+    moonset: datetime | None
     weather: WeatherSummary | None
     ranked: list[RankedTargetForBestRig]
     shortlist: list[BestRigShortlistEntry]
@@ -469,6 +491,7 @@ def plan_night_for_best_rig(
     """
     evening_start, morning_end = constraints.dark_window(site, when)
     illumination_pct = moon_illumination(Time(when)) * 100
+    moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
     ranked = rank_targets_for_best_rig(site, rigs, when, types=types, limit=limit)
 
@@ -484,6 +507,8 @@ def plan_night_for_best_rig(
         evening_start=evening_start,
         morning_end=morning_end,
         moon_illumination_pct=illumination_pct,
+        moonrise=moonrise,
+        moonset=moonset,
         weather=weather,
         ranked=ranked,
         shortlist=shortlist,

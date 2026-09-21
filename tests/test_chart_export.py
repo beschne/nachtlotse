@@ -30,6 +30,8 @@ def _empty_plan(site, rig) -> planning.NightPlan:
         evening_start=now,
         morning_end=now,
         moon_illumination_pct=0.0,
+        moonrise=None,
+        moonset=None,
         weather=None,
         ranked=[],
         shortlist=[],
