@@ -2,13 +2,23 @@
 
 Wires real data end to end — `planning.plan_night` against whichever
 site/rig/date is staged in the sidebar. No illustrative sample data
-anywhere in this package (unlike `macos-app-spike/`, which was never
-meant to be kept — see its README.md).
+anywhere in this package, unlike the throwaway framework spike that
+preceded it (deleted once it had settled the PySide6-vs-PyObjC
+decision — see ROADMAP.md).
 
 Every screen from the original scaffolding plan is now here: the
 shortlist, the full ranked table, the polar sky chart, the LLM
 briefing, and a read-only sites/rigs reference screen (see
 `sites_rigs.py`'s own docstring for why it's read-only, not an editor).
+
+`planning.plan_night` runs on a background `QThread` (`_PlanWorker`),
+same reasoning as `briefing._BriefingWorker`: it's not instant (catalog
+ephemeris + an Open-Meteo fetch), and running it on the UI thread would
+freeze the window for that long — visible only as the OS's own
+"app not responding" cursor, not a real progress indicator. An
+indeterminate `QProgressBar` plus an explicit wait cursor stand in for
+one instead; the sidebar is disabled for the same span so a second
+Re-plan can't be staged while one is already in flight.
 """
 
 from __future__ import annotations
@@ -16,12 +26,14 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QMainWindow,
+    QProgressBar,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -32,12 +44,14 @@ from PySide6.QtWidgets import (
 from nachtlotse import planning
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
+from nachtlotse.engine.models import Rig, Site
 from nachtlotse.gui import data_adapter
 from nachtlotse.gui.briefing import BriefingCard
 from nachtlotse.gui.sidebar import Sidebar
 from nachtlotse.gui.sites_rigs import SitesRigsCard
 from nachtlotse.gui.sky_chart import SkyChartCard
 from nachtlotse.gui.theme import COLORS, RoundedCard, VerdictBadge, label_style
+from nachtlotse.planning import NightPlan
 
 _SHORTLIST_COLUMNS = [
     ("label", "Target", "left"),
@@ -70,11 +84,32 @@ def local_when(selected_date: date, local_tz: ZoneInfo) -> datetime:
     return datetime.combine(selected_date, time(12, 0), tzinfo=local_tz)
 
 
+class _PlanWorker(QThread):
+    """Runs `planning.plan_night` off the UI thread."""
+
+    succeeded = Signal(object)
+    failed = Signal(str)
+
+    def __init__(self, site: Site, rig: Rig, when: datetime) -> None:
+        super().__init__()
+        self._site = site
+        self._rig = rig
+        self._when = when
+
+    def run(self) -> None:
+        try:
+            plan = planning.plan_night(self._site, self._rig, self._when)
+        except Exception as exc:  # noqa: BLE001 — surface any failure to the UI, don't crash it
+            self.failed.emit(str(exc))
+            return
+        self.succeeded.emit(plan)
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Nachtlotse")
-        self.resize(1080, 640)
+        self.resize(1300, 700)
 
         central = QWidget()
         central.setStyleSheet(f"background: {COLORS['cream']};")
@@ -113,10 +148,23 @@ class MainWindow(QMainWindow):
             label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px; margin-bottom: 12px;")
         )
 
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 0)  # indeterminate: we don't know how long a plan will take
+        self.progress.setFixedHeight(4)
+        self.progress.setTextVisible(False)
+        self.progress.setStyleSheet(
+            f"""
+            QProgressBar {{ background: {COLORS['border']}; border: none; border-radius: 2px; }}
+            QProgressBar::chunk {{ background: {COLORS['clay']}; border-radius: 2px; }}
+            """
+        )
+        self.progress.hide()
+
         content_layout.addWidget(self.eyebrow)
         content_layout.addWidget(self.title)
         content_layout.addWidget(self.sub)
         content_layout.addWidget(self.weather_label)
+        content_layout.addWidget(self.progress)
 
         self.tabs = QTabWidget()
         self.tabs.setStyleSheet(
@@ -155,6 +203,7 @@ class MainWindow(QMainWindow):
 
         content_layout.addWidget(self.tabs, stretch=1)
 
+        self._worker: _PlanWorker | None = None
         self._replan(
             self.sidebar.current_site_record(),
             self.sidebar.current_rig_record(),
@@ -181,8 +230,34 @@ class MainWindow(QMainWindow):
             QTableWidget::item:selected {{ background: {COLORS['cream']}; color: {COLORS['ink']}; }}
             """
         )
-        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        # Only the Target column stretches to absorb leftover width — every
+        # other column sizes to its own absolute minimum (header or cell,
+        # whichever is wider) and no further, so Target gets all the space
+        # the others don't need. No blanket minimum-section-size floor
+        # here anymore — it was padding Alt/Az/Fit/Reach out to 140px each
+        # even though their content needs far less; Type's own capped
+        # width (below) is what actually protects Target from being
+        # squeezed by a long combined-category row.
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        for col_index, (key, _label, _align) in enumerate(columns):
+            if col_index == 0:
+                continue
+            if key == "type_label":
+                # A combined group's categories ("Emission Nebula/Reflection
+                # Nebula") can be long — cap this column's width and let it
+                # wrap to two lines instead of claiming the space Target
+                # needs. Interactive (not ResizeToContents), since
+                # ResizeToContents would size to the unwrapped one-line
+                # width, defeating the wrap. 140px is the minimum that
+                # still fits the longest wrapped line ("Reflection Nebula")
+                # without eliding.
+                header.setSectionResizeMode(col_index, QHeaderView.Interactive)
+                table.setColumnWidth(col_index, 140)
+            else:
+                header.setSectionResizeMode(col_index, QHeaderView.ResizeToContents)
+        table.setWordWrap(True)
+        table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         return table
 
     def _replan(self, site_record: SiteRecord, rig_record: RigRecord, selected_date: date) -> None:
@@ -191,7 +266,25 @@ class MainWindow(QMainWindow):
         local_tz = ZoneInfo(site.tz)
         when = local_when(selected_date, local_tz)
 
-        plan = planning.plan_night(site, rig, when)
+        self.sidebar.setEnabled(False)
+        self.progress.show()
+        self.title.setText("Planning…")
+        self.sub.setText("")
+        self.weather_label.setText("")
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+
+        self._worker = _PlanWorker(site, rig, when)
+        self._worker.succeeded.connect(
+            lambda plan: self._on_plan_ready(plan, local_tz, site, rig, selected_date)
+        )
+        self._worker.failed.connect(self._on_plan_failed)
+        self._worker.start()
+
+    def _on_plan_ready(
+        self, plan: NightPlan, local_tz: ZoneInfo, site: Site, rig: Rig, selected_date: date
+    ) -> None:
+        self._finish_replan()
+
         summary = data_adapter.build_header_summary(plan, local_tz)
         shortlist_rows = data_adapter.build_shortlist_rows(plan, local_tz)
         ranked_rows = data_adapter.build_ranked_rows(plan, local_tz)
@@ -199,6 +292,7 @@ class MainWindow(QMainWindow):
         self.eyebrow.setText(
             f"{site.name} · {rig.name} · {selected_date:%a %d %b}".upper()
         )
+        self.title.setText("Tonight")
         self.sub.setText(
             f"{summary.dark_window_text}  ·  Moon {summary.moon_text}  ·  "
             f"{summary.counts_text}"
@@ -210,6 +304,16 @@ class MainWindow(QMainWindow):
         self.tabs.setTabText(1, f"All ranked ({len(ranked_rows)})")
         self.sky_chart.set_plan(plan, local_tz)
         self.briefing.set_plan(plan)
+
+    def _on_plan_failed(self, message: str) -> None:
+        self._finish_replan()
+        self.title.setText("Planning failed")
+        self.sub.setText(message)
+
+    def _finish_replan(self) -> None:
+        QApplication.restoreOverrideCursor()
+        self.progress.hide()
+        self.sidebar.setEnabled(True)
 
     def _populate_table(
         self,
@@ -228,10 +332,21 @@ class MainWindow(QMainWindow):
                 if hasattr(row, "verdict_reasons"):
                     item.setToolTip("\n".join(row.verdict_reasons))
                 table.setItem(row_index, col_index, item)
+        # setCellWidget/setItem can shift the "current" cell to whatever
+        # was set last (the Verdict column), which drags the horizontal
+        # scroll position along with it — force it back so Target is
+        # what's visible right after a (re)plan, not the tail columns.
+        table.horizontalScrollBar().setValue(0)
 
     @staticmethod
     def _verdict_cell(level: str) -> QWidget:
         container = QWidget()
+        # Same Qt quirk `theme.label_style` works around for QLabel: once
+        # any stylesheet exists anywhere in the app, a plain QWidget like
+        # this one can start painting an opaque default-palette background
+        # instead of staying transparent — visible as a faint box around
+        # the pill, most noticeable against GO/SKIP's paler tint.
+        container.setStyleSheet("background: transparent;")
         inner = QVBoxLayout(container)
         inner.setContentsMargins(0, 0, 0, 0)
         inner.addWidget(VerdictBadge(level), alignment=Qt.AlignCenter)

@@ -100,7 +100,7 @@ def test_entry_label_joins_a_ranked_groups_member_names() -> None:
     group = RankedGroup(
         targets=(_TARGET_A, _TARGET_B), best_time=_WHEN, pos=_pos(60.0, 90.0), fit=0.8, reach=1.0
     )
-    assert data_adapter.entry_label(group) == "TA1 target a + TB2 target b"
+    assert data_adapter.entry_label(group) == "TA1 target a, TB2 target b"
 
 
 def test_entry_type_label_dedupes_a_groups_categories_in_first_seen_order() -> None:

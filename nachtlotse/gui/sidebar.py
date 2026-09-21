@@ -1,26 +1,31 @@
 """The left-hand controls box: site/rig/date pickers plus a Re-plan
-button — see macos-app-spike/README.md for where this layout came from
-(the PySide6-vs-PyObjC framework spike).
+button — this layout (a sidebar box of pickers + button) came out of the
+PySide6-vs-PyObjC framework spike that settled ROADMAP.md's native macOS
+app toolkit decision (the throwaway spike itself is gone; PySide6 won).
 
 Selections are staged, not applied live: changing a combo box or the
 date only updates what *would* be planned; nothing re-runs `planning`
 until Re-plan is clicked (`replan_requested`) — computing a real plan
 touches ephemeris and (optionally) the network, so it shouldn't fire on
-every keystroke/click the way the spike's cosmetic eyebrow-text update
-could afford to.
+every keystroke/click.
+
+Re-plan starts disabled and only re-enables once something is staged
+that differs from the last computed plan — so changing site, rig, *and*
+date all takes one click, not three redundant re-plans in between.
 """
 
 from __future__ import annotations
 
 from datetime import date
 
-from PySide6.QtCore import QDate, Signal
+from PySide6.QtCore import QDate, QLocale, Signal
+from PySide6.QtGui import QColor, QTextCharFormat
 from PySide6.QtWidgets import QComboBox, QDateEdit, QLabel, QPushButton, QVBoxLayout
 
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.gui.theme import COLORS, RoundedCard, label_style
 
-SIDEBAR_WIDTH = 240
+SIDEBAR_WIDTH = 300
 
 
 class Sidebar(RoundedCard):
@@ -56,13 +61,28 @@ class Sidebar(RoundedCard):
                 background: {COLORS['cream']};
                 border: 1px solid {COLORS['border']};
                 border-radius: 8px;
-                padding: 6px 28px 6px 10px;
-                font-size: 13px;
+                padding: 6px 26px 6px 8px;
+                font-size: 12px;
                 color: {COLORS['ink']};
             }}
             QComboBox::drop-down, QDateEdit::drop-down {{
                 border: none;
                 width: 24px;
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+            }}
+            QComboBox::drop-down:hover, QDateEdit::drop-down:hover {{
+                background: {COLORS['cream_hover']};
+                border-radius: 6px;
+            }}
+            QComboBox::down-arrow, QDateEdit::down-arrow {{
+                image: none;
+                width: 0px;
+                height: 0px;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid {COLORS['ink_secondary']};
+                margin-right: 10px;
             }}
             QComboBox QAbstractItemView {{
                 background: {COLORS['paper']};
@@ -97,17 +117,46 @@ class Sidebar(RoundedCard):
         date_label = QLabel("DATE")
         date_label.setStyleSheet(field_label_style)
         self.date_edit = QDateEdit(QDate.currentDate())
+        self.date_edit.setLocale(QLocale(QLocale.English, QLocale.UnitedStates))
         self.date_edit.setCalendarPopup(True)
-        self.date_edit.setDisplayFormat("ddd d MMM")
+        self.date_edit.setDisplayFormat("ddd d MMMM")
         self.date_edit.setStyleSheet(picker_style)
+        self.date_edit.calendarWidget().setLocale(self.date_edit.locale())
+        self.date_edit.calendarWidget().setStyleSheet(
+            f"""
+            QCalendarWidget QWidget {{ background: {COLORS['paper']}; color: {COLORS['ink']}; }}
+            QCalendarWidget QToolButton {{
+                background: transparent; color: {COLORS['ink']};
+                font-size: 13px; font-weight: 600;
+            }}
+            QCalendarWidget QToolButton:hover {{ background: {COLORS['cream_hover']}; border-radius: 6px; }}
+            QCalendarWidget QAbstractItemView:enabled {{
+                background: {COLORS['paper']}; color: {COLORS['ink']};
+                selection-background-color: {COLORS['clay']};
+                selection-color: {COLORS['text_on_accent']};
+                outline: none;
+            }}
+            QCalendarWidget QAbstractItemView:disabled {{ color: {COLORS['ink_muted']}; }}
+            QCalendarWidget QWidget#qt_calendar_navigationbar {{ background: {COLORS['cream']}; }}
+            """
+        )
+        # Mark today distinctly from the currently-selected date (which
+        # already gets the solid-clay selection style above) — a light
+        # clay tint plus bold, so "today" and "the staged date" read as
+        # two different things even when they're not the same day.
+        today_format = QTextCharFormat()
+        today_format.setBackground(QColor(COLORS["clay_tint"]))
+        today_format.setForeground(QColor(COLORS["clay_hover"]))
+        today_format.setFontWeight(700)
+        self.date_edit.calendarWidget().setDateTextFormat(QDate.currentDate(), today_format)
 
         for widget in (site_label, self.site_combo, rig_label, self.rig_combo, date_label, self.date_edit):
             layout.addWidget(widget)
 
         layout.addStretch(1)
 
-        replan_button = QPushButton("Re-plan")
-        replan_button.setStyleSheet(
+        self.replan_button = QPushButton("Re-plan")
+        self.replan_button.setStyleSheet(
             f"""
             QPushButton {{
                 background: {COLORS['clay']};
@@ -120,16 +169,32 @@ class Sidebar(RoundedCard):
             }}
             QPushButton:hover {{ background: {COLORS['clay_hover']}; }}
             QPushButton:pressed {{ background: {COLORS['clay_press']}; }}
+            QPushButton:disabled {{
+                background: {COLORS['border_strong']};
+                color: {COLORS['ink_muted']};
+            }}
             """
         )
-        replan_button.clicked.connect(self._emit_replan)
-        layout.addWidget(replan_button)
+        self.replan_button.setEnabled(False)  # nothing staged differs from the plan shown yet
+        self.replan_button.clicked.connect(self._emit_replan)
+        layout.addWidget(self.replan_button)
+
+        # Any staged change re-enables Re-plan; clicking it applies the
+        # change and goes back to disabled — lets you change site, rig,
+        # *and* date together and replan once, instead of on every click.
+        self.site_combo.currentIndexChanged.connect(self._mark_dirty)
+        self.rig_combo.currentIndexChanged.connect(self._mark_dirty)
+        self.date_edit.dateChanged.connect(self._mark_dirty)
+
+    def _mark_dirty(self, *_args: object) -> None:
+        self.replan_button.setEnabled(True)
 
     def _emit_replan(self) -> None:
         site_record = self._sites[self.site_combo.currentIndex()]
         rig_record = self._rigs[self.rig_combo.currentIndex()]
         selected_date = self.date_edit.date().toPython()
         self.replan_requested.emit(site_record, rig_record, selected_date)
+        self.replan_button.setEnabled(False)
 
     def current_site_record(self) -> SiteRecord:
         return self._sites[self.site_combo.currentIndex()]

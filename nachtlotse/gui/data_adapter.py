@@ -21,6 +21,7 @@ ranked table.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from nachtlotse.data.store import RigRecord, SiteRecord
@@ -49,9 +50,10 @@ def _entry_targets(ranked: object) -> tuple[Target, ...]:
 
 
 def entry_label(ranked: object) -> str:
-    """Joined member names for a `RankedGroup` (e.g. "M81 + M82"), the
-    target's own name otherwise — see `cli.py`'s identical `_entry_label`."""
-    return " + ".join(target_label(target) for target in _entry_targets(ranked))
+    """Joined member names for a `RankedGroup` (e.g. "M81, M82"), the
+    target's own name otherwise — comma-separated here, unlike `cli.py`'s
+    `_entry_label`, which joins with " + " for its plain-text table."""
+    return ", ".join(target_label(target) for target in _entry_targets(ranked))
 
 
 def entry_type_label(ranked: object) -> str:
@@ -66,6 +68,13 @@ def entry_type_label(ranked: object) -> str:
     else:
         types = ranked.target.types  # type: ignore[attr-defined]
     return "/".join(TARGET_TYPE_LABELS.get(t, t) for t in types)
+
+
+def _best_time_text(local_time: datetime) -> str:
+    """Time + zone only, no date — the table's own header already shows
+    the dark window's date range, and the date is redundant there even
+    though a "best time" can fall on the night's second calendar day."""
+    return f"{local_time:%H:%M %Z}"
 
 
 @dataclass(frozen=True)
@@ -102,7 +111,7 @@ def build_shortlist_rows(
                 az_text=f"{ranked.pos.az_deg:.1f}°",
                 fit_text=f"{ranked.fit:.2f}",
                 reach_text=f"{ranked.reach:.2f}",
-                best_time_text=f"{local_time:%Y-%m-%d %H:%M %Z}",
+                best_time_text=_best_time_text(local_time),
                 rig_name=rig_name,
                 verdict_level=entry.verdict.level,
                 verdict_reasons=tuple(entry.verdict.reasons),
@@ -141,7 +150,7 @@ def build_ranked_rows(
                 az_text=f"{ranked.pos.az_deg:.1f}°",
                 fit_text=f"{ranked.fit:.2f}",
                 reach_text=f"{ranked.reach:.2f}",
-                best_time_text=f"{local_time:%Y-%m-%d %H:%M %Z}",
+                best_time_text=_best_time_text(local_time),
                 rig_name=rig_name,
             )
         )

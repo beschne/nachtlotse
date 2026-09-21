@@ -96,9 +96,9 @@ def label_style(rules: str) -> str:
     set anywhere in the app, QLabel (itself a QFrame subclass) starts
     painting an opaque default-palette background instead of staying
     see-through, even for labels with no matching selector of their own.
-    Found the hard way in the framework spike (macos-app-spike/) — see
-    its README.md. `VerdictBadge` below is unaffected: it *wants* an
-    opaque tinted background.
+    Found the hard way in the PySide6-vs-PyObjC framework spike (see
+    ROADMAP.md's native macOS app entry). `VerdictBadge` below is
+    unaffected: it *wants* an opaque tinted background.
     """
     return f"background: transparent; border: none; {rules}"
 
@@ -134,12 +134,23 @@ class RoundedCard(QFrame):
 
 
 class VerdictBadge(QLabel):
-    """A colored, rounded pill for a GO/MARGINAL/SKIP verdict."""
+    """A colored, rounded pill for a GO/MARGINAL/SKIP verdict.
+
+    `WA_StyledBackground` (belt-and-braces correctness for a stylesheet
+    background/border-radius on a QWidget-derived class) and a fixed
+    size taken from `sizeHint()` (so the badge never gets stretched by
+    a parent layout). Neither turned out to be the fix for the "badge
+    looked incompletely colored" bug reported during GUI testing — that
+    was the plain `QWidget` wrapping this badge in a `QTableWidget` cell
+    (`main_window._verdict_cell`) painting an opaque default-palette box
+    around it; see that method's own comment.
+    """
 
     def __init__(self, level: str) -> None:
         super().__init__(level)
         fg, bg = VERDICT_COLORS[level]
         self.setAlignment(Qt.AlignCenter)
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
             f"""
             QLabel {{
@@ -152,3 +163,4 @@ class VerdictBadge(QLabel):
             }}
             """
         )
+        self.setFixedSize(self.sizeHint())
