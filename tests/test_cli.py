@@ -261,8 +261,29 @@ def test_plan_command_falls_back_gracefully_when_weather_is_unavailable(
     output = capsys.readouterr().out
 
     assert "Weather: unavailable" in output
+    assert "Clouds tonight:" not in output  # no hourly forecast to show either
     assert "Verdict:" in output  # still produced, from sky geometry alone
     assert "Best time (local)" in output  # the ranked table still printed
+
+
+def test_plan_command_prints_an_hourly_cloud_cover_sparkline(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The offline clear-sky fixture (see conftest.py) gives every test a
+    real hourly forecast — a colorless block-height sparkline, one
+    character per forecast hour, no ANSI escapes."""
+    assert cli.main(["plan"]) == 0
+    output = capsys.readouterr().out
+
+    lines = [line for line in output.splitlines() if line.startswith("Clouds tonight:")]
+    assert len(lines) == 1
+    line = lines[0]
+    assert "\x1b" not in line  # no ANSI color codes
+    bar = line.split("Clouds tonight: ", 1)[1].split("  (", 1)[0]
+    assert bar  # at least one hour in the dark window
+    assert all(char in "▁▂▃▄▅▆▇█" for char in bar)
 
 
 def test_best_sky_command_lists_every_configured_site_without_a_radius(

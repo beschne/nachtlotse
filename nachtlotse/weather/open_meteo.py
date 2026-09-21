@@ -187,6 +187,19 @@ def fetch_hourly_cached(
     return hours
 
 
+def hourly_forecast_in_window(
+    hours: list[HourlyWeather], start: datetime, end: datetime
+) -> list[HourlyWeather]:
+    """Every forecast hour falling within [start, end], in order —
+    the same window `summarize_window` collapses into one aggregate,
+    kept hour-by-hour instead for ROADMAP.md's "Hourly cloud cover for
+    the astro-night": a fully-clear window that closes early, or a
+    socked-in one that clears at 2am, shows up as a shape rather than
+    one averaged number.
+    """
+    return [hour for hour in hours if start <= hour.when <= end]
+
+
 def summarize_window(
     hours: list[HourlyWeather], start: datetime, end: datetime
 ) -> WeatherSummary | None:
@@ -195,7 +208,7 @@ def summarize_window(
     None if no forecast hour falls in the window (e.g. the window is
     further out than Open-Meteo's forecast horizon).
     """
-    relevant = [hour for hour in hours if start <= hour.when <= end]
+    relevant = hourly_forecast_in_window(hours, start, end)
     if not relevant:
         return None
 

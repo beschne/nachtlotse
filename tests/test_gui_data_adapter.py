@@ -94,6 +94,7 @@ def _night_plan(shortlist_ranked) -> NightPlan:
         moonrise=None,
         moonset=None,
         weather=_WEATHER,
+        hourly_cloud_cover=[],
         ranked=list(shortlist_ranked),
         shortlist=shortlist,
     )
@@ -161,6 +162,7 @@ def test_build_shortlist_rows_names_each_entrys_own_rig_for_best_rig_plans() -> 
         moonrise=None,
         moonset=None,
         weather=None,
+        hourly_cloud_cover=[],
         ranked=[row],
         shortlist=[BestRigShortlistEntry(row, Verdict(level="MARGINAL", reasons=["x"]))],
     )
@@ -197,6 +199,7 @@ def test_build_header_summary_counts_verdicts_and_formats_the_dark_window() -> N
         moonrise=None,
         moonset=None,
         weather=_WEATHER,
+        hourly_cloud_cover=[],
         ranked=[go_row, skip_row],
         shortlist=[
             ShortlistEntry(go_row, Verdict(level="GO", reasons=["fine"])),
@@ -226,6 +229,7 @@ def test_build_header_summary_appends_whichever_moon_events_are_present() -> Non
         moonrise=None,
         moonset=None,
         weather=_WEATHER,
+        hourly_cloud_cover=[],
         ranked=[go_row],
         shortlist=[ShortlistEntry(go_row, Verdict(level="GO", reasons=["fine"]))],
     )

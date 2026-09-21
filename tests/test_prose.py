@@ -92,6 +92,7 @@ def _night_plan(shortlist_ranked, ranked=None) -> planning.NightPlan:
         moonrise=None,
         moonset=None,
         weather=_WEATHER,
+        hourly_cloud_cover=[],
         ranked=ranked if ranked is not None else list(shortlist_ranked),
         shortlist=shortlist,
     )
@@ -150,6 +151,7 @@ def test_build_briefing_facts_for_best_rig_plan_names_each_entrys_own_rig() -> N
         moonrise=None,
         moonset=None,
         weather=None,
+        hourly_cloud_cover=[],
         ranked=[row],
         shortlist=[
             planning.BestRigShortlistEntry(row, Verdict(level="MARGINAL", reasons=["x"]))

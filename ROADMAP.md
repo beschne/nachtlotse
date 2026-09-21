@@ -8,32 +8,25 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Hourly cloud cover for the astro-night:** `weather/open_meteo.py`
-   currently aggregates cloud cover over the whole dark window into one
-   `WeatherSummary` (`max_cloud_cover_pct`/`avg_cloud_cover_pct`). Instead,
-   surface the hour-by-hour Open-Meteo series, clipped to the astronomical
-   dark window (`constraints.dark_window`) rather than the full calendar
-   night, so a fully-clear window that closes early or a socked-in window
-   that clears at 2am shows up as a shape, not one averaged number.
-2. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
+1. **Export from the GUI:** Shortlist/All ranked as CSV, the sky chart as
    a PNG (reusing `chart_export.py`'s matplotlib path, or a direct
    `QWidget.grab()` of the canvas), the briefing as `.txt`, and Sites/Rigs
    as `.txt`.
-3. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
+2. **GUI evaluation limit:** `lotse gui` calls `planning.plan_night`
    without a `limit`, so it already inherits the same
    `DEFAULT_MAX_EVALUATED` (50) cap the CLI defaults to — but unlike the
    CLI's own `--limit` flag, there's no sidebar control to change it
    (evaluate more, fewer, or 0/unlimited).
-4. **Session log:** record what's already been captured, and when — total
+3. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos.
-5. **Current events:** well-placed comets, supernova alerts; later also minor
+4. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-6. **Multilingual UI/CLI text** (at minimum German and English). Everything
+5. **Multilingual UI/CLI text** (at minimum German and English). Everything
    user-facing is English-only for now; this stays parked until there's a
    reason to localize.
-7. **Framing preview for selected targets:** render what a target would
+6. **Framing preview for selected targets:** render what a target would
    actually look like through the given rig — its angular size/shape
    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
    math) — rather than only the numeric `framing_score`/reach. A visual

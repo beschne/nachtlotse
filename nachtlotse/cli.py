@@ -26,6 +26,7 @@ from nachtlotse.engine.models import (
     WeatherSummary,
 )
 from nachtlotse.planning import RankedEntry, RankedGroup, RankedTargetForBestRig
+from nachtlotse.weather import open_meteo
 
 _TARGET_TYPE_CHOICES = sorted(get_args(TargetType))
 
@@ -71,6 +72,44 @@ def _format_weather_line(weather: WeatherSummary | None) -> str:
         f"(avg {weather.avg_cloud_cover_pct:.0f}%) · "
         f"wind up to {weather.max_wind_kmh:.0f} km/h · "
         f"dew margin {weather.min_dew_point_spread_c:.1f}°C"
+    )
+
+
+# 8 block-height levels, no color — this CLI's output stays plain text/
+# ANSI-free throughout, so shading (not hue) is what has to carry cloud
+# cover across the night (ROADMAP.md's "Hourly cloud cover for the
+# astro-night").
+_SPARKLINE_LEVELS = "▁▂▃▄▅▆▇█"
+
+
+def _sparkline(percentages: list[float]) -> str:
+    """One `_SPARKLINE_LEVELS` character per value, 0-100 -> the 8
+    height levels."""
+    chars = []
+    for pct in percentages:
+        level = int(pct / 100.0 * len(_SPARKLINE_LEVELS))
+        level = max(0, min(len(_SPARKLINE_LEVELS) - 1, level))
+        chars.append(_SPARKLINE_LEVELS[level])
+    return "".join(chars)
+
+
+def _hourly_cloud_cover_line(
+    hourly: list[open_meteo.HourlyWeather], local_tz: ZoneInfo
+) -> str | None:
+    """A compact sparkline of cloud cover across the dark window, one
+    character per forecast hour — real Open-Meteo hours, not resampled
+    or interpolated, so a short summer night is a short bar rather than
+    a padded one. None when there's no hourly forecast to show (same
+    "no data" case `_format_weather_line` already handles for the
+    aggregated summary)."""
+    if not hourly:
+        return None
+    bar = _sparkline([hour.cloud_cover_pct for hour in hourly])
+    start_local = hourly[0].when.astimezone(local_tz)
+    end_local = hourly[-1].when.astimezone(local_tz)
+    return (
+        f"Clouds tonight: {bar}  ({start_local:%H:%M}–{end_local:%H:%M} "
+        f"{end_local:%Z})"
     )
 
 
@@ -165,6 +204,9 @@ def _cmd_plan(
         f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
     )
     print(_format_weather_line(plan.weather))
+    hourly_line = _hourly_cloud_cover_line(plan.hourly_cloud_cover, local_tz)
+    if hourly_line is not None:
+        print(hourly_line)
     print()
 
     if not plan.ranked:
@@ -249,6 +291,9 @@ def _cmd_plan_best_rig(
         f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
     )
     print(_format_weather_line(plan.weather))
+    hourly_line = _hourly_cloud_cover_line(plan.hourly_cloud_cover, local_tz)
+    if hourly_line is not None:
+        print(hourly_line)
     print()
 
     if not plan.ranked:

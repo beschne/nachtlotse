@@ -415,6 +415,11 @@ def test_plan_night_carries_dark_window_moon_weather_and_a_shortlist(
     assert plan.evening_start < plan.morning_end
     assert 0.0 <= plan.moon_illumination_pct <= 100.0
     assert plan.weather is not None  # offline fixture always provides one
+    assert plan.hourly_cloud_cover, "the offline clear-sky fixture spans any dark window"
+    assert all(
+        plan.evening_start <= hour.when <= plan.morning_end
+        for hour in plan.hourly_cloud_cover
+    )
     assert plan.ranked, "the default site/rig should have observable targets tonight"
     assert plan.shortlist, "a non-empty ranking should yield a shortlist"
     # The top SHORTLIST_SIZE are always exactly ranked[:SHORTLIST_SIZE];
@@ -429,6 +434,53 @@ def test_plan_night_carries_dark_window_moon_weather_and_a_shortlist(
         assert planning.is_favorite(extra)
     for entry in plan.shortlist:
         assert entry.verdict.level in ("GO", "MARGINAL", "SKIP")
+
+
+def test_fetch_hourly_cloud_cover_clips_to_the_dark_window(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from nachtlotse.weather import open_meteo
+
+    site = store.default_site_record().site
+    base = datetime(2026, 9, 12, 18, 0, tzinfo=UTC)
+
+    def fake_fetch_hourly(lat_deg: float, lon_deg: float) -> list[open_meteo.HourlyWeather]:
+        return [
+            open_meteo.HourlyWeather(
+                when=base + timedelta(hours=offset),
+                cloud_cover_pct=float(offset),  # distinct per hour, easy to check order
+                wind_speed_kmh=5.0,
+                humidity_pct=50.0,
+                dew_point_c=5.0,
+                temperature_c=15.0,
+            )
+            for offset in range(12)
+        ]
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", fake_fetch_hourly)
+
+    evening_start = base + timedelta(hours=3)
+    morning_end = base + timedelta(hours=8)
+    hourly = planning.fetch_hourly_cloud_cover(site, evening_start, morning_end)
+
+    assert [hour.cloud_cover_pct for hour in hourly] == [3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+
+
+def test_fetch_hourly_cloud_cover_is_empty_when_weather_is_unavailable(
+    template_sites: list[store.SiteRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from nachtlotse.weather import open_meteo
+
+    def always_unavailable(lat_deg: float, lon_deg: float) -> list:
+        raise open_meteo.WeatherUnavailable("simulated: no network")
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", always_unavailable)
+
+    site = store.default_site_record().site
+    now = datetime.now(UTC)
+    assert planning.fetch_hourly_cloud_cover(site, now, now + timedelta(hours=8)) == []
 
 
 def test_plan_night_has_no_shortlist_when_nothing_is_observable(

@@ -125,6 +125,7 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
         moonrise=None,
         moonset=None,
         weather=None,
+        hourly_cloud_cover=[],
         ranked=[ranked],
         shortlist=[entry],
     )
@@ -219,6 +220,7 @@ def test_shortlist_tracks_draws_a_single_line_for_a_group_not_one_per_member(
         moonrise=None,
         moonset=None,
         weather=None,
+        hourly_cloud_cover=[],
         ranked=[ranked],
         shortlist=[entry],
     )

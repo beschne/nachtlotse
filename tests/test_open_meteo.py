@@ -154,6 +154,27 @@ def test_summarize_window_returns_none_when_window_is_outside_the_forecast() -> 
     assert open_meteo.summarize_window(hours, far_future_start, far_future_end) is None
 
 
+def test_hourly_forecast_in_window_keeps_each_hour_instead_of_aggregating() -> None:
+    with patch("urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)):
+        hours = open_meteo.fetch_hourly(50.237, 8.551)
+
+    start = datetime(2026, 9, 12, 21, 0, tzinfo=UTC)
+    end = datetime(2026, 9, 12, 22, 0, tzinfo=UTC)
+    in_window = open_meteo.hourly_forecast_in_window(hours, start, end)
+
+    assert [hour.cloud_cover_pct for hour in in_window] == [40.0, 90.0]
+    assert all(start <= hour.when <= end for hour in in_window)
+
+
+def test_hourly_forecast_in_window_empty_outside_the_forecast() -> None:
+    with patch("urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)):
+        hours = open_meteo.fetch_hourly(50.237, 8.551)
+
+    far_future_start = datetime(2030, 1, 1, 0, 0, tzinfo=UTC)
+    far_future_end = datetime(2030, 1, 1, 6, 0, tzinfo=UTC)
+    assert open_meteo.hourly_forecast_in_window(hours, far_future_start, far_future_end) == []
+
+
 def test_fetch_hourly_cached_serves_a_fresh_cache_entry_without_a_network_call(
     tmp_path: Path,
 ) -> None:

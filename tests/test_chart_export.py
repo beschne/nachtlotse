@@ -33,6 +33,7 @@ def _empty_plan(site, rig) -> planning.NightPlan:
         moonrise=None,
         moonset=None,
         weather=None,
+        hourly_cloud_cover=[],
         ranked=[],
         shortlist=[],
     )

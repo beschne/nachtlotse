@@ -358,6 +358,20 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
 - Optional by design — any failure (offline, bad response) raises
   `WeatherUnavailable`, which the CLI turns into "Weather: unavailable"
   rather than a crash; the ranking keeps working from sky geometry alone.
+- `hourly_forecast_in_window(hours, start, end)` (ROADMAP.md's "Hourly
+  cloud cover for the astro-night", done) is `summarize_window`'s own
+  filter, factored out and made public: every forecast hour inside the
+  dark window, kept as-is instead of collapsed into one max/avg number.
+  `planning.fetch_hourly_cloud_cover` calls it the same way `fetch_
+  weather_summary` calls `summarize_window` — same cache, same offline
+  fallback (`[]`, not an exception) — and `NightPlan`/`NightPlanForBestRig`
+  both carry the result as `hourly_cloud_cover`. Surfaced in both front
+  ends: `cli.py` prints it as a plain-text sparkline (`▁▂▃▄▅▆▇█`, no ANSI
+  color — this CLI's output stays colorless throughout); `gui/hourly_
+  cloud_bar.py` draws a row of colored cells instead, thresholds modeled
+  on clearoutside.com (0-18% good, 19-48% moderate, 49-100% poor) but
+  filled from this app's own muted `theme.VERDICT_COLORS` `_text` tones,
+  not clearoutside's blue gradient or a generic traffic-light palette.
 
 ## `nachtlotse/prose.py`
 

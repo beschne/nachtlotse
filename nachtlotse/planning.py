@@ -103,6 +103,11 @@ class NightPlan:
     moonrise: datetime | None
     moonset: datetime | None
     weather: WeatherSummary | None
+    # Same source data `weather` summarizes into one max/avg number, kept
+    # hour-by-hour instead (see `fetch_hourly_cloud_cover`) — empty list,
+    # not None, when weather is unreachable (a chart with zero points
+    # already reads as "nothing to show").
+    hourly_cloud_cover: list[open_meteo.HourlyWeather]
     ranked: list[RankedEntry]
     # The top SHORTLIST_SIZE of `ranked`, each with its own verdict, plus
     # any favorite entries that didn't already make that cutoff — see
@@ -406,6 +411,26 @@ def fetch_weather_summary(
     return open_meteo.summarize_window(hours, evening_start, morning_end)
 
 
+def fetch_hourly_cloud_cover(
+    site: Site, evening_start: datetime, morning_end: datetime
+) -> list[open_meteo.HourlyWeather]:
+    """Cloud cover, hour by hour, clipped to the dark window — see
+    ROADMAP.md's "Hourly cloud cover for the astro-night". `open_meteo.
+    fetch_hourly_cached` means this costs no extra network round-trip
+    when `fetch_weather_summary` already fetched the same site this
+    hour.
+
+    Same offline-safe contract as `fetch_weather_summary`: unreachable
+    weather is an empty list, not an exception — this is a display
+    refinement, never something the ranking itself depends on.
+    """
+    try:
+        hours = open_meteo.fetch_hourly_cached(site.lat_deg, site.lon_deg)
+    except open_meteo.WeatherUnavailable:
+        return []
+    return open_meteo.hourly_forecast_in_window(hours, evening_start, morning_end)
+
+
 def _entry_targets(entry: object) -> tuple[Target, ...]:
     """The one or more real catalog targets behind a ranked entry — a
     `RankedGroup`'s members, or a single-target entry's own target.
@@ -469,6 +494,7 @@ def plan_night(
     illumination_pct = moon_illumination(Time(when)) * 100
     moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
+    hourly_cloud_cover = fetch_hourly_cloud_cover(site, evening_start, morning_end)
     ranked = rank_targets(site, rig, when, types=types, limit=limit)
 
     shortlist = [
@@ -485,6 +511,7 @@ def plan_night(
         moonrise=moonrise,
         moonset=moonset,
         weather=weather,
+        hourly_cloud_cover=hourly_cloud_cover,
         ranked=ranked,
         shortlist=shortlist,
     )
@@ -512,6 +539,7 @@ class NightPlanForBestRig:
     moonrise: datetime | None
     moonset: datetime | None
     weather: WeatherSummary | None
+    hourly_cloud_cover: list[open_meteo.HourlyWeather]
     ranked: list[RankedTargetForBestRig]
     shortlist: list[BestRigShortlistEntry]
 
@@ -531,6 +559,7 @@ def plan_night_for_best_rig(
     illumination_pct = moon_illumination(Time(when)) * 100
     moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
+    hourly_cloud_cover = fetch_hourly_cloud_cover(site, evening_start, morning_end)
     ranked = rank_targets_for_best_rig(site, rigs, when, types=types, limit=limit)
 
     shortlist = [
@@ -548,6 +577,7 @@ def plan_night_for_best_rig(
         moonrise=moonrise,
         moonset=moonset,
         weather=weather,
+        hourly_cloud_cover=hourly_cloud_cover,
         ranked=ranked,
         shortlist=shortlist,
     )

@@ -47,6 +47,7 @@ from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine.models import Rig, Site
 from nachtlotse.gui import data_adapter
 from nachtlotse.gui.briefing import BriefingCard
+from nachtlotse.gui.hourly_cloud_bar import HourlyCloudCoverBar
 from nachtlotse.gui.sidebar import Sidebar
 from nachtlotse.gui.sites_rigs import RigsCard, SitesCard
 from nachtlotse.gui.sky_chart import SkyChartCard
@@ -200,8 +201,9 @@ class MainWindow(QMainWindow):
         )
         self.weather_label = QLabel()
         self.weather_label.setStyleSheet(
-            label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px; margin-bottom: 12px;")
+            label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px;")
         )
+        self.hourly_cloud_bar = HourlyCloudCoverBar()
 
         self.progress = QProgressBar()
         self.progress.setRange(0, 0)  # indeterminate: we don't know how long a plan will take
@@ -219,6 +221,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.title)
         content_layout.addWidget(self.sub)
         content_layout.addWidget(self.weather_label)
+        content_layout.addWidget(self.hourly_cloud_bar)
         content_layout.addWidget(self.progress)
 
         self.tabs = QTabWidget()
@@ -350,6 +353,7 @@ class MainWindow(QMainWindow):
         self.title.setText("Planning…")
         self.sub.setText("")
         self.weather_label.setText("")
+        self.hourly_cloud_bar.hide()
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
         self._worker = _PlanWorker(site, rig, when)
@@ -377,6 +381,7 @@ class MainWindow(QMainWindow):
             f"{summary.counts_text}"
         )
         self.weather_label.setText(summary.weather_text)
+        self.hourly_cloud_bar.set_hourly_cloud_cover(plan.hourly_cloud_cover, local_tz)
 
         self._populate_table(self.shortlist_table, _SHORTLIST_COLUMNS, shortlist_rows)
         self._populate_table(self.ranked_table, _RANKED_COLUMNS, ranked_rows)
