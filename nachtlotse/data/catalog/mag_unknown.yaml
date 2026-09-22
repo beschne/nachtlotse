@@ -201,6 +201,7 @@
   # SKIPPED-OBJECTS.md), so it's referenced here rather than added.
   size_arcmin: [140.0, 140.0]
   types: ["emission_nebula"]
+  favorite: true
 
 - name: "Lion Nebula"
   catalog_id: "Sh2-132"
