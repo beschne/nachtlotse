@@ -217,9 +217,7 @@ def test_load_local_sites_parses_bortle_class_and_measured_sky_brightness(
     )
     monkeypatch.setattr(store, "_LOCAL_SITES_PATH", yaml_path)
 
-    by_name = {
-        record.site.name: record.site for record in store._load_local_sites()
-    }
+    by_name = {record.site.name: record.site for record in store._load_local_sites()}
 
     measured = by_name["Measured Site"]
     assert measured.bortle_class == pytest.approx(4.5)
@@ -388,6 +386,4 @@ def test_load_prose_config_allows_either_field_to_be_omitted(
 
     config = store._load_local_prose()
 
-    assert config == store.ProseConfig(
-        api_key=None, model="claude-haiku-4-5-20251001"
-    )
+    assert config == store.ProseConfig(api_key=None, model="claude-haiku-4-5-20251001")

@@ -212,7 +212,9 @@ def _build_ranked_group(
         framing.reach_factor(site, member.magnitude, member.size_arcmin)
         for member in members
     )
-    return RankedGroup(targets=members, best_time=best_time, pos=pos, fit=fit, reach=reach)
+    return RankedGroup(
+        targets=members, best_time=best_time, pos=pos, fit=fit, reach=reach
+    )
 
 
 def _fold_in_groups(
@@ -241,7 +243,9 @@ def _fold_in_groups(
         row for target, row in by_target.items() if target not in grouped_targets
     )
     entries.sort(
-        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
+        key=lambda row: framing.target_priority_score(
+            row.pos.alt_deg, row.fit, row.reach
+        ),
         reverse=True,
     )
     return entries
@@ -317,7 +321,9 @@ def rank_targets(
             )
         )
     ranked.sort(
-        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
+        key=lambda row: framing.target_priority_score(
+            row.pos.alt_deg, row.fit, row.reach
+        ),
         reverse=True,
     )
     return _fold_in_groups(site, rig, ranked, when)
@@ -401,7 +407,9 @@ def rank_targets_for_best_rig(
             ranked.append(best_for_target)
 
     ranked.sort(
-        key=lambda row: framing.target_priority_score(row.pos.alt_deg, row.fit, row.reach),
+        key=lambda row: framing.target_priority_score(
+            row.pos.alt_deg, row.fit, row.reach
+        ),
         reverse=True,
     )
     return ranked
@@ -512,7 +520,9 @@ def plan_night(
     ranked = rank_targets(site, rig, when, types=types, limit=limit)
 
     shortlist = [
-        ShortlistEntry(row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather))
+        ShortlistEntry(
+            row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather)
+        )
         for row in _fold_favorites_into_shortlist(ranked)
     ]
 

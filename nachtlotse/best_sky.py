@@ -1,4 +1,4 @@
-""""Where's the best sky?" — cross-site weather comparison.
+""" "Where's the best sky?" — cross-site weather comparison.
 
 A different question from `planning.plan_night`: not "what should I shoot
 at my usual site tonight", but "which of my configured sites has the
@@ -119,7 +119,9 @@ def compare_sites(
         site_distance_km = distance_km(reference, site)
         if max_distance_km is not None and site_distance_km > max_distance_km:
             continue
-        site_bearing_deg = bearing_deg(reference, site) if site_distance_km > 0.01 else None
+        site_bearing_deg = (
+            bearing_deg(reference, site) if site_distance_km > 0.01 else None
+        )
 
         evening_start, morning_end = constraints.dark_window(site, when)
         weather_unavailable_reason: WeatherUnavailableReason | None
@@ -137,7 +139,9 @@ def compare_sites(
             # The fetch itself succeeded — a still-None `weather` here can
             # only mean no fetched hour fell in the window, i.e. the night
             # is past Open-Meteo's own forecast horizon.
-            weather_unavailable_reason = None if weather is not None else "beyond_forecast_horizon"
+            weather_unavailable_reason = (
+                None if weather is not None else "beyond_forecast_horizon"
+            )
 
         reports.append(
             SiteSkyReport(

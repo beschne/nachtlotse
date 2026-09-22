@@ -207,7 +207,9 @@ def test_compare_sites_reuses_the_disk_cache_across_a_different_reference(
     assert call_count == 3
 
     best_sky.compare_sites(FRANKFURT, candidates, _NOW)  # a different reference
-    assert call_count == 3, "changing the reference re-fetched already-cached candidates"
+    assert call_count == 3, (
+        "changing the reference re-fetched already-cached candidates"
+    )
 
 
 def test_compare_sites_includes_hourly_cloud_cover_clipped_to_the_dark_window(
@@ -235,7 +237,9 @@ def test_compass_direction_rounds_to_the_nearest_16_point() -> None:
 
 
 def test_distance_km_is_symmetric_and_zero_for_the_same_site() -> None:
-    assert best_sky.distance_km(BAD_HOMBURG, BAD_HOMBURG) == pytest.approx(0.0, abs=0.01)
+    assert best_sky.distance_km(BAD_HOMBURG, BAD_HOMBURG) == pytest.approx(
+        0.0, abs=0.01
+    )
     assert best_sky.distance_km(BAD_HOMBURG, MUNICH) == pytest.approx(
         best_sky.distance_km(MUNICH, BAD_HOMBURG)
     )

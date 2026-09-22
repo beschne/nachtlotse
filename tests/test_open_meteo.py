@@ -172,7 +172,10 @@ def test_hourly_forecast_in_window_empty_outside_the_forecast() -> None:
 
     far_future_start = datetime(2030, 1, 1, 0, 0, tzinfo=UTC)
     far_future_end = datetime(2030, 1, 1, 6, 0, tzinfo=UTC)
-    assert open_meteo.hourly_forecast_in_window(hours, far_future_start, far_future_end) == []
+    assert (
+        open_meteo.hourly_forecast_in_window(hours, far_future_start, far_future_end)
+        == []
+    )
 
 
 def test_fetch_hourly_cached_serves_a_fresh_cache_entry_without_a_network_call(

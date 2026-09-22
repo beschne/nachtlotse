@@ -334,7 +334,9 @@ def test_catalog_is_loaded_brightest_first() -> None:
     object in favor of whichever bin sorts first by filename. Only bin-level
     order is asserted; a bin file's own internal ordering isn't a contract.
     """
-    bin_ranks = [_BIN_ORDER.index(_expected_bin(target.magnitude)) for target in CATALOG]
+    bin_ranks = [
+        _BIN_ORDER.index(_expected_bin(target.magnitude)) for target in CATALOG
+    ]
     assert bin_ranks == sorted(bin_ranks)
 
 

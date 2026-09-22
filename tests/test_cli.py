@@ -28,7 +28,11 @@ def test_plan_command_prints_dark_window_moon_and_a_ranked_table(
     default_rig = store.default_rig_record().rig
     ranked = planning.rank_targets(default_site, default_rig, datetime.now(UTC))
     for entry in ranked:
-        targets = entry.targets if isinstance(entry, planning.RankedGroup) else (entry.target,)
+        targets = (
+            entry.targets
+            if isinstance(entry, planning.RankedGroup)
+            else (entry.target,)
+        )
         for target in targets:
             assert target.catalog_id in output
 
@@ -334,7 +338,10 @@ def test_plan_command_chart_writes_the_default_png_and_overwrites_it(
     assert cli.main(["plan", "--chart"]) == 0
     default_path = tmp_path / chart_export.DEFAULT_CHART_FILENAME
     assert default_path.exists()
-    assert f"Chart written to {chart_export.DEFAULT_CHART_FILENAME}" in capsys.readouterr().out
+    assert (
+        f"Chart written to {chart_export.DEFAULT_CHART_FILENAME}"
+        in capsys.readouterr().out
+    )
     first_mtime = default_path.stat().st_mtime_ns
 
     assert cli.main(["plan", "--chart"]) == 0
@@ -480,10 +487,16 @@ def test_plan_command_shows_a_co_visible_group_as_one_joined_shortlist_entry(
 
     close_a = Target(name="close a", ra_deg=lst_deg, dec_deg=dec_deg)
     close_b = Target(
-        name="close b", ra_deg=lst_deg + (fov_short_arcmin * 0.3) / 60.0, dec_deg=dec_deg
+        name="close b",
+        ra_deg=lst_deg + (fov_short_arcmin * 0.3) / 60.0,
+        dec_deg=dec_deg,
     )
     monkeypatch.setattr(planning, "CATALOG", [close_a, close_b])
-    monkeypatch.setattr(cli, "_resolve_when", lambda *_a, **_kw: night_reference.to_datetime(timezone=UTC))
+    monkeypatch.setattr(
+        cli,
+        "_resolve_when",
+        lambda *_a, **_kw: night_reference.to_datetime(timezone=UTC),
+    )
 
     assert cli.main(["plan"]) == 0
     output = capsys.readouterr().out
@@ -536,7 +549,9 @@ def test_plan_command_best_rig_shows_which_rig_won_each_target(
     )
     monkeypatch.setattr(planning, "CATALOG", [target])
     monkeypatch.setattr(
-        cli, "_resolve_when", lambda *_a, **_kw: night_reference.to_datetime(timezone=UTC)
+        cli,
+        "_resolve_when",
+        lambda *_a, **_kw: night_reference.to_datetime(timezone=UTC),
     )
 
     assert cli.main(["plan", "--best-rig"]) == 0

@@ -133,7 +133,9 @@ def test_a_heavily_obstructed_horizon_excludes_targets_a_clear_horizon_admits(
     def catalog_ids(ranked: list[planning.RankedEntry]) -> set[str]:
         ids: set[str] = set()
         for row in ranked:
-            targets = row.targets if isinstance(row, planning.RankedGroup) else (row.target,)
+            targets = (
+                row.targets if isinstance(row, planning.RankedGroup) else (row.target,)
+            )
             ids.update(target.catalog_id for target in targets)
         return ids
 
@@ -179,9 +181,7 @@ def test_rank_targets_folds_a_co_visible_pair_into_one_group(
     far = Target(name="far", ra_deg=lst_deg, dec_deg=site.lat_deg - 60.0)
     monkeypatch.setattr(planning, "CATALOG", [close_a, close_b, far])
 
-    ranked = planning.rank_targets(
-        site, rig, night_reference.to_datetime(timezone=UTC)
-    )
+    ranked = planning.rank_targets(site, rig, night_reference.to_datetime(timezone=UTC))
 
     groups = [row for row in ranked if isinstance(row, planning.RankedGroup)]
     singles = [row for row in ranked if isinstance(row, planning.RankedTarget)]
@@ -222,9 +222,7 @@ def test_rank_targets_leaves_distant_targets_ungrouped(
     b = Target(name="test b", ra_deg=lst_deg, dec_deg=site.lat_deg - 60.0)
     monkeypatch.setattr(planning, "CATALOG", [a, b])
 
-    ranked = planning.rank_targets(
-        site, rig, night_reference.to_datetime(timezone=UTC)
-    )
+    ranked = planning.rank_targets(site, rig, night_reference.to_datetime(timezone=UTC))
 
     assert all(isinstance(row, planning.RankedTarget) for row in ranked)
     assert {row.target.name for row in ranked} == {"test a", "test b"}
@@ -415,7 +413,9 @@ def test_plan_night_carries_dark_window_moon_weather_and_a_shortlist(
     assert plan.evening_start < plan.morning_end
     assert 0.0 <= plan.moon_illumination_pct <= 100.0
     assert plan.weather is not None  # offline fixture always provides one
-    assert plan.hourly_cloud_cover, "the offline clear-sky fixture spans any dark window"
+    assert plan.hourly_cloud_cover, (
+        "the offline clear-sky fixture spans any dark window"
+    )
     assert all(
         plan.evening_start <= hour.when <= plan.morning_end
         for hour in plan.hourly_cloud_cover
@@ -429,7 +429,9 @@ def test_plan_night_carries_dark_window_moon_weather_and_a_shortlist(
     # shortlist longer, so this doesn't assert an upper bound or a plain
     # slice equality the way it did before favorites existed.
     shortlisted = [entry.ranked for entry in plan.shortlist]
-    assert shortlisted[: planning.SHORTLIST_SIZE] == plan.ranked[: planning.SHORTLIST_SIZE]
+    assert (
+        shortlisted[: planning.SHORTLIST_SIZE] == plan.ranked[: planning.SHORTLIST_SIZE]
+    )
     for extra in shortlisted[planning.SHORTLIST_SIZE :]:
         assert planning.is_favorite(extra)
     for entry in plan.shortlist:
@@ -445,7 +447,9 @@ def test_fetch_hourly_cloud_cover_clips_to_the_dark_window(
     site = store.default_site_record().site
     base = datetime(2026, 9, 12, 18, 0, tzinfo=UTC)
 
-    def fake_fetch_hourly(lat_deg: float, lon_deg: float) -> list[open_meteo.HourlyWeather]:
+    def fake_fetch_hourly(
+        lat_deg: float, lon_deg: float
+    ) -> list[open_meteo.HourlyWeather]:
         return [
             open_meteo.HourlyWeather(
                 when=base + timedelta(hours=offset),
@@ -570,13 +574,17 @@ def test_is_favorite_checks_the_underlying_target_or_group_members() -> None:
 
     assert (
         planning.is_favorite(
-            planning.RankedTarget(target=plain, best_time=now, pos=pos, fit=0.0, reach=0.0)
+            planning.RankedTarget(
+                target=plain, best_time=now, pos=pos, fit=0.0, reach=0.0
+            )
         )
         is False
     )
     assert (
         planning.is_favorite(
-            planning.RankedTarget(target=starred, best_time=now, pos=pos, fit=0.0, reach=0.0)
+            planning.RankedTarget(
+                target=starred, best_time=now, pos=pos, fit=0.0, reach=0.0
+            )
         )
         is True
     )
@@ -593,7 +601,9 @@ def test_is_favorite_checks_the_underlying_target_or_group_members() -> None:
     )
     assert (
         planning.is_favorite(
-            planning.RankedGroup(targets=(plain,), best_time=now, pos=pos, fit=0.0, reach=0.0)
+            planning.RankedGroup(
+                targets=(plain,), best_time=now, pos=pos, fit=0.0, reach=0.0
+            )
         )
         is False
     )
@@ -681,7 +691,8 @@ def test_rank_targets_limits_evaluated_count(
         call_count += 1
 
     with patch(
-        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+        "nachtlotse.planning.constraints.best_time_tonight",
+        side_effect=counting_best_time,
     ):
         ranked = planning.rank_targets(site, rig, datetime.now(UTC), limit=5)
 
@@ -715,7 +726,8 @@ def test_rank_targets_limit_zero_evaluates_all(
         call_count += 1
 
     with patch(
-        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+        "nachtlotse.planning.constraints.best_time_tonight",
+        side_effect=counting_best_time,
     ):
         ranked = planning.rank_targets(site, rig, datetime.now(UTC), limit=0)
 
@@ -749,7 +761,8 @@ def test_rank_targets_default_limit_is_50(
         call_count += 1
 
     with patch(
-        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+        "nachtlotse.planning.constraints.best_time_tonight",
+        side_effect=counting_best_time,
     ):
         ranked = planning.rank_targets(site, rig, datetime.now(UTC))
 
@@ -798,7 +811,8 @@ def test_rank_targets_limit_does_not_skip_a_favorite(
         return None  # every non-favorite fails, to isolate the favorite's own result
 
     with patch(
-        "nachtlotse.planning.constraints.best_time_tonight", side_effect=selective_best_time
+        "nachtlotse.planning.constraints.best_time_tonight",
+        side_effect=selective_best_time,
     ):
         ranked = planning.rank_targets(site, rig, now, limit=5)
 
@@ -834,7 +848,8 @@ def test_rank_targets_limit_exceeds_catalog(
         call_count += 1
 
     with patch(
-        "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
+        "nachtlotse.planning.constraints.best_time_tonight",
+        side_effect=counting_best_time,
     ):
         ranked = planning.rank_targets(site, rig, datetime.now(UTC), limit=50)
 

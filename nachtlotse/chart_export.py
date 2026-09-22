@@ -89,7 +89,13 @@ def save_shortlist_chart(plan: NightPlan, path: Path) -> None:
     for label, az_deg in charting.COMPASS_LABELS:
         x, y = charting.compass_label_point(az_deg, rim_r=98.0)
         ax.annotate(
-            label, (x, y), fontsize=10, ha="center", va="center", zorder=4, fontweight="bold"
+            label,
+            (x, y),
+            fontsize=10,
+            ha="center",
+            va="center",
+            zorder=4,
+            fontweight="bold",
         )
 
     for i, track in enumerate(charting.shortlist_tracks(plan)):

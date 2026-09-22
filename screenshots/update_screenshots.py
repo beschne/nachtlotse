@@ -65,7 +65,9 @@ SKY_CHART_TAB_INDEX = 2
 BEST_SKY_TAB_INDEX = 4
 
 
-def _pump(app: QApplication, worker_holder: MainWindow | BestSkyCard, seconds: float) -> None:
+def _pump(
+    app: QApplication, worker_holder: MainWindow | BestSkyCard, seconds: float
+) -> None:
     """Works for anything holding a `._worker` QThread — `MainWindow`
     itself (the plan worker) or `BestSkyCard` (its own refresh worker)."""
     deadline = time.time() + seconds
@@ -86,14 +88,23 @@ def _find_window_id(title: str) -> int:
         Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID
     )
     for w in windows:
-        if w.get("kCGWindowOwnerName", "") == "python3" and w.get("kCGWindowName") == title:
+        if (
+            w.get("kCGWindowOwnerName", "") == "python3"
+            and w.get("kCGWindowName") == title
+        ):
             return w.get("kCGWindowNumber")
     raise RuntimeError(f"Could not find an on-screen window titled {title!r}")
 
 
 def _capture(window_id: int, out_path: Path) -> None:
-    subprocess.run(["screencapture", "-l", str(window_id), "-x", str(out_path)], check=True)
-    subprocess.run(["sips", "-Z", str(RESIZE_WIDTH), str(out_path)], check=True, capture_output=True)
+    subprocess.run(
+        ["screencapture", "-l", str(window_id), "-x", str(out_path)], check=True
+    )
+    subprocess.run(
+        ["sips", "-Z", str(RESIZE_WIDTH), str(out_path)],
+        check=True,
+        capture_output=True,
+    )
 
 
 def _switch_tab(app: QApplication, window: MainWindow, tab_index: int) -> None:
@@ -131,7 +142,9 @@ def main() -> int:
     # keep showing whatever was selected when the window was constructed.
     sidebar.site_combo.setCurrentIndex(sidebar._sites.index(site_record))
     sidebar.rig_combo.setCurrentIndex(sidebar._rigs.index(rig_record))
-    sidebar.date_edit.setDate(QDate(TARGET_DATE.year, TARGET_DATE.month, TARGET_DATE.day))
+    sidebar.date_edit.setDate(
+        QDate(TARGET_DATE.year, TARGET_DATE.month, TARGET_DATE.day)
+    )
     sidebar.replan_button.setEnabled(False)
 
     window._replan(site_record, rig_record, TARGET_DATE, sidebar.current_limit())
@@ -150,7 +163,9 @@ def main() -> int:
     # doesn't use rig data at all (see BEST_SKY_RIG_NAME above).
     sidebar.rig_combo.setCurrentIndex(sidebar._rigs.index(best_sky_rig_record))
     sidebar.replan_button.setEnabled(False)
-    window._replan(site_record, best_sky_rig_record, TARGET_DATE, sidebar.current_limit())
+    window._replan(
+        site_record, best_sky_rig_record, TARGET_DATE, sidebar.current_limit()
+    )
     _pump(app, window, 20.0)
 
     # Taller than the default for this capture only, so the full site

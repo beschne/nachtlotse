@@ -36,6 +36,7 @@ def _no_local_prose_config(monkeypatch: pytest.MonkeyPatch) -> None:
     care about config-based resolution override this explicitly."""
     monkeypatch.setattr(store, "load_prose_config", lambda: None)
 
+
 SITE = Site(
     name="Test Site",
     lat_deg=50.0,
@@ -154,7 +155,9 @@ def test_build_briefing_facts_for_best_rig_plan_names_each_entrys_own_rig() -> N
         hourly_cloud_cover=[],
         ranked=[row],
         shortlist=[
-            planning.BestRigShortlistEntry(row, Verdict(level="MARGINAL", reasons=["x"]))
+            planning.BestRigShortlistEntry(
+                row, Verdict(level="MARGINAL", reasons=["x"])
+            )
         ],
     )
     facts = prose.build_briefing_facts(plan)
@@ -244,7 +247,9 @@ class _FakeResponse:
 
 
 class _FakeMessages:
-    def __init__(self, captured: dict, response_text: str, error: Exception | None) -> None:
+    def __init__(
+        self, captured: dict, response_text: str, error: Exception | None
+    ) -> None:
         self._captured = captured
         self._response_text = response_text
         self._error = error
@@ -257,12 +262,16 @@ class _FakeMessages:
 
 
 class _FakeClient:
-    def __init__(self, captured: dict, response_text: str, error: Exception | None) -> None:
+    def __init__(
+        self, captured: dict, response_text: str, error: Exception | None
+    ) -> None:
         self.messages = _FakeMessages(captured, response_text, error)
 
 
 class _FakeAnthropicModule:
-    def __init__(self, captured: dict, response_text: str = "", error: Exception | None = None) -> None:
+    def __init__(
+        self, captured: dict, response_text: str = "", error: Exception | None = None
+    ) -> None:
         self._captured = captured
         self._response_text = response_text
         self._error = error
@@ -277,7 +286,9 @@ def test_generate_nightly_briefing_returns_the_models_text_and_sends_the_facts(
 ) -> None:
     captured: dict = {}
     monkeypatch.setattr(
-        prose, "_import_anthropic", lambda: _FakeAnthropicModule(captured, "Clear skies ahead.")
+        prose,
+        "_import_anthropic",
+        lambda: _FakeAnthropicModule(captured, "Clear skies ahead."),
     )
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
@@ -300,7 +311,9 @@ def test_generate_nightly_briefing_uses_prose_local_yamls_key_and_model(
 ) -> None:
     captured: dict = {}
     monkeypatch.setattr(
-        prose, "_import_anthropic", lambda: _FakeAnthropicModule(captured, "Configured briefing.")
+        prose,
+        "_import_anthropic",
+        lambda: _FakeAnthropicModule(captured, "Configured briefing."),
     )
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(

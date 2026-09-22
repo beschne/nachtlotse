@@ -108,8 +108,7 @@ def _hourly_cloud_cover_line(
     start_local = hourly[0].when.astimezone(local_tz)
     end_local = hourly[-1].when.astimezone(local_tz)
     return (
-        f"Clouds tonight: {bar}  ({start_local:%H:%M}–{end_local:%H:%M} "
-        f"{end_local:%Z})"
+        f"Clouds tonight: {bar}  ({start_local:%H:%M}–{end_local:%H:%M} {end_local:%Z})"
     )
 
 
@@ -133,7 +132,9 @@ def _resolve_when(date_str: str | None, local_tz: ZoneInfo) -> datetime:
     )
 
 
-def _print_prose_briefing(plan: planning.NightPlan | planning.NightPlanForBestRig) -> int | None:
+def _print_prose_briefing(
+    plan: planning.NightPlan | planning.NightPlanForBestRig,
+) -> int | None:
     """Prints `--prose`'s nightly briefing for `plan`, or an actionable
     error to stderr. Returns an exit code the caller should return
     immediately, or None to keep going (the briefing printed fine)."""

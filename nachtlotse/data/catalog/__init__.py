@@ -68,7 +68,9 @@ from nachtlotse.engine.models import Target
 
 _CATALOG_DIR = Path(__file__).resolve().parent
 
-_BIN_FILENAME_RE = re.compile(r"^mag_(?:lt_(?P<lt>\d+)|(?P<low>\d+)_\d+|unknown)\.yaml$")
+_BIN_FILENAME_RE = re.compile(
+    r"^mag_(?:lt_(?P<lt>\d+)|(?P<low>\d+)_\d+|unknown)\.yaml$"
+)
 
 
 def _brightness_sort_key(path: Path) -> float:
@@ -83,7 +85,9 @@ def _brightness_sort_key(path: Path) -> float:
     """
     match = _BIN_FILENAME_RE.match(path.name)
     if match is None:
-        raise ValueError(f"catalog bin file doesn't match the mag_*.yaml pattern: {path.name}")
+        raise ValueError(
+            f"catalog bin file doesn't match the mag_*.yaml pattern: {path.name}"
+        )
     if match["lt"] is not None:
         return -float(match["lt"])
     if match["low"] is not None:

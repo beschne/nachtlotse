@@ -103,7 +103,7 @@ def _local_when(selected_date: date, local_tz: ZoneInfo) -> datetime:
 
 
 def _tonight_column_label(selected_date: date, local_tz: ZoneInfo) -> str:
-    """"Tonight" for today (in the CENTER site's own timezone), else the
+    """ "Tonight" for today (in the CENTER site's own timezone), else the
     actual date — same "Tonight" vs. real-date rule as
     `main_window.title_for_date`, duplicated rather than imported for the
     same reason `_local_when` above is. Abbreviated ("Fri, Oct 3") rather
@@ -189,12 +189,12 @@ class BestSkyCard(RoundedCard):
 
         controls_style = f"""
             QComboBox, QSpinBox {{
-                background: {COLORS['cream']};
-                border: 1px solid {COLORS['border']};
+                background: {COLORS["cream"]};
+                border: 1px solid {COLORS["border"]};
                 border-radius: 8px;
                 padding: 4px 8px;
                 font-size: 12px;
-                color: {COLORS['ink']};
+                color: {COLORS["ink"]};
             }}
         """
 
@@ -374,7 +374,9 @@ class BestSkyCard(RoundedCard):
         self._all_rows = []
         self._rows = []
 
-        self._worker = _BestSkyWorker(reference, self._sites, self._selected_date, max_distance_km)
+        self._worker = _BestSkyWorker(
+            reference, self._sites, self._selected_date, max_distance_km
+        )
         self._worker.succeeded.connect(self._on_succeeded)
         self._worker.failed.connect(self._on_failed)
         self._worker.start()

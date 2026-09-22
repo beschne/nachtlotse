@@ -166,7 +166,9 @@ class _PlanWorker(QThread):
 
     def run(self) -> None:
         try:
-            plan = planning.plan_night(self._site, self._rig, self._when, limit=self._limit)
+            plan = planning.plan_night(
+                self._site, self._rig, self._when, limit=self._limit
+            )
         except Exception as exc:  # noqa: BLE001 — surface any failure to the UI, don't crash it
             self.failed.emit(str(exc))
             return
@@ -424,7 +426,11 @@ class MainWindow(QMainWindow):
         return table
 
     def _replan(
-        self, site_record: SiteRecord, rig_record: RigRecord, selected_date: date, limit: int
+        self,
+        site_record: SiteRecord,
+        rig_record: RigRecord,
+        selected_date: date,
+        limit: int,
     ) -> None:
         site = site_record.site
         rig = rig_record.rig

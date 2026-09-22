@@ -72,7 +72,9 @@ def _render_1024() -> Image.Image:
 
     margin = int(0.04 * _SIZE)
     radius = int(0.225 * _SIZE)
-    draw.rounded_rectangle([margin, margin, _SIZE - margin, _SIZE - margin], radius=radius, fill=_INK)
+    draw.rounded_rectangle(
+        [margin, margin, _SIZE - margin, _SIZE - margin], radius=radius, fill=_INK
+    )
 
     # Crescent: a paper-colored disk with an offset disk of the same
     # background cut out of it, via alpha subtraction — simpler and
@@ -85,13 +87,17 @@ def _render_1024() -> Image.Image:
 
     moon_layer = Image.new("RGBA", (_SIZE, _SIZE), (0, 0, 0, 0))
     ImageDraw.Draw(moon_layer).ellipse(
-        [moon_cx - moon_r, moon_cy - moon_r, moon_cx + moon_r, moon_cy + moon_r], fill=_PAPER
+        [moon_cx - moon_r, moon_cy - moon_r, moon_cx + moon_r, moon_cy + moon_r],
+        fill=_PAPER,
     )
     cut_layer = Image.new("RGBA", (_SIZE, _SIZE), (0, 0, 0, 0))
     ImageDraw.Draw(cut_layer).ellipse(
-        [cut_cx - cut_r, cut_cy - cut_r, cut_cx + cut_r, cut_cy + cut_r], fill=(255, 255, 255, 255)
+        [cut_cx - cut_r, cut_cy - cut_r, cut_cx + cut_r, cut_cy + cut_r],
+        fill=(255, 255, 255, 255),
     )
-    moon_layer.putalpha(ImageChops.subtract(moon_layer.split()[3], cut_layer.split()[3]))
+    moon_layer.putalpha(
+        ImageChops.subtract(moon_layer.split()[3], cut_layer.split()[3])
+    )
     img = Image.alpha_composite(img, moon_layer)
     draw = ImageDraw.Draw(img)
 
@@ -112,13 +118,22 @@ def main() -> int:
         iconset_dir.mkdir()
         for filename, size in _ICONSET_SIZES:
             subprocess.run(
-                ["sips", "-z", str(size), str(size), str(png_path), "--out", str(iconset_dir / filename)],
+                [
+                    "sips",
+                    "-z",
+                    str(size),
+                    str(size),
+                    str(png_path),
+                    "--out",
+                    str(iconset_dir / filename),
+                ],
                 check=True,
                 capture_output=True,
             )
         icns_path = _ASSETS_DIR / "app_icon.icns"
         subprocess.run(
-            ["iconutil", "-c", "icns", str(iconset_dir), "-o", str(icns_path)], check=True
+            ["iconutil", "-c", "icns", str(iconset_dir), "-o", str(icns_path)],
+            check=True,
         )
 
     print(f"Wrote {png_path.name} and {icns_path.name}")

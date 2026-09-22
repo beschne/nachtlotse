@@ -51,6 +51,7 @@ _ROTATION_RATE_BASELINE = timedelta(minutes=5)
 # if needed.
 DEFAULT_MAX_ROTATION_RATE_DEG_PER_MIN = 1.5
 
+
 def fov_short_arcmin(rig: Rig) -> float:
     """`rig`'s field of view's shorter side, in arcmin.
 
@@ -253,7 +254,9 @@ _NELM_FORMULA_REFERENCE = 6.9
 DEFAULT_INTEGRATION_GAIN_MAG = 7.0
 
 
-def _interpolate_by_bortle_class(table: dict[float, float], bortle_class: float) -> float:
+def _interpolate_by_bortle_class(
+    table: dict[float, float], bortle_class: float
+) -> float:
     """Linear interpolation over a Bortle-class-keyed table (a site
     documented as "4-5" -> 4.5), clamped to the standard scale's 1-9
     range."""
@@ -305,7 +308,9 @@ def sky_brightness_mag_arcsec2(site: Site) -> float | None:
     if site.zenith_sky_brightness_mag_arcsec2 is not None:
         return site.zenith_sky_brightness_mag_arcsec2
     if site.bortle_class is not None:
-        return _interpolate_by_bortle_class(_SKY_BRIGHTNESS_BY_BORTLE, site.bortle_class)
+        return _interpolate_by_bortle_class(
+            _SKY_BRIGHTNESS_BY_BORTLE, site.bortle_class
+        )
     return None
 
 

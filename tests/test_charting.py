@@ -78,7 +78,8 @@ def test_horizon_wedge_follows_an_obstructed_sector() -> None:
     # Somewhere in the obstructed sector, the inner boundary must sit
     # strictly closer to the center than the rim (a real blocked band).
     assert any(
-        math.hypot(*ix) < math.hypot(*ox) - 1.0 for ox, ix in zip(outer, reversed(inner))
+        math.hypot(*ix) < math.hypot(*ox) - 1.0
+        for ox, ix in zip(outer, reversed(inner))
     )
 
 
@@ -97,9 +98,20 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
     # alt_deg pattern: below, below, above, above, above, below, below —
     # one contiguous above-horizon run in the middle.
     fake_series = [
-        (base + timedelta(hours=i), ephemeris.AltAz(alt_deg=alt, az_deg=az, distance_au=1.0))
+        (
+            base + timedelta(hours=i),
+            ephemeris.AltAz(alt_deg=alt, az_deg=az, distance_au=1.0),
+        )
         for i, (alt, az) in enumerate(
-            [(-5.0, 10.0), (-2.0, 20.0), (5.0, 30.0), (10.0, 40.0), (5.0, 50.0), (-3.0, 60.0), (-8.0, 70.0)]
+            [
+                (-5.0, 10.0),
+                (-2.0, 20.0),
+                (5.0, 30.0),
+                (10.0, 40.0),
+                (5.0, 50.0),
+                (-3.0, 60.0),
+                (-8.0, 70.0),
+            ]
         )
     ]
     monkeypatch.setattr(
@@ -115,7 +127,9 @@ def test_shortlist_tracks_clips_below_horizon_and_splits_into_segments(
         fit=1.0,
         reach=1.0,
     )
-    entry = planning.ShortlistEntry(ranked=ranked, verdict=Verdict(level="GO", reasons=[]))
+    entry = planning.ShortlistEntry(
+        ranked=ranked, verdict=Verdict(level="GO", reasons=[])
+    )
     plan = planning.NightPlan(
         site=site,
         rig=rig,
@@ -152,9 +166,20 @@ def test_moon_track_clips_below_horizon_and_splits_into_segments(
     site = store.default_site_record().site
     base = datetime(2026, 6, 1, 22, 0, tzinfo=UTC)
     fake_series = [
-        (base + timedelta(hours=i), ephemeris.AltAz(alt_deg=alt, az_deg=az, distance_au=0.0025))
+        (
+            base + timedelta(hours=i),
+            ephemeris.AltAz(alt_deg=alt, az_deg=az, distance_au=0.0025),
+        )
         for i, (alt, az) in enumerate(
-            [(-5.0, 10.0), (-2.0, 20.0), (5.0, 30.0), (10.0, 40.0), (5.0, 50.0), (-3.0, 60.0), (-8.0, 70.0)]
+            [
+                (-5.0, 10.0),
+                (-2.0, 20.0),
+                (5.0, 30.0),
+                (10.0, 40.0),
+                (5.0, 50.0),
+                (-3.0, 60.0),
+                (-8.0, 70.0),
+            ]
         )
     ]
     monkeypatch.setattr(
@@ -192,7 +217,10 @@ def test_shortlist_tracks_draws_a_single_line_for_a_group_not_one_per_member(
 
     base = datetime(2026, 6, 1, 22, 0, tzinfo=UTC)
     always_above_horizon = [
-        (base + timedelta(hours=i), ephemeris.AltAz(alt_deg=30.0, az_deg=40.0, distance_au=1.0))
+        (
+            base + timedelta(hours=i),
+            ephemeris.AltAz(alt_deg=30.0, az_deg=40.0, distance_au=1.0),
+        )
         for i in range(3)
     ]
     calls: list[Target] = []
@@ -210,7 +238,9 @@ def test_shortlist_tracks_draws_a_single_line_for_a_group_not_one_per_member(
         fit=1.0,
         reach=1.0,
     )
-    entry = planning.ShortlistEntry(ranked=ranked, verdict=Verdict(level="GO", reasons=[]))
+    entry = planning.ShortlistEntry(
+        ranked=ranked, verdict=Verdict(level="GO", reasons=[])
+    )
     plan = planning.NightPlan(
         site=site,
         rig=rig,

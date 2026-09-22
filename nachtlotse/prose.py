@@ -60,7 +60,7 @@ SYSTEM_PROMPT = (
     "you are unsure how to phrase something, omit it rather than guess. "
     "Output plain text only, for display in a terminal — no Markdown at "
     "all: no **bold**, no # headings, no -/* bullet or numbered lists. "
-    "Use each target's exact label and separator (e.g. \"A + B\") as "
+    'Use each target\'s exact label and separator (e.g. "A + B") as '
     "given, not your own variant. Keep it tight: one short paragraph for "
     "the overall picture (dark window, Moon, weather), then at most one "
     "or two sentences per shortlisted target — never a full paragraph "
@@ -149,7 +149,9 @@ def build_briefing_facts(plan: NightPlan | NightPlanForBestRig) -> str:
         ]
         if isinstance(ranked, RankedTargetForBestRig):
             detail_bits.append(f"rig {ranked.rig.name}")
-        lines.append(f"{rank}. {_entry_label(ranked)} — " + "; ".join(detail_bits) + ".")
+        lines.append(
+            f"{rank}. {_entry_label(ranked)} — " + "; ".join(detail_bits) + "."
+        )
         for reason in entry.verdict.reasons:
             lines.append(f"   reason: {reason}")
 

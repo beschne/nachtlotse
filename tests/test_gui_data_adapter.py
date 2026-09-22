@@ -69,7 +69,11 @@ _TARGET_A = Target(
     name="target a", catalog_id="TA1", ra_deg=10.0, dec_deg=20.0, types=("galaxy",)
 )
 _TARGET_B = Target(
-    name="target b", catalog_id="TB2", ra_deg=11.0, dec_deg=20.0, types=("open_cluster",)
+    name="target b",
+    catalog_id="TB2",
+    ra_deg=11.0,
+    dec_deg=20.0,
+    types=("open_cluster",),
 )
 
 _WEATHER = WeatherSummary(
@@ -86,7 +90,9 @@ def _pos(alt_deg: float, az_deg: float) -> ephemeris.AltAz:
 
 def _night_plan(shortlist_ranked) -> NightPlan:
     shortlist = [
-        ShortlistEntry(row, Verdict(level="GO", reasons=["clear sky and good conditions"]))
+        ShortlistEntry(
+            row, Verdict(level="GO", reasons=["clear sky and good conditions"])
+        )
         for row in shortlist_ranked
     ]
     return NightPlan(
@@ -106,14 +112,22 @@ def _night_plan(shortlist_ranked) -> NightPlan:
 
 def test_entry_label_joins_a_ranked_groups_member_names() -> None:
     group = RankedGroup(
-        targets=(_TARGET_A, _TARGET_B), best_time=_WHEN, pos=_pos(60.0, 90.0), fit=0.8, reach=1.0
+        targets=(_TARGET_A, _TARGET_B),
+        best_time=_WHEN,
+        pos=_pos(60.0, 90.0),
+        fit=0.8,
+        reach=1.0,
     )
     assert data_adapter.entry_label(group) == "TA1 target a, TB2 target b"
 
 
 def test_entry_type_label_dedupes_a_groups_categories_in_first_seen_order() -> None:
     group = RankedGroup(
-        targets=(_TARGET_A, _TARGET_B), best_time=_WHEN, pos=_pos(60.0, 90.0), fit=0.8, reach=1.0
+        targets=(_TARGET_A, _TARGET_B),
+        best_time=_WHEN,
+        pos=_pos(60.0, 90.0),
+        fit=0.8,
+        reach=1.0,
     )
     assert data_adapter.entry_type_label(group) == "Galaxy/Open Cluster"
 
@@ -156,7 +170,12 @@ def test_build_ranked_rows_covers_the_full_ranked_list_with_no_verdict_field() -
 
 def test_build_shortlist_rows_names_each_entrys_own_rig_for_best_rig_plans() -> None:
     row = RankedTargetForBestRig(
-        target=_TARGET_A, rig=OTHER_RIG, best_time=_WHEN, pos=_pos(70.0, 200.0), fit=1.0, reach=1.0
+        target=_TARGET_A,
+        rig=OTHER_RIG,
+        best_time=_WHEN,
+        pos=_pos(70.0, 200.0),
+        fit=1.0,
+        reach=1.0,
     )
     plan = NightPlanForBestRig(
         site=SITE,
@@ -168,7 +187,9 @@ def test_build_shortlist_rows_names_each_entrys_own_rig_for_best_rig_plans() -> 
         weather=None,
         hourly_cloud_cover=[],
         ranked=[row],
-        shortlist=[BestRigShortlistEntry(row, Verdict(level="MARGINAL", reasons=["x"]))],
+        shortlist=[
+            BestRigShortlistEntry(row, Verdict(level="MARGINAL", reasons=["x"]))
+        ],
     )
 
     (result,) = data_adapter.build_shortlist_rows(plan, BERLIN)
@@ -241,7 +262,9 @@ def test_build_header_summary_appends_whichever_moon_events_are_present() -> Non
     both = data_adapter.build_header_summary(
         replace(base_plan, moonrise=_WHEN, moonset=_WHEN + timedelta(hours=8)), BERLIN
     )
-    rise_only = data_adapter.build_header_summary(replace(base_plan, moonrise=_WHEN), BERLIN)
+    rise_only = data_adapter.build_header_summary(
+        replace(base_plan, moonrise=_WHEN), BERLIN
+    )
     neither = data_adapter.build_header_summary(base_plan, BERLIN)
 
     assert "rises" in both.moon_text and "sets" in both.moon_text
@@ -259,7 +282,9 @@ def test_build_site_info_covers_aliases_region_bortle_and_address() -> None:
     assert info.name == "Test Site"
     assert info.aliases_text == "Home"
     assert "50.00000" in info.coords_text
-    assert "Taunus" in info.region_text and "Bortle 4" in info.region_text
+    assert (
+        "Taunus" in info.region_and_sky_text and "Bortle 4" in info.region_and_sky_text
+    )
     assert info.horizon_text == "Horizon: flat/sector"
     assert info.address == "Somewhere 1"
 
@@ -446,7 +471,9 @@ def test_build_best_sky_rows_covers_weather_distance_and_site_lookup() -> None:
     assert rows[0].site_text == "Other Site, Hintertaunus"
     assert "111 km" in rows[0].distance_text and "N" in rows[0].distance_text
     assert "20%" in rows[0].clouds_text and "5%" in rows[0].clouds_text
-    assert "up to" not in rows[0].clouds_text  # that phrasing lives in the column header
+    assert (
+        "up to" not in rows[0].clouds_text
+    )  # that phrasing lives in the column header
     assert rows[0].clouds_available is True
     assert rows[0].hourly_cloud_cover == hourly
 

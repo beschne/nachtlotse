@@ -68,7 +68,9 @@ class Sidebar(RoundedCard):
         about = QLabel("My pilot through clear nights.")
         about.setWordWrap(True)
         about.setStyleSheet(
-            label_style(f"color: {COLORS['ink_secondary']}; font-size: 11px; margin-top: 2px;")
+            label_style(
+                f"color: {COLORS['ink_secondary']}; font-size: 11px; margin-top: 2px;"
+            )
         )
         layout.addWidget(about)
 
@@ -82,12 +84,12 @@ class Sidebar(RoundedCard):
 
         picker_style = f"""
             QComboBox, QDateEdit, QSpinBox {{
-                background: {COLORS['cream']};
-                border: 1px solid {COLORS['border']};
+                background: {COLORS["cream"]};
+                border: 1px solid {COLORS["border"]};
                 border-radius: 8px;
                 padding: 6px 26px 6px 8px;
                 font-size: 12px;
-                color: {COLORS['ink']};
+                color: {COLORS["ink"]};
             }}
             QComboBox::drop-down, QDateEdit::drop-down {{
                 border: none;
@@ -96,7 +98,7 @@ class Sidebar(RoundedCard):
                 subcontrol-position: center right;
             }}
             QComboBox::drop-down:hover, QDateEdit::drop-down:hover {{
-                background: {COLORS['cream_hover']};
+                background: {COLORS["cream_hover"]};
                 border-radius: 6px;
             }}
             QComboBox::down-arrow, QDateEdit::down-arrow {{
@@ -105,7 +107,7 @@ class Sidebar(RoundedCard):
                 height: 0px;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
-                border-top: 5px solid {COLORS['ink_secondary']};
+                border-top: 5px solid {COLORS["ink_secondary"]};
                 margin-right: 10px;
             }}
             QSpinBox::up-button, QSpinBox::down-button {{
@@ -116,7 +118,7 @@ class Sidebar(RoundedCard):
             QSpinBox::up-button {{ subcontrol-position: top right; }}
             QSpinBox::down-button {{ subcontrol-position: bottom right; }}
             QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
-                background: {COLORS['cream_hover']};
+                background: {COLORS["cream_hover"]};
             }}
             QSpinBox::up-arrow {{
                 image: none;
@@ -124,7 +126,7 @@ class Sidebar(RoundedCard):
                 height: 0px;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
-                border-bottom: 5px solid {COLORS['ink_secondary']};
+                border-bottom: 5px solid {COLORS["ink_secondary"]};
                 margin-right: 6px;
             }}
             QSpinBox::down-arrow {{
@@ -133,18 +135,18 @@ class Sidebar(RoundedCard):
                 height: 0px;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
-                border-top: 5px solid {COLORS['ink_secondary']};
+                border-top: 5px solid {COLORS["ink_secondary"]};
                 margin-right: 6px;
             }}
             QComboBox QAbstractItemView {{
-                background: {COLORS['paper']};
-                color: {COLORS['ink']};
-                border: 1px solid {COLORS['border']};
+                background: {COLORS["paper"]};
+                color: {COLORS["ink"]};
+                border: 1px solid {COLORS["border"]};
                 border-radius: 8px;
                 outline: none;
                 padding: 4px;
-                selection-background-color: {COLORS['cream']};
-                selection-color: {COLORS['ink']};
+                selection-background-color: {COLORS["cream"]};
+                selection-color: {COLORS["ink"]};
             }}
         """
         field_label_style = label_style(
@@ -176,20 +178,20 @@ class Sidebar(RoundedCard):
         self.date_edit.calendarWidget().setLocale(self.date_edit.locale())
         self.date_edit.calendarWidget().setStyleSheet(
             f"""
-            QCalendarWidget QWidget {{ background: {COLORS['paper']}; color: {COLORS['ink']}; }}
+            QCalendarWidget QWidget {{ background: {COLORS["paper"]}; color: {COLORS["ink"]}; }}
             QCalendarWidget QToolButton {{
-                background: transparent; color: {COLORS['ink']};
+                background: transparent; color: {COLORS["ink"]};
                 font-size: 13px; font-weight: 600;
             }}
-            QCalendarWidget QToolButton:hover {{ background: {COLORS['cream_hover']}; border-radius: 6px; }}
+            QCalendarWidget QToolButton:hover {{ background: {COLORS["cream_hover"]}; border-radius: 6px; }}
             QCalendarWidget QAbstractItemView:enabled {{
-                background: {COLORS['paper']}; color: {COLORS['ink']};
-                selection-background-color: {COLORS['clay']};
-                selection-color: {COLORS['text_on_accent']};
+                background: {COLORS["paper"]}; color: {COLORS["ink"]};
+                selection-background-color: {COLORS["clay"]};
+                selection-color: {COLORS["text_on_accent"]};
                 outline: none;
             }}
-            QCalendarWidget QAbstractItemView:disabled {{ color: {COLORS['ink_muted']}; }}
-            QCalendarWidget QWidget#qt_calendar_navigationbar {{ background: {COLORS['cream']}; }}
+            QCalendarWidget QAbstractItemView:disabled {{ color: {COLORS["ink_muted"]}; }}
+            QCalendarWidget QWidget#qt_calendar_navigationbar {{ background: {COLORS["cream"]}; }}
             """
         )
         # Mark today distinctly from the currently-selected date (which
@@ -200,7 +202,9 @@ class Sidebar(RoundedCard):
         today_format.setBackground(QColor(COLORS["clay_tint"]))
         today_format.setForeground(QColor(COLORS["clay_hover"]))
         today_format.setFontWeight(700)
-        self.date_edit.calendarWidget().setDateTextFormat(QDate.currentDate(), today_format)
+        self.date_edit.calendarWidget().setDateTextFormat(
+            QDate.currentDate(), today_format
+        )
 
         catalog_size = len(CATALOG)
 
@@ -252,23 +256,25 @@ class Sidebar(RoundedCard):
         self.replan_button.setStyleSheet(
             f"""
             QPushButton {{
-                background: {COLORS['clay']};
-                color: {COLORS['text_on_accent']};
+                background: {COLORS["clay"]};
+                color: {COLORS["text_on_accent"]};
                 border: none;
                 border-radius: 8px;
                 padding: 10px 18px;
                 font-size: 13px;
                 font-weight: 600;
             }}
-            QPushButton:hover {{ background: {COLORS['clay_hover']}; }}
-            QPushButton:pressed {{ background: {COLORS['clay_press']}; }}
+            QPushButton:hover {{ background: {COLORS["clay_hover"]}; }}
+            QPushButton:pressed {{ background: {COLORS["clay_press"]}; }}
             QPushButton:disabled {{
-                background: {COLORS['border_strong']};
-                color: {COLORS['ink_muted']};
+                background: {COLORS["border_strong"]};
+                color: {COLORS["ink_muted"]};
             }}
             """
         )
-        self.replan_button.setEnabled(False)  # nothing staged differs from the plan shown yet
+        self.replan_button.setEnabled(
+            False
+        )  # nothing staged differs from the plan shown yet
         self.replan_button.clicked.connect(self._emit_replan)
         layout.addWidget(self.replan_button)
 
@@ -287,7 +293,9 @@ class Sidebar(RoundedCard):
         site_record = self._sites[self.site_combo.currentIndex()]
         rig_record = self._rigs[self.rig_combo.currentIndex()]
         selected_date = self.date_edit.date().toPython()
-        self.replan_requested.emit(site_record, rig_record, selected_date, self.limit_spin.value())
+        self.replan_requested.emit(
+            site_record, rig_record, selected_date, self.limit_spin.value()
+        )
         self.replan_button.setEnabled(False)
 
     def set_site(self, site_record: SiteRecord) -> None:

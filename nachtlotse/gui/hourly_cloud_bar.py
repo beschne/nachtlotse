@@ -81,7 +81,9 @@ class _CloudStrip(QWidget):
             return []
         total_gap = self._GAP * (n - 1)
         cell_w = (self.width() - total_gap) / n
-        return [QRectF(i * (cell_w + self._GAP), 0, cell_w, self.height()) for i in range(n)]
+        return [
+            QRectF(i * (cell_w + self._GAP), 0, cell_w, self.height()) for i in range(n)
+        ]
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
@@ -90,26 +92,34 @@ class _CloudStrip(QWidget):
         font.setPointSizeF(9.0)
         painter.setFont(font)
         text_color = QColor(COLORS["text_on_accent"])
-        for rect, (when, cloud_cover_pct) in zip(self._cell_rects(), self._hours, strict=True):
+        for rect, (when, cloud_cover_pct) in zip(
+            self._cell_rects(), self._hours, strict=True
+        ):
             if cloud_cover_pct is None:
                 continue  # outside this site's own dark window — leave blank
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(_band_color(cloud_cover_pct)))
             painter.drawRoundedRect(rect, 3.0, 3.0)
 
-            local_hour = when.astimezone(self._local_tz).hour if self._local_tz else when.hour
+            local_hour = (
+                when.astimezone(self._local_tz).hour if self._local_tz else when.hour
+            )
             painter.setPen(text_color)
             painter.drawText(rect, Qt.AlignCenter, f"{local_hour:02d}")
         painter.end()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        for rect, (when, cloud_cover_pct) in zip(self._cell_rects(), self._hours, strict=True):
+        for rect, (when, cloud_cover_pct) in zip(
+            self._cell_rects(), self._hours, strict=True
+        ):
             if rect.contains(event.position()):
                 if cloud_cover_pct is None:
                     self.setToolTip("")
                     return
                 local_time = when.astimezone(self._local_tz) if self._local_tz else when
-                self.setToolTip(f"{local_time:%H:%M} — {cloud_cover_pct:.0f}% cloud cover")
+                self.setToolTip(
+                    f"{local_time:%H:%M} — {cloud_cover_pct:.0f}% cloud cover"
+                )
                 return
         self.setToolTip("")
 
@@ -134,7 +144,9 @@ class HourlyCloudCoverBar(QWidget):
         caption_row = QHBoxLayout()
         caption_row.setContentsMargins(0, 0, 0, 0)
         caption = QLabel("Clouds, hour by hour")
-        caption.setStyleSheet(label_style(f"color: {COLORS['ink_secondary']}; font-size: 11px;"))
+        caption.setStyleSheet(
+            label_style(f"color: {COLORS['ink_secondary']}; font-size: 11px;")
+        )
         self._range_label = QLabel()
         self._range_label.setStyleSheet(
             label_style(f"color: {COLORS['ink_muted']}; font-size: 11px;")
@@ -147,7 +159,9 @@ class HourlyCloudCoverBar(QWidget):
         self._strip = _CloudStrip()
         layout.addWidget(self._strip)
 
-    def set_hourly_cloud_cover(self, hourly: list[HourlyWeather], local_tz: ZoneInfo) -> None:
+    def set_hourly_cloud_cover(
+        self, hourly: list[HourlyWeather], local_tz: ZoneInfo
+    ) -> None:
         hours = [(hour.when, hour.cloud_cover_pct) for hour in hourly]
         self._strip.set_hours(hours, local_tz)
         if not hours:
@@ -156,7 +170,9 @@ class HourlyCloudCoverBar(QWidget):
             return
         start_local = hours[0][0].astimezone(local_tz)
         end_local = hours[-1][0].astimezone(local_tz)
-        self._range_label.setText(f"{start_local:%H:%M}–{end_local:%H:%M} {end_local:%Z}")
+        self._range_label.setText(
+            f"{start_local:%H:%M}–{end_local:%H:%M} {end_local:%Z}"
+        )
         self.show()
 
 

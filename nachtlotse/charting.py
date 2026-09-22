@@ -109,7 +109,11 @@ def shortlist_tracks(plan: NightPlan, num_samples: int = 49) -> list[Track]:
     for entry in plan.shortlist:
         target = _entry_track_target(entry.ranked)
         series = ephemeris.altitude_series(
-            plan.site, target, plan.evening_start, plan.morning_end, num_samples=num_samples
+            plan.site,
+            target,
+            plan.evening_start,
+            plan.morning_end,
+            num_samples=num_samples,
         )
         segments: list[list[tuple[float, float]]] = []
         current: list[tuple[float, float]] = []
@@ -133,7 +137,9 @@ def moon_track(
     (`engine.ephemeris.moon_altaz_series`), not a target from the
     catalog, so this stays a standalone function rather than another
     branch inside `shortlist_tracks`."""
-    series = ephemeris.moon_altaz_series(site, evening_start, morning_end, num_samples=num_samples)
+    series = ephemeris.moon_altaz_series(
+        site, evening_start, morning_end, num_samples=num_samples
+    )
     segments: list[list[tuple[float, float]]] = []
     current: list[tuple[float, float]] = []
     for _when, pos in series:
@@ -147,7 +153,9 @@ def moon_track(
     return Track(name="Moon", segments=segments)
 
 
-def grid_ring(alt_deg: float, resolution_deg: float = _RING_RESOLUTION_DEG) -> list[tuple[float, float]]:
+def grid_ring(
+    alt_deg: float, resolution_deg: float = _RING_RESOLUTION_DEG
+) -> list[tuple[float, float]]:
     """A full-circle zenith-distance ring at a given altitude, for the
     chart's background grid."""
     num_points = round(360.0 / resolution_deg) + 1
@@ -163,7 +171,9 @@ def horizon_wedge(
     num_points = round(360.0 / resolution_deg) + 1
     azimuths = np.linspace(0.0, 360.0, num_points)
     outer = [project(0.0, az) for az in azimuths]
-    inner = [project(site.horizon.min_alt(az), az) for az in reversed(azimuths.tolist())]
+    inner = [
+        project(site.horizon.min_alt(az), az) for az in reversed(azimuths.tolist())
+    ]
     return outer + inner
 
 
