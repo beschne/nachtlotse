@@ -178,7 +178,12 @@ that distance — same "0/omitted = every configured site" convention as
 site plus region, a "Clouds up to" max/avg reading, and an hourly
 cloud-cover sparkline for that site's own dark window (a clear-then-
 closes-in night doesn't collapse into the same number as the reverse).
-A site with no weather reads as either "Weather unavailable" (the fetch
+Every row's sparkline lines up on the same hour-by-hour timeline —
+whichever site has the longest night that evening — rather than each
+scaling to its own hour count, so a shorter night reads as empty cells
+at the edges, not a same-width bar that quietly means different clock
+hours in different rows. A site with no weather reads as either
+"Weather unavailable" (the fetch
 itself failed — network/API) or "Beyond forecast range" (fetch fine,
 but the picked date is past Open-Meteo's own 16-day forecast horizon)
 — told apart rather than one generic unreachable state, and never with

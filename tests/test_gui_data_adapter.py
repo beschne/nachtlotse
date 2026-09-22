@@ -370,6 +370,38 @@ def test_sort_sites_regions_none_means_unfiltered() -> None:
     assert len(rows) == len(_SORT_TEST_SITES)
 
 
+def _hourly(hours: list[tuple[int, float]]) -> list[open_meteo.HourlyWeather]:
+    """(hour offset from 22:00 UTC, cloud_cover_pct) pairs -> a
+    HourlyWeather list, for shared_hourly_axis tests below."""
+    base = datetime(2026, 9, 22, 22, 0, tzinfo=UTC)
+    return [
+        open_meteo.HourlyWeather(
+            when=base + timedelta(hours=offset),
+            cloud_cover_pct=pct,
+            wind_speed_kmh=5.0,
+            humidity_pct=50.0,
+            dew_point_c=5.0,
+            temperature_c=15.0,
+        )
+        for offset, pct in hours
+    ]
+
+
+def test_shared_hourly_axis_spans_earliest_start_to_latest_end() -> None:
+    short_night = _hourly([(0, 10.0), (1, 20.0)])  # 22:00, 23:00
+    long_night = _hourly([(-1, 5.0), (0, 10.0), (1, 20.0), (2, 30.0)])  # 21:00..00:00
+
+    axis = data_adapter.shared_hourly_axis([short_night, long_night])
+
+    base = datetime(2026, 9, 22, 22, 0, tzinfo=UTC)
+    assert axis == [base + timedelta(hours=h) for h in (-1, 0, 1, 2)]
+
+
+def test_shared_hourly_axis_handles_empty_input() -> None:
+    assert data_adapter.shared_hourly_axis([]) == []
+    assert data_adapter.shared_hourly_axis([[], []]) == []
+
+
 def test_build_best_sky_rows_covers_weather_distance_and_site_lookup() -> None:
     reference_record = SiteRecord(site=SITE, region="Taunus", bortle="4")
     other_site = replace(SITE, name="Other Site", lat_deg=51.0)

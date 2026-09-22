@@ -21,7 +21,7 @@ ranked table.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
@@ -436,3 +436,27 @@ def build_best_sky_rows(
             )
         )
     return rows
+
+
+def shared_hourly_axis(hourly_lists: list[list[open_meteo.HourlyWeather]]) -> list[datetime]:
+    """The hour-by-hour timeline spanning every given report's own dark
+    window, earliest start to latest end (1h steps) — `gui/best_sky_
+    card.py` aligns every row's sparkline (`hourly_cloud_bar.
+    build_cloud_sparkline`'s `axis`) against this shared axis instead
+    of each row's own, so a site whose night is shorter than the
+    longest one in the table reads as empty cells at the edges, not a
+    narrower strip that doesn't line up with the rest of the column.
+
+    Empty input (or every report's own hourly list empty) returns [].
+    """
+    all_whens = [hour.when for hours in hourly_lists for hour in hours]
+    if not all_whens:
+        return []
+    start, end = min(all_whens), max(all_whens)
+    axis = []
+    current = start
+    step = timedelta(hours=1)
+    while current <= end:
+        axis.append(current)
+        current += step
+    return axis

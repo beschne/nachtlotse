@@ -274,6 +274,12 @@ class BestSkyCard(RoundedCard):
     def _on_succeeded(self, reports: list[best_sky.SiteSkyReport]) -> None:
         self.refresh_button.setEnabled(True)
         self._rows = data_adapter.build_best_sky_rows(reports, self._sites)
+        # Every site's own dark window is a different length (latitude) —
+        # align every row's sparkline to the same hour-by-hour timeline
+        # (the longest night among them) rather than each row scaling to
+        # its own hour count, which otherwise leaves same-width columns
+        # meaning different clock hours from row to row.
+        axis = data_adapter.shared_hourly_axis([row.hourly_cloud_cover for row in self._rows])
         self.table.setRowCount(len(self._rows))
         for row_index, row in enumerate(self._rows):
             site_item = QTableWidgetItem(row.site_text)
@@ -290,7 +296,7 @@ class BestSkyCard(RoundedCard):
             self.table.setCellWidget(
                 row_index,
                 _TONIGHT_COLUMN_INDEX,
-                build_cloud_sparkline(row.hourly_cloud_cover, local_tz),
+                build_cloud_sparkline(row.hourly_cloud_cover, local_tz, axis=axis),
             )
         if self._rows:
             self.table.selectRow(0)  # the clearest site, already ranked first

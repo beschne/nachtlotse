@@ -57,14 +57,20 @@ class _CloudStrip(QWidget):
 
     def __init__(self, *, compact: bool = False) -> None:
         super().__init__()
-        self._hours: list[tuple[datetime, float]] = []
+        self._hours: list[tuple[datetime, float | None]] = []
         self._local_tz: ZoneInfo | None = None
         self.setFixedHeight(self._HEIGHT)
         self.setMinimumWidth(60 if compact else 120)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setMouseTracking(True)
 
-    def set_hours(self, hours: list[tuple[datetime, float]], local_tz: ZoneInfo) -> None:
+    def set_hours(
+        self, hours: list[tuple[datetime, float | None]], local_tz: ZoneInfo
+    ) -> None:
+        """A `None` cloud_cover_pct paints an empty cell (no rect, no
+        digit) — still reserving that slot's width, for
+        `build_cloud_sparkline`'s shared-axis alignment below, where a
+        slot can fall outside this particular site's own dark window."""
         self._hours = hours
         self._local_tz = local_tz
         self.update()
@@ -85,6 +91,8 @@ class _CloudStrip(QWidget):
         painter.setFont(font)
         text_color = QColor(COLORS["text_on_accent"])
         for rect, (when, cloud_cover_pct) in zip(self._cell_rects(), self._hours, strict=True):
+            if cloud_cover_pct is None:
+                continue  # outside this site's own dark window — leave blank
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(_band_color(cloud_cover_pct)))
             painter.drawRoundedRect(rect, 3.0, 3.0)
@@ -97,6 +105,9 @@ class _CloudStrip(QWidget):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         for rect, (when, cloud_cover_pct) in zip(self._cell_rects(), self._hours, strict=True):
             if rect.contains(event.position()):
+                if cloud_cover_pct is None:
+                    self.setToolTip("")
+                    return
                 local_time = when.astimezone(self._local_tz) if self._local_tz else when
                 self.setToolTip(f"{local_time:%H:%M} — {cloud_cover_pct:.0f}% cloud cover")
                 return
@@ -149,14 +160,34 @@ class HourlyCloudCoverBar(QWidget):
         self.show()
 
 
-def build_cloud_sparkline(hourly: list[HourlyWeather], local_tz: ZoneInfo) -> QWidget:
+def build_cloud_sparkline(
+    hourly: list[HourlyWeather],
+    local_tz: ZoneInfo,
+    axis: list[datetime] | None = None,
+) -> QWidget:
     """A caption-less hourly cloud-cover strip for embedding as a table
     cell widget (`gui/best_sky_card.py`'s results table) — same color
     bands, per-cell hour digits, and hover tooltip as
     `HourlyCloudCoverBar`, just without the caption/range label above
     it (that line belongs once per screen, not once per row). One-shot,
     like `main_window._verdict_cell`: built fresh each time the table
-    repopulates, no `set_*` method of its own."""
+    repopulates, no `set_*` method of its own.
+
+    `axis`, if given (see `data_adapter.shared_hourly_axis`), is the
+    common hour-by-hour timeline every row in the table should line up
+    against — every configured site's own dark window differs in
+    length (latitude), so without this each row's strip has its own
+    hour count and columns don't align between rows. One cell per
+    `axis` slot; slots `hourly` has no entry for (this site's own
+    window hasn't started yet, or already ended, relative to the
+    longest night in the table) paint as empty rather than shrinking
+    the strip. Without `axis`, falls back to `hourly`'s own hours only
+    (no gaps possible, nothing to align against)."""
+    by_when = {hour.when: hour.cloud_cover_pct for hour in hourly}
+    if axis is not None:
+        hours = [(when, by_when.get(when)) for when in axis]
+    else:
+        hours = [(hour.when, hour.cloud_cover_pct) for hour in hourly]
     strip = _CloudStrip(compact=True)
-    strip.set_hours([(hour.when, hour.cloud_cover_pct) for hour in hourly], local_tz)
+    strip.set_hours(hours, local_tz)
     return strip

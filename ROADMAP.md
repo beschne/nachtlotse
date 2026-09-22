@@ -15,7 +15,7 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
    check for "does this actually fit, and how tightly" for a target picked
    off the shortlist, complementing (not replacing) the existing polar
    `--chart`, which shows where in the sky, not how it frames. To be implemented
-for the CLI and the GUI. Both on demand only and cached.
+   for the CLI and the GUI. Both on demand only and cached.
 2. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
 3. **Session log:** record what's already been captured, and when — total
