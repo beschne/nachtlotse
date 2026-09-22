@@ -99,7 +99,8 @@ def _site_card(record: SiteRecord, distance_text: str | None = None) -> QWidget:
     title = info.name + (f"  (aka {info.aliases_text})" if info.aliases_text else "")
     layout.addWidget(_name_label(title))
     layout.addWidget(_detail_label(info.coords_text))
-    layout.addWidget(_detail_label(f"{info.region_text} · {info.horizon_text}"))
+    layout.addWidget(_detail_label(info.region_and_sky_text))
+    layout.addWidget(_detail_label(info.horizon_text))
     if info.address:
         layout.addWidget(_detail_label(info.address))
     # Only set when the Sites tab's SORT is "Distance" (see
@@ -231,12 +232,12 @@ class SitesCard(_ListScrollArea):
     def _build_sort_row(self) -> QHBoxLayout:
         controls_style = f"""
             QComboBox {{
-                background: {COLORS['cream']};
-                border: 1px solid {COLORS['border']};
+                background: {COLORS["cream"]};
+                border: 1px solid {COLORS["border"]};
                 border-radius: 8px;
                 padding: 4px 8px;
                 font-size: 12px;
-                color: {COLORS['ink']};
+                color: {COLORS["ink"]};
             }}
         """
         row = QHBoxLayout()

@@ -108,7 +108,9 @@ def build_shortlist_rows(
     rows = []
     for entry in plan.shortlist:
         ranked = entry.ranked
-        rig_name = ranked.rig.name if isinstance(ranked, RankedTargetForBestRig) else None
+        rig_name = (
+            ranked.rig.name if isinstance(ranked, RankedTargetForBestRig) else None
+        )
         local_time = ranked.best_time.astimezone(local_tz)
         rows.append(
             ShortlistRow(
@@ -147,7 +149,9 @@ def build_ranked_rows(
 ) -> list[RankedRow]:
     rows = []
     for ranked in plan.ranked:
-        rig_name = ranked.rig.name if isinstance(ranked, RankedTargetForBestRig) else None
+        rig_name = (
+            ranked.rig.name if isinstance(ranked, RankedTargetForBestRig) else None
+        )
         local_time = ranked.best_time.astimezone(local_tz)
         rows.append(
             RankedRow(
@@ -186,7 +190,7 @@ class HeaderSummary:
 def _moon_event_text(
     moonrise: datetime | None, moonset: datetime | None, local_tz: ZoneInfo
 ) -> str:
-    """"rises HH:MM", "sets HH:MM", both, or "" — either can be absent:
+    """ "rises HH:MM", "sets HH:MM", both, or "" — either can be absent:
     the Moon doesn't necessarily cross the horizon during a given dark
     window (see `planning._moon_rise_set`), and this makes no claim
     about "up"/"down" all night without actually checking, so it just
@@ -234,7 +238,7 @@ class SiteInfo:
     name: str
     aliases_text: str  # "" if the record has none
     coords_text: str
-    region_text: str
+    region_and_sky_text: str
     horizon_text: str
     address: str  # "" if the record has none
 
@@ -242,11 +246,13 @@ class SiteInfo:
 def build_site_info(record: SiteRecord) -> SiteInfo:
     site = record.site
     profile = "measured" if len(site.horizon.points) > 4 else "flat/sector"
+    sqm = site.zenith_sky_brightness_mag_arcsec2
+    sqm_text = f"SQM {sqm:.2f}" if sqm is not None else "SQM <b>n/a</b>"
     return SiteInfo(
         name=site.name,
         aliases_text=", ".join(record.aliases),
         coords_text=f"{site.lat_deg:.5f}°N {site.lon_deg:.5f}°E, {site.elevation_m:.0f} m",
-        region_text=f"{record.region} · Bortle {record.bortle}",
+        region_and_sky_text=f"{record.region} · Bortle {record.bortle}, {sqm_text}",
         horizon_text=f"Horizon: {profile}",
         address=record.address,
     )
@@ -423,7 +429,9 @@ def build_best_sky_rows(
             distance_text = f"{report.distance_km:.0f} km"
         else:
             direction = best_sky.compass_direction(report.bearing_deg)
-            distance_text = f"{report.distance_km:.0f} km {report.bearing_deg:.0f}° {direction}"
+            distance_text = (
+                f"{report.distance_km:.0f} km {report.bearing_deg:.0f}° {direction}"
+            )
         site_record = by_name[report.site.name]
         rows.append(
             BestSkyRow(
@@ -438,7 +446,9 @@ def build_best_sky_rows(
     return rows
 
 
-def shared_hourly_axis(hourly_lists: list[list[open_meteo.HourlyWeather]]) -> list[datetime]:
+def shared_hourly_axis(
+    hourly_lists: list[list[open_meteo.HourlyWeather]],
+) -> list[datetime]:
     """The hour-by-hour timeline spanning every given report's own dark
     window, earliest start to latest end (1h steps) — `gui/best_sky_
     card.py` aligns every row's sparkline (`hourly_cloud_bar.
