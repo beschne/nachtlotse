@@ -252,6 +252,30 @@ def test_catalog_contains_t_crb_as_a_favorite_variable_star() -> None:
     assert t_crb.types == ("variable_star",)
 
 
+_BIN_ORDER = [*_BIN_BOUNDS, _UNKNOWN_MAGNITUDE_BIN_FILENAME]
+
+
+def _expected_bin(magnitude: float | None) -> str:
+    if magnitude is None:
+        return _UNKNOWN_MAGNITUDE_BIN_FILENAME
+    for filename, (low, high) in _BIN_BOUNDS.items():
+        if (low is None or magnitude >= low) and magnitude < high:
+            return filename
+    raise AssertionError(f"magnitude {magnitude} matches no known bin")
+
+
+def test_catalog_is_loaded_brightest_first() -> None:
+    """`planning.rank_targets`'s `limit` caps evaluation to the first N
+    entries of CATALOG, on the assumption that catalog order is
+    brightest-first — a regression here (e.g. back to alphabetical glob
+    order) would silently make `--limit 50` skip every bright, attractive
+    object in favor of whichever bin sorts first by filename. Only bin-level
+    order is asserted; a bin file's own internal ordering isn't a contract.
+    """
+    bin_ranks = [_BIN_ORDER.index(_expected_bin(target.magnitude)) for target in CATALOG]
+    assert bin_ranks == sorted(bin_ranks)
+
+
 def test_load_catalog_picks_up_any_new_mag_bin_file_automatically(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

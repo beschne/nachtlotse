@@ -760,6 +760,57 @@ def test_rank_targets_default_limit_is_50(
     assert len(ranked) == 0
 
 
+def test_rank_targets_limit_does_not_skip_a_favorite(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `favorite` target must always be evaluated, regardless of where
+    it sits in catalog order relative to `limit` — the whole point of
+    starring an object (ROADMAP.md's "Favorites in the catalog") is that
+    it keeps showing up no matter what, and a low evaluation limit is as
+    silent a way to drop it as a low ranking is."""
+    from unittest.mock import patch
+
+    from nachtlotse.engine.ephemeris import AltAz
+    from nachtlotse.engine.models import Target
+
+    site = store.get_site_record("Großer Feldberg").site
+    rig = store.default_rig_record().rig
+
+    fillers = [
+        Target(name=f"filler {i}", ra_deg=0.0, dec_deg=0.0, types=("galaxy",))
+        for i in range(20)
+    ]
+    favorite = Target(
+        name="starred galaxy", ra_deg=0.0, dec_deg=0.0, types=("galaxy",), favorite=True
+    )
+    # Placed well past a limit of 5 — brightest-first catalog order gives
+    # no guarantee a favorite sorts early.
+    targets = [*fillers[:15], favorite, *fillers[15:]]
+    monkeypatch.setattr(planning, "CATALOG", targets)
+
+    call_count = 0
+    now = datetime.now(UTC)
+
+    def selective_best_time(site, target, when, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if target.favorite:
+            return now, AltAz(alt_deg=45.0, az_deg=90.0, distance_au=1.0)
+        return None  # every non-favorite fails, to isolate the favorite's own result
+
+    with patch(
+        "nachtlotse.planning.constraints.best_time_tonight", side_effect=selective_best_time
+    ):
+        ranked = planning.rank_targets(site, rig, now, limit=5)
+
+    # 5 non-favorites (the limit) + the 1 favorite, wherever it sat.
+    assert call_count == 6
+    assert len(ranked) == 1
+    assert ranked[0].target.name == "starred galaxy"
+
+
 def test_rank_targets_limit_exceeds_catalog(
     template_sites: list[store.SiteRecord],
     template_rigs: list[store.RigRecord],

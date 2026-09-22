@@ -96,7 +96,13 @@ uv run lotse plan --type galaxy --type globular_cluster
 
 # --limit caps how many catalog objects are evaluated (default: 50, use 0 for all).
 # Keeps `lotse plan` fast when the catalog is large; all objects that clear
-# basic constraints are still ranked, just the evaluation budget is limited:
+# basic constraints are still ranked, just the evaluation budget is limited.
+# The catalog is loaded brightest-first, so a lower limit gives up the
+# faintest objects first, not an arbitrary slice — nothing bright is
+# skipped in favor of something fainter. A starred favorite (e.g. T CrB)
+# is always evaluated regardless of this limit, wherever it sits in
+# catalog order; it can only be missing from a plan if it genuinely
+# isn't up tonight.
 uv run lotse plan --limit 20
 uv run lotse plan --limit 0    # evaluate every catalog object
 
@@ -164,10 +170,12 @@ target's best-time dot its own color — a star instead of a dot for a
 favorite, e.g. T CrB — plus a real Moon track and phase icon), a
 nightly-briefing screen (same Claude API opt-in/fail-loud contract as
 `--prose` — nothing is sent to Anthropic until you click Generate), and
-a read-only sites/rigs reference. See [ROADMAP.md](./ROADMAP.md) for the
-toolkit decision (PySide6 over PyObjC/AppKit) and what's still open (an
-in-app sites/rigs editor, a GUI catalog/favorites tab, GUI-side exports,
-among others).
+a read-only sites/rigs reference. The sidebar's EVALUATE field is the
+GUI's own `--limit` (see above) — same brightest-first evaluation order,
+same unconditional exemption for starred favorites. See
+[ROADMAP.md](./ROADMAP.md) for the toolkit decision (PySide6 over
+PyObjC/AppKit) and what's still open (an in-app sites/rigs editor, a GUI
+catalog/favorites tab, GUI-side exports, among others).
 
 ## Architecture
 

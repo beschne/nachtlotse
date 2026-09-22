@@ -5,7 +5,11 @@ catalog (Messier/NGC/IC): the file a target lives in is decided purely by
 brightness, so a site+rig's computed limiting magnitude will eventually be
 able to load only the files it actually needs. New magnitude bins are
 picked up automatically — this module globs `mag_*.yaml` in its own
-directory rather than importing each one by name.
+directory rather than importing each one by name — but loaded in
+brightest-first order (`_brightness_sort_key`), not filename order:
+`planning.rank_targets`'s `limit` caps evaluation to the first N entries
+of `CATALOG`, so the load order is what makes "evaluate only 50" mean
+"evaluate the 50 brightest" rather than an arbitrary alphabetical slice.
 
 `mag_unknown.yaml` is the one exception to "split by magnitude": it holds
 objects with no reliably sourced integrated magnitude at all (see
@@ -45,6 +49,7 @@ that way; omit the key entirely rather than writing `favorite: false`.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +58,28 @@ import yaml
 from nachtlotse.engine.models import Target
 
 _CATALOG_DIR = Path(__file__).resolve().parent
+
+_BIN_FILENAME_RE = re.compile(r"^mag_(?:lt_(?P<lt>\d+)|(?P<low>\d+)_\d+|unknown)\.yaml$")
+
+
+def _brightness_sort_key(path: Path) -> float:
+    """Lower is brighter/evaluated-first — see `planning.rank_targets`'s
+    `limit`, which relies on catalog order being brightest-first so that
+    capping evaluation to the first N objects still surfaces the most
+    attractive targets rather than an alphabetically-arbitrary slice.
+
+    `mag_lt_6.yaml` sorts before every numeric bin (no lower bound to key
+    on); `mag_unknown.yaml` sorts after all of them, magnitude being
+    exactly what's not known about those entries.
+    """
+    match = _BIN_FILENAME_RE.match(path.name)
+    if match is None:
+        raise ValueError(f"catalog bin file doesn't match the mag_*.yaml pattern: {path.name}")
+    if match["lt"] is not None:
+        return -float(match["lt"])
+    if match["low"] is not None:
+        return float(match["low"])
+    return float("inf")  # mag_unknown.yaml
 
 
 def _target_from_dict(raw: dict[str, Any]) -> Target:
@@ -73,7 +100,7 @@ def _target_from_dict(raw: dict[str, Any]) -> Target:
 
 def _load_catalog() -> list[Target]:
     targets: list[Target] = []
-    for path in sorted(_CATALOG_DIR.glob("mag_*.yaml")):
+    for path in sorted(_CATALOG_DIR.glob("mag_*.yaml"), key=_brightness_sort_key):
         raw_targets = yaml.safe_load(path.read_text(encoding="utf-8")) or []
         targets.extend(_target_from_dict(raw) for raw in raw_targets)
     return targets

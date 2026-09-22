@@ -222,9 +222,15 @@ class Sidebar(RoundedCard):
         # this special value, so it's spelled out here instead.
         self.limit_spin.setSpecialValueText(f"Unlimited ({catalog_size})")
         self.limit_spin.setToolTip(
-            f"How many of the {catalog_size} catalog objects (matching any\n"
-            "type filter) get evaluated, not how many end up shortlisted.\n"
-            "0 evaluates every one of them — slower, but nothing is skipped."
+            f"How many of the {catalog_size} catalog objects get evaluated,\n"
+            "not how many end up shortlisted. Evaluated brightest-first (by\n"
+            "catalog magnitude), so a lower number gives up the faintest,\n"
+            "least attractive objects first — nothing bright is skipped in\n"
+            "favor of something fainter.\n"
+            "0 evaluates every one of them — slower, but nothing is skipped.\n"
+            "A ★ favorite is always evaluated regardless of this limit — it\n"
+            "can only be missing from the plan if it genuinely isn't up\n"
+            "tonight."
         )
         self.limit_spin.setStyleSheet(picker_style)
 

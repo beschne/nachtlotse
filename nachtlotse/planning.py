@@ -272,6 +272,12 @@ def rank_targets(
     are skipped before the expensive ephemeris check, keeping `lotse plan`
     fast even with a large catalog.  The first N matching objects are
     evaluated (catalog order is magnitude-binned, brightest first).
+    `Target.favorite` entries are exempt from this cap — they're always
+    evaluated, wherever they sit in catalog order, so a low `limit` can
+    never make a favorite silently vanish from the plan (only the actual
+    tonight-visibility checks in `constraints.best_time_tonight` can drop
+    one). They don't count against `limit` either, so a small `limit`
+    plus a favorite never costs headroom meant for other objects.
 
     Ranked by `framing.target_priority_score` (altitude, fit, and
     surface-brightness reach together), not altitude alone — a target
@@ -290,9 +296,14 @@ def rank_targets(
     for target in CATALOG:
         if types is not None and not (set(target.types) & types):
             continue
-        if 0 < limit <= evaluated:
-            break
-        evaluated += 1
+        # Favorites are exempt from the cap (see docstring) — can't just
+        # `break` once the limit's hit, since a favorite may still be
+        # further down catalog order; keep scanning, just without paying
+        # for the expensive ephemeris check on anything else past it.
+        if not target.favorite:
+            if 0 < limit <= evaluated:
+                continue
+            evaluated += 1
         result = constraints.best_time_tonight(
             site, target, when, extra_ok=_rotation_gate(rig, site, target)
         )
@@ -358,9 +369,12 @@ def rank_targets_for_best_rig(
     for target in CATALOG:
         if types is not None and not (set(target.types) & types):
             continue
-        if 0 < limit <= evaluated:
-            break
-        evaluated += 1
+        # Favorites are exempt from the cap — see `rank_targets`'s
+        # docstring for why this can't just `break` once the limit's hit.
+        if not target.favorite:
+            if 0 < limit <= evaluated:
+                continue
+            evaluated += 1
 
         best_for_target: RankedTargetForBestRig | None = None
         for rig in rigs:
