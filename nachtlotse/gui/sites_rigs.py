@@ -48,6 +48,7 @@ from nachtlotse.gui.theme import (
     RoundedCard,
     field_label,
     label_style,
+    region_checkbox_row,
     secondary_button,
 )
 
@@ -199,7 +200,9 @@ class SitesCard(_ListScrollArea):
 
         if sites:
             outer.addLayout(self._build_sort_row())
-            region_row = self._build_region_filter_row()
+            region_row, self._region_checkboxes = region_checkbox_row(
+                {record.region for record in sites}, self._render
+            )
             if region_row is not None:
                 outer.addLayout(region_row)
 
@@ -256,29 +259,6 @@ class SitesCard(_ListScrollArea):
         self.from_combo.currentIndexChanged.connect(self._render)
         row.addWidget(self.from_combo)
 
-        row.addStretch(1)
-        return row
-
-    def _build_region_filter_row(self) -> QHBoxLayout | None:
-        """A checkbox per distinct region, all checked by default — a
-        filter independent of SORT (not nested under `mode="region"`),
-        so it's built and shown whenever there's more than one region
-        to choose among, regardless of the current sort. None when
-        every configured site shares one region: nothing to filter."""
-        regions = sorted({record.region for record in self._sites}, key=str.casefold)
-        if len(regions) < 2:
-            return None
-
-        row = QHBoxLayout()
-        row.addWidget(field_label("REGIONS"))
-        checkbox_style = f"QCheckBox {{ color: {COLORS['ink']}; font-size: 12px; }}"
-        for region in regions:
-            checkbox = QCheckBox(region)
-            checkbox.setChecked(True)
-            checkbox.setStyleSheet(checkbox_style)
-            checkbox.toggled.connect(self._render)
-            self._region_checkboxes[region] = checkbox
-            row.addWidget(checkbox)
         row.addStretch(1)
         return row
 

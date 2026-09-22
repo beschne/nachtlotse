@@ -9,9 +9,18 @@ ROADMAP.md/STATUS.md for what's still missing from this first scaffold).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QPushButton
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+)
 
 LIGHT_COLORS = {
     "cream": "#f6f2ea",
@@ -134,6 +143,41 @@ def field_label(text: str) -> QLabel:
         )
     )
     return label
+
+
+def region_checkbox_row(
+    regions: set[str], on_toggle: Callable[[], None]
+) -> tuple[QHBoxLayout | None, dict[str, QCheckBox]]:
+    """A "REGIONS" `field_label` + one checkbox per region (alphabetical,
+    all checked by default), each wired to `on_toggle` — shared between
+    the Sites tab's own filter row (`gui/sites_rigs.py`, the original)
+    and Best Sky's (`gui/best_sky_card.py`) identical one. What "checked"
+    means is entirely up to the caller: `SitesCard` re-renders live on
+    every toggle (pure client-side filtering, nothing to fetch);
+    `BestSkyCard` also re-renders live, filtering its own already-
+    fetched rows — REGIONS never itself triggers a new Open-Meteo fetch
+    in either screen, only what's already loaded gets shown or hidden.
+
+    Returns `(None, {})` when fewer than two regions exist — nothing
+    meaningful to filter, so callers should skip adding the row at all.
+    """
+    sorted_regions = sorted(regions, key=str.casefold)
+    if len(sorted_regions) < 2:
+        return None, {}
+
+    row = QHBoxLayout()
+    row.addWidget(field_label("REGIONS"))
+    checkbox_style = f"QCheckBox {{ color: {COLORS['ink']}; font-size: 12px; }}"
+    checkboxes: dict[str, QCheckBox] = {}
+    for region in sorted_regions:
+        checkbox = QCheckBox(region)
+        checkbox.setChecked(True)
+        checkbox.setStyleSheet(checkbox_style)
+        checkbox.toggled.connect(on_toggle)
+        checkboxes[region] = checkbox
+        row.addWidget(checkbox)
+    row.addStretch(1)
+    return row, checkboxes
 
 
 def secondary_button(text: str) -> QPushButton:

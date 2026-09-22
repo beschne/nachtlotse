@@ -8,7 +8,13 @@ tonight", independent of any rig. It therefore doesn't hook into
 `MainWindow._replan` at all — its own Center/Radius controls are staged
 and applied by their own Refresh button (same "staged, not live" rule
 `sidebar.py`'s module docstring lays out), not tied to the sidebar's
-Re-plan.
+Re-plan. `refresh_if_needed()` is the one exception: `MainWindow` calls
+it on every tab switch, and the first one that actually lands here
+clicks Refresh automatically (with Radius already at
+`_DEFAULT_RADIUS_KM`, not "All sites"), so the tab shows real results
+the moment it's first opened rather than an empty "click Refresh"
+prompt — every switch after that, and every control change, still
+needs an explicit click same as always.
 
 The compared date instead *does* follow the sidebar: `set_date` is
 called from `MainWindow._on_plan_ready` after every successful plan, so
@@ -23,6 +29,14 @@ The request runs on a background `QThread` (`_BestSkyWorker`), same
 reasoning as `briefing._BriefingWorker`/`main_window._PlanWorker`: it's
 one Open-Meteo fetch per candidate site (cached 1h, but still real
 network I/O), and running it on the UI thread would freeze the window.
+
+A REGIONS checkbox row (`theme.region_checkbox_row`, shared with the
+Sites tab's own identical one) filters the *displayed* table live —
+unlike Center/Radius, toggling a region never itself triggers a new
+fetch. Refresh still queries every configured site (subject to
+Radius), and REGIONS just shows/hides rows from whatever's already in
+`self._all_rows`; unchecking a region and checking it back needs no
+second Refresh to see its data again.
 """
 
 from __future__ import annotations
@@ -32,6 +46,7 @@ from zoneinfo import ZoneInfo
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
@@ -52,12 +67,17 @@ from nachtlotse.gui.theme import (
     RoundedCard,
     field_label,
     label_style,
+    region_checkbox_row,
     secondary_button,
 )
 
 # Sites you'd realistically drive to for one night, not a hard engine
 # limit — best_sky.compare_sites itself accepts any distance.
 _MAX_RADIUS_KM = 500
+# The initial Radius, not a permanent cap — a sensible "nearby options"
+# starting point (widen or go to "All sites" from here) rather than
+# opening on the full, possibly-country-spanning site list.
+_DEFAULT_RADIUS_KM = 50
 
 # "Clouds up to" carries the phrasing that used to repeat in every row's
 # own cell text (data_adapter.BestSkyRow.clouds_text is now just the
@@ -111,8 +131,9 @@ class _BestSkyWorker(QThread):
 
 
 class BestSkyCard(RoundedCard):
-    """Center/Radius controls, a Refresh button, and the ranked
-    clearest-first comparison table."""
+    """Center/Radius controls, a Refresh button, a REGIONS filter row
+    (live, see module docstring), and the ranked clearest-first
+    comparison table."""
 
     plan_site_requested = Signal(object)  # SiteRecord
 
@@ -125,7 +146,16 @@ class BestSkyCard(RoundedCard):
         # calls `set_date` for real (see module docstring) — the system's
         # local date is a fine starting guess for that brief window.
         self._selected_date = datetime.now().astimezone().date()
+        # `_all_rows` is every row from the last successful fetch;
+        # `_rows` is whatever REGIONS currently leaves visible (what the
+        # table actually shows, and what row indices in it resolve
+        # against — see _on_plan_clicked). Refreshing replaces both;
+        # toggling a region only ever re-filters _all_rows into _rows.
+        self._all_rows: list[data_adapter.BestSkyRow] = []
         self._rows: list[data_adapter.BestSkyRow] = []
+        self._region_checkboxes: dict[str, QCheckBox] = {}
+        self._has_results = False
+        self._auto_refresh_pending = True
         self._worker: _BestSkyWorker | None = None
 
         layout = QVBoxLayout(self)
@@ -166,6 +196,7 @@ class BestSkyCard(RoundedCard):
         # (omitted = every configured site) and the EVALUATE spinbox's
         # identical 0-is-special convention in sidebar.py.
         self.radius_spin.setSpecialValueText("All sites")
+        self.radius_spin.setValue(_DEFAULT_RADIUS_KM)
         self.radius_spin.setStyleSheet(controls_style)
         controls_row.addWidget(self.radius_spin)
 
@@ -188,6 +219,12 @@ class BestSkyCard(RoundedCard):
         controls_row.addWidget(self.refresh_button)
         controls_row.addStretch(1)
         layout.addLayout(controls_row)
+
+        region_row, self._region_checkboxes = region_checkbox_row(
+            {record.region for record in sites}, self._on_region_filter_changed
+        )
+        if region_row is not None:
+            layout.addLayout(region_row)
 
         self.status_label = QLabel("Pick a center site and click Refresh.")
         self.status_label.setStyleSheet(
@@ -250,6 +287,19 @@ class BestSkyCard(RoundedCard):
         a refetch."""
         self._selected_date = selected_date
 
+    def refresh_if_needed(self) -> None:
+        """Called from `MainWindow` on every tab switch; only the first
+        one that actually lands on this tab does anything — clicking
+        Refresh for the user once, with whatever Center/Radius/REGIONS
+        are already staged (Radius defaults to `_DEFAULT_RADIUS_KM`),
+        so the tab isn't just an empty prompt the very first time it's
+        opened. Every later switch, and every control change after
+        that, still needs an explicit Refresh click same as always."""
+        if not self._auto_refresh_pending:
+            return
+        self._auto_refresh_pending = False
+        self.refresh_button.click()
+
     def _on_refresh_clicked(self) -> None:
         reference = self._sites[self.center_combo.currentIndex()]
         radius_value = self.radius_spin.value()
@@ -265,6 +315,12 @@ class BestSkyCard(RoundedCard):
             f"{self._selected_date:%A, %B %-d}…"
         )
         self.table.setRowCount(0)
+        # Cleared up front, not just left stale until a new _on_succeeded:
+        # a REGIONS toggle during/after a failed refresh must not silently
+        # repopulate the table from the previous fetch's results.
+        self._has_results = False
+        self._all_rows = []
+        self._rows = []
 
         self._worker = _BestSkyWorker(reference, self._sites, self._selected_date, max_distance_km)
         self._worker.succeeded.connect(self._on_succeeded)
@@ -273,15 +329,43 @@ class BestSkyCard(RoundedCard):
 
     def _on_succeeded(self, reports: list[best_sky.SiteSkyReport]) -> None:
         self.refresh_button.setEnabled(True)
-        self._rows = data_adapter.build_best_sky_rows(reports, self._sites)
+        self._has_results = True
+        self._all_rows = data_adapter.build_best_sky_rows(reports, self._sites)
+        self._render_rows(self._filtered_rows())
+
+    def _filtered_rows(self) -> list[data_adapter.BestSkyRow]:
+        if not self._region_checkboxes:
+            return self._all_rows
+        selected = {
+            region
+            for region, checkbox in self._region_checkboxes.items()
+            if checkbox.isChecked()
+        }
+        return [row for row in self._all_rows if row.site_record.region in selected]
+
+    def _on_region_filter_changed(self) -> None:
+        if not self._has_results:
+            return  # nothing fetched yet — leave the initial prompt as-is
+        self._render_rows(self._filtered_rows())
+
+    def _render_rows(self, rows: list[data_adapter.BestSkyRow]) -> None:
+        self._rows = rows
         # Every site's own dark window is a different length (latitude) —
         # align every row's sparkline to the same hour-by-hour timeline
-        # (the longest night among them) rather than each row scaling to
-        # its own hour count, which otherwise leaves same-width columns
-        # meaning different clock hours from row to row.
-        axis = data_adapter.shared_hourly_axis([row.hourly_cloud_cover for row in self._rows])
-        self.table.setRowCount(len(self._rows))
-        for row_index, row in enumerate(self._rows):
+        # (the longest night among the *displayed* rows) rather than each
+        # row scaling to its own hour count, which otherwise leaves
+        # same-width columns meaning different clock hours from row to
+        # row. Recomputed here (not once per fetch) so a REGIONS toggle
+        # that drops the longest-night row also shrinks the axis to match.
+        axis = data_adapter.shared_hourly_axis([row.hourly_cloud_cover for row in rows])
+        # Dropping straight to the new (possibly smaller) row count, not
+        # via 0 first, left REGIONS-filtered-out rows' cell widgets
+        # (the sparklines — QTableWidget.setRowCount() alone doesn't
+        # reliably tear those down) still painting behind the shorter
+        # table — same lesson as sites_rigs.py's own card-widget cleanup.
+        self.table.setRowCount(0)
+        self.table.setRowCount(len(rows))
+        for row_index, row in enumerate(rows):
             site_item = QTableWidgetItem(row.site_text)
             distance_item = QTableWidgetItem(row.distance_text)
             clouds_item = QTableWidgetItem(row.clouds_text)
@@ -298,9 +382,17 @@ class BestSkyCard(RoundedCard):
                 _TONIGHT_COLUMN_INDEX,
                 build_cloud_sparkline(row.hourly_cloud_cover, local_tz, axis=axis),
             )
-        if self._rows:
+        if rows:
             self.table.selectRow(0)  # the clearest site, already ranked first
-            self.status_label.setText(f"{len(self._rows)} site(s) compared.")
+            if len(rows) == len(self._all_rows):
+                self.status_label.setText(f"{len(rows)} site(s) compared.")
+            else:
+                self.status_label.setText(
+                    f"{len(rows)} of {len(self._all_rows)} site(s) shown "
+                    "(REGIONS filter)."
+                )
+        elif self._all_rows:
+            self.status_label.setText("No sites match the checked regions.")
         else:
             self.status_label.setText("No configured site falls within that radius.")
 

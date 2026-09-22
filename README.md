@@ -172,10 +172,18 @@ nightly-briefing screen (same Claude API opt-in/fail-loud contract as
 `--prose` — nothing is sent to Anthropic until you click Generate), a
 **Best sky** tab (`best-sky`'s own cross-site cloud-cover comparison,
 independent of the currently-planned rig: pick any configured site as
-**Center**, an optional **Radius** in km to only compare sites within
-that distance — same "0/omitted = every configured site" convention as
-`--radius-km` — then Refresh to rank them clearest-first, each row its
-site plus region, a "Clouds up to" max/avg reading, and an hourly
+**Center**, an optional **Radius** in km (defaults to 50, not "every
+configured site" — widen it or set it to 0 for that, same
+"0/omitted = every configured site" convention as `--radius-km`) to
+only compare sites within that distance, plus a **Regions** checkbox
+row (all checked by default) that filters the results table live —
+unlike Center/Radius, toggling a region never itself re-fetches, it
+just shows/hides rows from whatever Refresh already pulled in. The
+tab auto-refreshes itself once, the first time you open it, so it's
+never just an empty prompt; every change after that (and every later
+tab switch) still needs an explicit Refresh click. Results rank
+clearest-first, each row its site plus region, a "Clouds up to"
+max/avg reading, and an hourly
 cloud-cover sparkline for that site's own dark window (a clear-then-
 closes-in night doesn't collapse into the same number as the reverse).
 Every row's sparkline lines up on the same hour-by-hour timeline —

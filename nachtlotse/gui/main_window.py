@@ -295,6 +295,8 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(SitesCard(store.SITES), "Sites")
         self.tabs.addTab(RigsCard(store.RIGS), "Rigs")
 
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+
         content_layout.addWidget(self.tabs, stretch=1)
 
         self._worker: _PlanWorker | None = None
@@ -486,6 +488,14 @@ class MainWindow(QMainWindow):
         than leaving the user to re-select it manually."""
         self.sidebar.set_site(site_record)
         self.tabs.setCurrentIndex(0)
+
+    def _on_tab_changed(self, index: int) -> None:
+        """Fires on every tab switch — `BestSkyCard.refresh_if_needed`
+        itself no-ops after the first time it actually lands there, so
+        this is just "let Best Sky know it might be its first showing",
+        not a full per-tab dispatch table."""
+        if self.tabs.widget(index) is self.best_sky:
+            self.best_sky.refresh_if_needed()
 
     def _on_plan_failed(self, message: str) -> None:
         self._finish_replan()
