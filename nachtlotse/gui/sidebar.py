@@ -290,6 +290,15 @@ class Sidebar(RoundedCard):
         self.replan_requested.emit(site_record, rig_record, selected_date, self.limit_spin.value())
         self.replan_button.setEnabled(False)
 
+    def set_site(self, site_record: SiteRecord) -> None:
+        """Stage `site_record` and immediately re-plan — used by Best
+        Sky's "Plan this site" row action, where jumping straight to a
+        plan for the chosen site *is* the action, unlike a manual combo
+        change which only stages (see module docstring). Rig/date/limit
+        are left exactly as currently staged."""
+        self.site_combo.setCurrentIndex(self._sites.index(site_record))
+        self._emit_replan()
+
     def current_site_record(self) -> SiteRecord:
         return self._sites[self.site_combo.currentIndex()]
 

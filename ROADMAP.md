@@ -8,23 +8,20 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **"Best sky" in the GUI:** `best_sky.py`/`lotse best-sky` (cross-site
-  forecast cloud-cover comparison) has no GUI surface yet — the GUI can
-  only plan for whichever single site is picked in the sidebar, not
-  answer "which of my configured sites has the clearest sky tonight."
-2. **Current events:** well-placed comets, supernova alerts; later also minor
-   planets/asteroids and near-Earth objects (NEOs).
-3. **Session log:** record what's already been captured, and when — total
-   exposure time per target, logged per session. Prior exposure on a target
-   is informational, not a deterrent; it doesn't mean the target drops out of
-   contention, more can still be worth shooting. No attached photos.
-4. **Framing preview for selected targets:** render what a target would
+1. **Framing preview for selected targets:** render what a target would
    actually look like through the given rig — its angular size/shape
    against the rig's field of view (from `framing.py`'s FoV/fill-fraction
    math) — rather than only the numeric `framing_score`/reach. A visual
    check for "does this actually fit, and how tightly" for a target picked
    off the shortlist, complementing (not replacing) the existing polar
-   `--chart`, which shows where in the sky, not how it frames.
+   `--chart`, which shows where in the sky, not how it frames. To be implemented
+for the CLI and the GUI. Both on demand only and cached.
+2. **Current events:** well-placed comets, supernova alerts; later also minor
+   planets/asteroids and near-Earth objects (NEOs).
+3. **Session log:** record what's already been captured, and when — total
+   exposure time per target, logged per session. Prior exposure on a target
+   is informational, not a deterrent; it doesn't mean the target drops out of
+   contention, more can still be worth shooting. No attached photos. 
 
 ## Non-prioritized ideas
 

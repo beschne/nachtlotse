@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from nachtlotse import best_sky
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing
 from nachtlotse.engine.models import TARGET_TYPE_LABELS, Target, WeatherSummary
@@ -33,6 +34,20 @@ from nachtlotse.planning import (
     RankedGroup,
     RankedTargetForBestRig,
 )
+from nachtlotse.weather import open_meteo
+
+# Same 16-point compass rose `cli.py`'s own private `_compass_direction`
+# uses for `lotse best-sky` — duplicated rather than shared, per this
+# module's own "small adapter per UI boundary" rule above.
+_COMPASS_POINTS = (
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+)  # fmt: skip
+
+
+def _compass_direction(bearing_deg: float) -> str:
+    index = round(bearing_deg / 22.5) % len(_COMPASS_POINTS)
+    return _COMPASS_POINTS[index]
 
 # Same two reference sky-darkness classes `cli.py`'s `_format_rig_line`
 # quotes a rough limiting magnitude for.
@@ -286,3 +301,72 @@ def build_rig_info(record: RigRecord) -> RigInfo:
         fov_text=f"FoV {fov_width_deg:.2f}° × {fov_height_deg:.2f}° · sampling {rig.sampling_arcsec_px:.2f}″/px",
         limiting_mag_text=f"Rough limiting magnitude (stacked, tunable estimate): {limiting_mags}",
     )
+
+
+@dataclass(frozen=True)
+class BestSkyRow:
+    """One `best_sky.SiteSkyReport`, display-ready — mirrors `cli.py`'s
+    own `_format_site_sky_line` (`lotse best-sky`).
+
+    Carries the matching `SiteRecord` (not just the bare engine `Site`
+    `SiteSkyReport.site` itself holds) so a "Plan this site" row action
+    has everything `Sidebar.set_site` needs without a second lookup, and
+    `region` for `site_text` below.
+
+    `clouds_text` is deliberately just the numbers ("18% (avg 5%)") —
+    the "clouds up to" phrasing lives in the results table's own column
+    header instead of repeating on every row (`best_sky_card.py`).
+    `hourly_cloud_cover` is passed straight through for that table's
+    sparkline column (`hourly_cloud_bar.build_cloud_sparkline`); this
+    module stays free of any PySide6 import (see module docstring), so
+    it hands over the raw data rather than a built widget.
+    """
+
+    site_record: SiteRecord
+    site_text: str
+    distance_text: str
+    clouds_text: str
+    clouds_available: bool
+    hourly_cloud_cover: list[open_meteo.HourlyWeather]
+
+
+def build_best_sky_rows(
+    reports: list[best_sky.SiteSkyReport], site_records: list[SiteRecord]
+) -> list[BestSkyRow]:
+    by_name = {record.site.name: record for record in site_records}
+    rows = []
+    for report in reports:
+        if report.weather is not None:
+            clouds_text = (
+                f"{report.weather.max_cloud_cover_pct:.0f}% "
+                f"(avg {report.weather.avg_cloud_cover_pct:.0f}%)"
+            )
+        elif report.weather_unavailable_reason == "beyond_forecast_horizon":
+            # Distinguished from a genuine fetch failure (below) — this
+            # isn't Open-Meteo being down, it's the requested night
+            # sitting past its own forecast horizon (best_sky.py's
+            # `WeatherUnavailableReason`), a routine, not-alarming case
+            # for a date picked far ahead.
+            clouds_text = "Beyond forecast range"
+        else:
+            # Same phrasing `weather_line` uses for the main plan's own
+            # header (just without its parenthetical — this is a table
+            # cell, not a status line).
+            clouds_text = "Weather unavailable"
+        if report.bearing_deg is None:
+            distance_text = f"{report.distance_km:.0f} km"
+        else:
+            direction = _compass_direction(report.bearing_deg)
+            distance_text = f"{report.distance_km:.0f} km {report.bearing_deg:.0f}° {direction}"
+        site_record = by_name[report.site.name]
+        rows.append(
+            BestSkyRow(
+                site_record=site_record,
+                site_text=f"{site_record.site.name}, {site_record.region}",
+                distance_text=distance_text,
+                clouds_text=clouds_text,
+                clouds_available=report.weather is not None,
+                hourly_cloud_cover=report.hourly_cloud_cover,
+            )
+        )
+    return rows

@@ -164,18 +164,33 @@ uv run lotse gui
 (Screenshots at the top of this README.)
 
 It computes real plans against your own `sites_local.yaml`/`rigs_local.yaml`
-(no illustrative/fake data) across five tabs: the shortlist, the full
+(no illustrative/fake data) across six tabs: the shortlist, the full
 ranked table, a polar sky chart (tracks colored by verdict, each
 target's best-time dot its own color — a star instead of a dot for a
 favorite, e.g. T CrB — plus a real Moon track and phase icon), a
 nightly-briefing screen (same Claude API opt-in/fail-loud contract as
-`--prose` — nothing is sent to Anthropic until you click Generate), and
-a read-only sites/rigs reference. The sidebar's EVALUATE field is the
-GUI's own `--limit` (see above) — same brightest-first evaluation order,
-same unconditional exemption for starred favorites. See
-[ROADMAP.md](./ROADMAP.md) for the toolkit decision (PySide6 over
-PyObjC/AppKit) and what's still open (an in-app sites/rigs editor, a GUI
-catalog/favorites tab, GUI-side exports, among others).
+`--prose` — nothing is sent to Anthropic until you click Generate), a
+**Best sky** tab (`best-sky`'s own cross-site cloud-cover comparison,
+independent of the currently-planned rig: pick any configured site as
+**Center**, an optional **Radius** in km to only compare sites within
+that distance — same "0/omitted = every configured site" convention as
+`--radius-km` — then Refresh to rank them clearest-first, each row its
+site plus region, a "Clouds up to" max/avg reading, and an hourly
+cloud-cover sparkline for that site's own dark window (a clear-then-
+closes-in night doesn't collapse into the same number as the reverse).
+A site with no weather reads as either "Weather unavailable" (the fetch
+itself failed — network/API) or "Beyond forecast range" (fetch fine,
+but the picked date is past Open-Meteo's own 16-day forecast horizon)
+— told apart rather than one generic unreachable state, and never with
+a colored sparkline of its own either way. "Plan this site" on a result
+jumps the sidebar straight to it and switches back to the Shortlist),
+and a read-only sites/rigs reference. The sidebar's
+EVALUATE field is the GUI's own `--limit` (see above) — same
+brightest-first evaluation order, same unconditional exemption for
+starred favorites. See [ROADMAP.md](./ROADMAP.md) for the toolkit
+decision (PySide6 over PyObjC/AppKit) and what's still open (an in-app
+sites/rigs editor, a GUI catalog/favorites tab, GUI-side exports, among
+others).
 
 ## Architecture
 

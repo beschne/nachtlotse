@@ -42,17 +42,25 @@ class _CloudStrip(QWidget):
     """Paints the colored cells, each labeled with its own local hour.
     Hover still shows the exact hour and percentage as a tooltip — the
     color band and the hour number alone don't give the precise
-    percentage, same as a colored map legend needing its own key."""
+    percentage, same as a colored map legend needing its own key.
+
+    `compact`, used for `build_cloud_sparkline` below (a per-row table
+    cell, e.g. `gui/best_sky_card.py`'s results table): no caption/range
+    label above it (that's `HourlyCloudCoverBar`'s own job) and a lower
+    minimum width, so it still fits a narrower table column — but the
+    same height and per-cell hour digits as the standalone bar, not a
+    plain unlabeled color strip.
+    """
 
     _HEIGHT = 24
     _GAP = 2.0
 
-    def __init__(self) -> None:
+    def __init__(self, *, compact: bool = False) -> None:
         super().__init__()
         self._hours: list[tuple[datetime, float]] = []
         self._local_tz: ZoneInfo | None = None
         self.setFixedHeight(self._HEIGHT)
-        self.setMinimumWidth(120)
+        self.setMinimumWidth(60 if compact else 120)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setMouseTracking(True)
 
@@ -139,3 +147,16 @@ class HourlyCloudCoverBar(QWidget):
         end_local = hours[-1][0].astimezone(local_tz)
         self._range_label.setText(f"{start_local:%H:%M}–{end_local:%H:%M} {end_local:%Z}")
         self.show()
+
+
+def build_cloud_sparkline(hourly: list[HourlyWeather], local_tz: ZoneInfo) -> QWidget:
+    """A caption-less hourly cloud-cover strip for embedding as a table
+    cell widget (`gui/best_sky_card.py`'s results table) — same color
+    bands, per-cell hour digits, and hover tooltip as
+    `HourlyCloudCoverBar`, just without the caption/range label above
+    it (that line belongs once per screen, not once per row). One-shot,
+    like `main_window._verdict_cell`: built fresh each time the table
+    repopulates, no `set_*` method of its own."""
+    strip = _CloudStrip(compact=True)
+    strip.set_hours([(hour.when, hour.cloud_cover_pct) for hour in hourly], local_tz)
+    return strip

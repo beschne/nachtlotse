@@ -50,6 +50,7 @@ from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine.models import Rig, Site
 from nachtlotse.gui import data_adapter
 from nachtlotse.gui import export as gui_export
+from nachtlotse.gui.best_sky_card import BestSkyCard
 from nachtlotse.gui.briefing import BriefingCard
 from nachtlotse.gui.hourly_cloud_bar import HourlyCloudCoverBar
 from nachtlotse.gui.sidebar import Sidebar
@@ -286,6 +287,11 @@ class MainWindow(QMainWindow):
         self.briefing = BriefingCard()
         self.tabs.addTab(self.briefing, "Briefing")
 
+        self.best_sky = BestSkyCard(store.SITES)
+        self.best_sky.set_center(self.sidebar.current_site_record())
+        self.best_sky.plan_site_requested.connect(self._on_plan_site_requested)
+        self.tabs.addTab(self.best_sky, "Best sky")
+
         self.tabs.addTab(SitesCard(store.SITES), "Sites")
         self.tabs.addTab(RigsCard(store.RIGS), "Rigs")
 
@@ -472,6 +478,14 @@ class MainWindow(QMainWindow):
         self.tabs.setTabText(1, f"All ranked ({len(ranked_rows)})")
         self.sky_chart.set_plan(plan, local_tz)
         self.briefing.set_plan(plan)
+        self.best_sky.set_date(selected_date)
+
+    def _on_plan_site_requested(self, site_record: SiteRecord) -> None:
+        """Best Sky's "Plan this site" row action: jump the main sidebar
+        straight to that site and switch to the Shortlist tab, rather
+        than leaving the user to re-select it manually."""
+        self.sidebar.set_site(site_record)
+        self.tabs.setCurrentIndex(0)
 
     def _on_plan_failed(self, message: str) -> None:
         self._finish_replan()

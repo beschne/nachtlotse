@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from nachtlotse import best_sky
+from nachtlotse.engine import constraints
 from nachtlotse.engine.models import HorizonProfile, Site
 from nachtlotse.weather import open_meteo
 
@@ -41,6 +42,21 @@ FRANKFURT = Site(
 )
 
 _NOW = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_weather_cache(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """Every test below drives `best_sky.compare_sites`, which goes
+    through `open_meteo.fetch_hourly_cached`'s real on-disk cache unless
+    redirected — autoused so no test can write fake weather data into
+    the project's actual `.cache/open_meteo/` cache. That's exactly what
+    a one-off manual verification script did against real site
+    coordinates (outside the test suite, but the same underlying
+    mistake) and it broke the live GUI's Best Sky tab until the cache
+    was cleared by hand — this fixture is what keeps the *test suite*
+    itself from ever doing the same.
+    """
+    monkeypatch.setattr(open_meteo, "DEFAULT_CACHE_DIR", tmp_path)
 
 
 def _fake_fetch_hourly_factory(cloud_cover_pct: float):
@@ -126,3 +142,86 @@ def test_compare_sites_sorts_unreachable_weather_last(
 
     assert [report.site.name for report in reports] == ["Munich", "Frankfurt"]
     assert reports[-1].weather is None
+    assert reports[-1].hourly_cloud_cover == []
+    assert reports[-1].weather_unavailable_reason == "unreachable"
+
+
+def test_compare_sites_flags_a_night_beyond_the_forecast_horizon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A successful fetch that simply doesn't cover the requested night
+    (e.g. a date picked weeks ahead, past Open-Meteo's own forecast
+    horizon) must read as `weather_unavailable_reason ==
+    "beyond_forecast_horizon"`, not the same generic "unreachable" a
+    real fetch failure gets — see best_sky.WeatherUnavailableReason."""
+
+    def fetch_far_from_now(lat_deg: float, lon_deg: float) -> list:
+        # Real hours, real fetch — just nowhere near `_NOW`'s own dark
+        # window, the same shape a too-far-out forecast horizon leaves.
+        far_away = _NOW + timedelta(days=60)
+        return [
+            open_meteo.HourlyWeather(
+                when=far_away.replace(minute=0, second=0, microsecond=0)
+                + timedelta(hours=offset),
+                cloud_cover_pct=10.0,
+                wind_speed_kmh=5.0,
+                humidity_pct=50.0,
+                dew_point_c=5.0,
+                temperature_c=15.0,
+            )
+            for offset in range(24)
+        ]
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", fetch_far_from_now)
+
+    (report,) = best_sky.compare_sites(BAD_HOMBURG, [BAD_HOMBURG], _NOW)
+
+    assert report.weather is None
+    assert report.hourly_cloud_cover == []
+    assert report.weather_unavailable_reason == "beyond_forecast_horizon"
+
+
+def test_compare_sites_reuses_the_disk_cache_across_a_different_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`fetch_hourly_cached`'s on-disk cache is keyed by each candidate's
+    own lat/lon (see `open_meteo._cache_path`) — never by which site is
+    the current `reference`. So the GUI's Best Sky tab changing Center
+    and clicking Refresh again must not re-fetch a candidate whose
+    weather (summary *and* hourly, both drawn from that one cached
+    fetch) is already on disk within the TTL, even though `reference`
+    itself, and therefore every distance/bearing/ranking, is different
+    the second time. (Cache isolation itself comes from the autouse
+    `_isolated_weather_cache` fixture above.)"""
+    call_count = 0
+
+    def counting_fetch(lat_deg: float, lon_deg: float) -> list:
+        nonlocal call_count
+        call_count += 1
+        return _fake_fetch_hourly_factory(10.0)(lat_deg, lon_deg)
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", counting_fetch)
+
+    candidates = [BAD_HOMBURG, FRANKFURT, MUNICH]
+    best_sky.compare_sites(BAD_HOMBURG, candidates, _NOW)
+    assert call_count == 3
+
+    best_sky.compare_sites(FRANKFURT, candidates, _NOW)  # a different reference
+    assert call_count == 3, "changing the reference re-fetched already-cached candidates"
+
+
+def test_compare_sites_includes_hourly_cloud_cover_clipped_to_the_dark_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(open_meteo, "fetch_hourly", _fake_fetch_hourly_factory(10.0))
+
+    (report,) = best_sky.compare_sites(BAD_HOMBURG, [BAD_HOMBURG], _NOW)
+
+    assert report.hourly_cloud_cover, "the fake fetch spans well past the dark window"
+    assert all(hour.cloud_cover_pct == 10.0 for hour in report.hourly_cloud_cover)
+    # Every hour actually falls in that night's dark window, not just
+    # somewhere in the fake fetch's wide -24h/+72h span.
+    evening_start, morning_end = constraints.dark_window(BAD_HOMBURG, _NOW)
+    assert all(
+        evening_start <= hour.when <= morning_end for hour in report.hourly_cloud_cover
+    )

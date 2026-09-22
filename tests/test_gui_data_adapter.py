@@ -10,6 +10,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from nachtlotse import best_sky
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import ephemeris
 from nachtlotse.engine.models import (
@@ -33,6 +34,7 @@ from nachtlotse.planning import (
     RankedTargetForBestRig,
     ShortlistEntry,
 )
+from nachtlotse.weather import open_meteo
 
 BERLIN = ZoneInfo("Europe/Berlin")
 
@@ -280,3 +282,87 @@ def test_build_rig_info_covers_optics_sensor_fov_and_limiting_magnitude() -> Non
     assert "4000×3000 px" in info.sensor_text
     assert "FoV" in info.fov_text
     assert "Bortle 2" in info.limiting_mag_text and "Bortle 5" in info.limiting_mag_text
+
+
+def test_compass_direction_rounds_to_the_nearest_16_point() -> None:
+    assert data_adapter._compass_direction(0.0) == "N"
+    assert data_adapter._compass_direction(90.0) == "E"
+    assert data_adapter._compass_direction(200.0) == "SSW"
+    assert data_adapter._compass_direction(359.0) == "N"  # wraps past 360
+
+
+def test_build_best_sky_rows_covers_weather_distance_and_site_lookup() -> None:
+    reference_record = SiteRecord(site=SITE, region="Taunus", bortle="4")
+    other_site = replace(SITE, name="Other Site", lat_deg=51.0)
+    other_record = SiteRecord(site=other_site, region="Hintertaunus", bortle="5")
+
+    hourly = [
+        open_meteo.HourlyWeather(
+            when=datetime(2026, 9, 22, 22, 0, tzinfo=UTC),
+            cloud_cover_pct=20.0,
+            wind_speed_kmh=10.0,
+            humidity_pct=50.0,
+            dew_point_c=5.0,
+            temperature_c=12.0,
+        )
+    ]
+    reports = [
+        best_sky.SiteSkyReport(
+            site=other_site,
+            distance_km=111.2,
+            bearing_deg=0.0,
+            weather=WeatherSummary(
+                max_cloud_cover_pct=20.0,
+                avg_cloud_cover_pct=5.0,
+                max_wind_kmh=10.0,
+                min_dew_point_spread_c=3.0,
+            ),
+            hourly_cloud_cover=hourly,
+        ),
+        best_sky.SiteSkyReport(
+            site=SITE,
+            distance_km=0.0,
+            bearing_deg=None,
+            weather=None,
+            hourly_cloud_cover=[],
+            weather_unavailable_reason="unreachable",
+        ),
+    ]
+
+    rows = data_adapter.build_best_sky_rows(reports, [reference_record, other_record])
+
+    assert rows[0].site_record is other_record
+    assert rows[0].site_text == "Other Site, Hintertaunus"
+    assert "111 km" in rows[0].distance_text and "N" in rows[0].distance_text
+    assert "20%" in rows[0].clouds_text and "5%" in rows[0].clouds_text
+    assert "up to" not in rows[0].clouds_text  # that phrasing lives in the column header
+    assert rows[0].clouds_available is True
+    assert rows[0].hourly_cloud_cover == hourly
+
+    assert rows[1].site_record is reference_record
+    assert rows[1].site_text == "Test Site, Taunus"
+    assert rows[1].distance_text == "0 km"
+    assert rows[1].clouds_text == "Weather unavailable"
+    assert rows[1].clouds_available is False
+    assert rows[1].hourly_cloud_cover == []
+
+
+def test_build_best_sky_rows_distinguishes_beyond_forecast_horizon() -> None:
+    """A date past Open-Meteo's own forecast horizon is a routine,
+    expected case (picking a date weeks out), not a fetch failure — the
+    two must read differently, not both collapse into one generic
+    "unavailable" (see best_sky.WeatherUnavailableReason)."""
+    record = SiteRecord(site=SITE, region="Taunus", bortle="4")
+    report = best_sky.SiteSkyReport(
+        site=SITE,
+        distance_km=0.0,
+        bearing_deg=None,
+        weather=None,
+        hourly_cloud_cover=[],
+        weather_unavailable_reason="beyond_forecast_horizon",
+    )
+
+    (row,) = data_adapter.build_best_sky_rows([report], [record])
+
+    assert row.clouds_text == "Beyond forecast range"
+    assert row.clouds_available is False

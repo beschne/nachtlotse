@@ -5,6 +5,10 @@
 top of the main [README.md](../README.md). No illustrative/fake data;
 same rule the GUI itself follows.
 
+`gui-best-sky.png` is the same real run's Best sky tab (Center defaulted
+to the same site as the other two) — kept here for reference, not
+currently embedded in README.md.
+
 ## Regenerating them
 
 Whenever the GUI changes enough to make these look stale:
@@ -28,7 +32,7 @@ To capture a different site/rig/date combination, edit `SITE_NAME`,
 `RIG_NAME`, and `TARGET_DATE` at the top of `update_screenshots.py` —
 whatever you pick must already exist in your own `sites_local.yaml`/
 `rigs_local.yaml`. Update the caption text in README.md's screenshot
-block to match; the script only overwrites the two PNGs, not that text.
+block to match; the script only overwrites the three PNGs, not that text.
 
 Images are resized to 1600px wide (`sips -Z`) to keep the repo
 reasonable — full native screen resolution isn't needed for a README.

@@ -13,12 +13,23 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
 from nachtlotse.engine import constraints
 from nachtlotse.engine.models import Site, WeatherSummary
 from nachtlotse.weather import open_meteo
+from nachtlotse.weather.open_meteo import HourlyWeather
 
 _EARTH_RADIUS_KM = 6371.0
+
+# Two different reasons `SiteSkyReport.weather` can be None, worth telling
+# apart in the UI rather than collapsing both into one generic "unavailable":
+# "unreachable" — the fetch itself failed (network/API/parsing —
+# `open_meteo.WeatherUnavailable`); "beyond_forecast_horizon" — the fetch
+# succeeded, but the requested night falls past Open-Meteo's own forecast
+# window (`open_meteo._FORECAST_DAYS`, 16 days), so no hourly forecast
+# overlaps the dark window at all.
+WeatherUnavailableReason = Literal["unreachable", "beyond_forecast_horizon"]
 
 
 def _distance_km(site_a: Site, site_b: Site) -> float:
@@ -57,6 +68,14 @@ class SiteSkyReport:
     distance_km: float
     bearing_deg: float | None  # from the reference site; None if distance is ~0
     weather: WeatherSummary | None
+    # Same hour-by-hour shape `planning.fetch_hourly_cloud_cover` exposes
+    # for the main plan (ROADMAP.md's "Hourly cloud cover for the
+    # astro-night") — a site whose forecast opens clear then closes in,
+    # or the reverse, isn't told apart by `weather`'s single averaged
+    # number alone. Empty when `weather` is None (forecast unavailable).
+    hourly_cloud_cover: list[HourlyWeather]
+    # None whenever `weather` is not None; see `WeatherUnavailableReason`.
+    weather_unavailable_reason: WeatherUnavailableReason | None = None
 
 
 def compare_sites(
@@ -86,12 +105,22 @@ def compare_sites(
         bearing_deg = _bearing_deg(reference, site) if distance_km > 0.01 else None
 
         evening_start, morning_end = constraints.dark_window(site, when)
+        weather_unavailable_reason: WeatherUnavailableReason | None
         try:
             hours = open_meteo.fetch_hourly_cached(site.lat_deg, site.lon_deg)
         except open_meteo.WeatherUnavailable:
             weather = None
+            hourly_cloud_cover = []
+            weather_unavailable_reason = "unreachable"
         else:
             weather = open_meteo.summarize_window(hours, evening_start, morning_end)
+            hourly_cloud_cover = open_meteo.hourly_forecast_in_window(
+                hours, evening_start, morning_end
+            )
+            # The fetch itself succeeded — a still-None `weather` here can
+            # only mean no fetched hour fell in the window, i.e. the night
+            # is past Open-Meteo's own forecast horizon.
+            weather_unavailable_reason = None if weather is not None else "beyond_forecast_horizon"
 
         reports.append(
             SiteSkyReport(
@@ -99,6 +128,8 @@ def compare_sites(
                 distance_km=distance_km,
                 bearing_deg=bearing_deg,
                 weather=weather,
+                hourly_cloud_cover=hourly_cloud_cover,
+                weather_unavailable_reason=weather_unavailable_reason,
             )
         )
 
