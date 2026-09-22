@@ -32,11 +32,18 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   every front end spells a category the same way. An object can carry
   more than one (M42 is both an emission and a reflection nebula).
 - `Target.favorite: bool` (ROADMAP.md's "Favorites in the catalog",
-  done) — starred independent of ranking/score. First (and so far only)
-  user: T CrB, a recurrent nova that's ~10th magnitude for decades
-  between eruptions and would otherwise get crowded out of the shortlist
-  entirely. `planning._fold_favorites_into_shortlist` appends any
-  favorite left outside the normal `SHORTLIST_SIZE` cutoff onto the end
+  done) — starred independent of ranking/score. Never set in the shared
+  `data/catalog/*.yaml` files themselves (one person's preference isn't a
+  sourced fact about the object) — instead a local, gitignored
+  `data/favorites_local.yaml` lists starred `catalog_id`s, same pattern
+  `data/store.py` already uses for `sites_local.yaml`/`rigs_local.yaml`,
+  folded into the matching `Target` by `data.catalog._load_catalog` at
+  import time; `favorites_local.template.yaml` (committed) documents the
+  format with one real, working example: T CrB, a recurrent nova that's
+  ~10th magnitude for decades between eruptions and would otherwise get
+  crowded out of the shortlist entirely.
+  `planning._fold_favorites_into_shortlist` appends any favorite left
+  outside the normal `SHORTLIST_SIZE` cutoff onto the end
   of `plan.shortlist` (never reordering the top N themselves) for both
   `plan_night` and `plan_night_for_best_rig` — so a favorite reaches
   every front end that already reads `plan.shortlist` (CLI table, GUI

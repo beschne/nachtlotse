@@ -1,0 +1,24 @@
+# Template for your personal favorites list.
+#
+# This file is NOT read by Nachtlotse (see data/catalog/__init__.py) — it's
+# an example to copy from:
+#
+#   cp nachtlotse/data/favorites_local.template.yaml nachtlotse/data/favorites_local.yaml
+#
+# A favorite is folded into the shortlist regardless of where it ranks
+# (ROADMAP.md's "Favorites in the catalog") and marked with a "★ " prefix
+# everywhere its label shows up (CLI table, GUI Shortlist/All ranked tabs,
+# sky chart + legend).
+#
+# List each favorite by its catalog_id, exactly as written in
+# nachtlotse/data/catalog/*.yaml (not its name or an alias). T CrB below is
+# a real, working example, not a placeholder: a recurrent nova/symbiotic
+# binary that sits at quiescent ~10th magnitude for decades between
+# eruptions — exactly the case favorites exist for, since a normal ranking
+# would otherwise crowd it out between eruptions. Edit the copy freely:
+# keep it, replace it, or add more lines below it.
+#
+# `favorites_local.yaml` is gitignored — your own favorites never get
+# committed; this template is what ships in the repo instead.
+
+- "T CrB"

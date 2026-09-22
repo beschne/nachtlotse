@@ -220,9 +220,12 @@ def test_load_catalog_parses_an_omitted_magnitude_as_none(
     assert target.size_arcmin == (30.0, 20.0)
 
 
-def test_load_catalog_parses_the_favorite_flag(
+def test_load_catalog_ignores_an_inline_favorite_key(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Favorites are deliberately NOT read from the shared catalog YAML
+    itself any more (see the module docstring) — a stray `favorite: true`
+    left in a `mag_*.yaml` file must be silently ignored, not honored."""
     (tmp_path / "mag_10_11.yaml").write_text(
         """
 - name: "Test Variable"
@@ -240,16 +243,75 @@ def test_load_catalog_parses_the_favorite_flag(
 
     (target,) = catalog._load_catalog()
 
-    assert target.favorite is True
+    assert target.favorite is False
 
 
-def test_catalog_contains_t_crb_as_a_favorite_variable_star() -> None:
-    """T CrB (roadmap #1, "Favorites in the catalog") is the first target
-    that needs to show up regardless of ranking — a regression here means
-    the favorite flag silently stopped round-tripping from YAML."""
+def test_load_catalog_applies_local_favorites_by_catalog_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The real mechanism: a `catalog_id` listed in the gitignored
+    `favorites_local.yaml` next to the catalog package gets folded into
+    that target's `favorite` field at load time; an unlisted target
+    stays unstarred."""
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    (catalog_dir / "mag_10_11.yaml").write_text(
+        """
+- name: "Test Variable"
+  catalog_id: "T Test"
+  ra_deg: 10.0
+  dec_deg: 20.0
+  magnitude: 10.5
+  size_arcmin: [0.05, 0.05]
+  types: ["variable_star"]
+
+- name: "Other Variable"
+  catalog_id: "T Other"
+  ra_deg: 30.0
+  dec_deg: 40.0
+  magnitude: 10.5
+  size_arcmin: [0.05, 0.05]
+  types: ["variable_star"]
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "favorites_local.yaml").write_text('- "T Test"\n', encoding="utf-8")
+    monkeypatch.setattr(catalog, "_CATALOG_DIR", catalog_dir)
+
+    starred, unstarred = catalog._load_catalog()
+
+    assert starred.favorite is True
+    assert unstarred.favorite is False
+
+
+def test_catalog_contains_t_crb() -> None:
+    """T CrB is favorites_local.template.yaml's real, shipped example
+    (roadmap #1, "Favorites in the catalog") — a regression here means
+    that example no longer points at a real catalog entry."""
     (t_crb,) = (target for target in CATALOG if target.catalog_id == "T CrB")
-    assert t_crb.favorite is True
     assert t_crb.types == ("variable_star",)
+
+
+def test_favorites_template_lists_only_t_crb() -> None:
+    """`favorites_local.template.yaml` (committed, safe to ship — unlike
+    `favorites_local.yaml` itself) documents the format with exactly the
+    one example ROADMAP.md's "Favorites in the catalog" calls out."""
+    template_path = catalog._CATALOG_DIR.parent / "favorites_local.template.yaml"
+    favorite_ids = yaml.safe_load(template_path.read_text(encoding="utf-8")) or []
+    assert favorite_ids == ["T CrB"]
+
+
+def test_no_catalog_file_carries_an_inline_favorite_key() -> None:
+    """Guards the module docstring's separation: favorites belong only in
+    the local, gitignored favorites_local.yaml, never hand-added back
+    into the shared, committed catalog data."""
+    for path in catalog._CATALOG_DIR.glob("mag_*.yaml"):
+        raw_targets = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+        for raw in raw_targets:
+            assert "favorite" not in raw, (
+                f"{raw.get('catalog_id')} in {path.name} carries an inline "
+                "favorite key — move it to favorites_local.yaml instead"
+            )
 
 
 _BIN_ORDER = [*_BIN_BOUNDS, _UNKNOWN_MAGNITUDE_BIN_FILENAME]

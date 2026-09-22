@@ -82,11 +82,11 @@ up when it fits, not in any particular order.
   listing every catalog target — not just what's ranked/shortlisted
   tonight — sortable/filterable by type and magnitude. The concrete
   place to flip a target's `favorite` flag (see "Favorites in the
-  catalog", done) from the GUI instead of hand-editing a `mag_*.yaml`
-  file directly, which still works today and stays the source of truth
-  either way. Shares the same open problem as the in-app sites/rigs
-  editor idea just above: writing back into YAML without mangling
-  existing comments/formatting is real, separate scope.
+  catalog", done) from the GUI instead of hand-editing
+  `favorites_local.yaml` directly, which still works today and stays the
+  source of truth either way. Shares the same open problem as the in-app
+  sites/rigs editor idea just above: writing back into YAML without
+  mangling existing comments/formatting is real, separate scope.
 - **EQ mount "danger zone" — counterweight-required region (rig
   "ZWO Seestar S30 Pro (EQ wedge)" / "S30P-EQ"):** unlike the alt-az
   field-rotation gate `framing.has_safe_field_rotation` already models,

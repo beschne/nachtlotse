@@ -187,8 +187,11 @@ class Target:
     # photometric monitoring that should still show up even when its
     # current brightness would otherwise leave it out of the shortlist
     # cutoff. `planning` is what actually has to honor this (see
-    # ROADMAP.md); the catalog/model side just needs somewhere to record
-    # it as a real, sourced fact about the target, not a UI-only toggle.
+    # ROADMAP.md). Always False on a freshly-parsed catalog entry — never
+    # read from the shared catalog YAML itself, since that's one person's
+    # preference, not a sourced fact about the object; `data.catalog.
+    # _load_catalog` folds it in afterwards from the user's own local,
+    # gitignored `favorites_local.yaml` (see that module's docstring).
     favorite: bool = False
 
 
