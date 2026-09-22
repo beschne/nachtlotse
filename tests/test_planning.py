@@ -679,7 +679,6 @@ def test_rank_targets_limits_evaluated_count(
     def counting_best_time(*args, **kwargs):
         nonlocal call_count
         call_count += 1
-        return None  # every target fails — but the call is still made
 
     with patch(
         "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
@@ -714,7 +713,6 @@ def test_rank_targets_limit_zero_evaluates_all(
     def counting_best_time(*args, **kwargs):
         nonlocal call_count
         call_count += 1
-        return None
 
     with patch(
         "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
@@ -749,7 +747,6 @@ def test_rank_targets_default_limit_is_50(
     def counting_best_time(*args, **kwargs):
         nonlocal call_count
         call_count += 1
-        return None
 
     with patch(
         "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time
@@ -835,7 +832,6 @@ def test_rank_targets_limit_exceeds_catalog(
     def counting_best_time(*args, **kwargs):
         nonlocal call_count
         call_count += 1
-        return None
 
     with patch(
         "nachtlotse.planning.constraints.best_time_tonight", side_effect=counting_best_time

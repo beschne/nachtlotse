@@ -388,12 +388,11 @@ def test_plan_command_respects_limit_flag(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--limit should cap the number of evaluated catalog objects."""
-    from nachtlotse.data.catalog import CATALOG
-    from nachtlotse.engine.models import Target
+    from astropy.time import Time
 
     # Build a controlled list: first 5 pass constraints, next 10 fail
     from nachtlotse.engine.constraints import build_observer
-    from astropy.time import Time
+    from nachtlotse.engine.models import Target
 
     site = store.get_site_record("Großer Feldberg").site
     observer = build_observer(site)
