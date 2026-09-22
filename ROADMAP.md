@@ -126,6 +126,18 @@ up when it fits, not in any particular order.
   dataclasses/NamedTuples, so this is a serializer in `cli.py`, not an
   engine change.
 - **Export today's pick to a NINA-compatible format.**
+- **Sort/filter Best Sky and the Sites tab by the machine's own current
+  location**, not just a configured reference site — useful mainly when
+  traveling. Tried a plain `pyobjc-framework-CoreLocation` script for
+  this (same approach the screenshot tooling already uses for
+  `pyobjc-framework-Quartz`); macOS silently denies it
+  (`kCLErrorDenied`) and never even lists the requesting process in
+  System Settings' Location Services pane, since that dialog/listing
+  needs a proper code-signed `.app` bundle with an
+  `NSLocationWhenInUseUsageDescription` in its `Info.plist` — a bare
+  CLI script can't get there. Real support means either such a helper
+  app, or just asking the user for coordinates/an address to geocode,
+  each visit.
 
 ## Out of scope (deliberately excluded)
 - Mount control / session automation

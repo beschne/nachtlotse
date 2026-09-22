@@ -184,7 +184,15 @@ but the picked date is past Open-Meteo's own 16-day forecast horizon)
 — told apart rather than one generic unreachable state, and never with
 a colored sparkline of its own either way. "Plan this site" on a result
 jumps the sidebar straight to it and switches back to the Shortlist),
-and a read-only sites/rigs reference. The sidebar's
+and a read-only sites/rigs reference — the Sites tab has two controls
+on top of that list, neither touching the underlying file: SORT
+reorders it (`sites_local.yaml`'s own order by default; by Region; or
+by Distance from a chosen reference site, same haversine math as Best
+Sky's own Distance column, each card then showing its distance/
+bearing), and a REGIONS checkbox row *filters* which sites show at
+all — independent of SORT, all checked by default. Handy together for
+a growing site list: narrow to one region, then order those by
+distance from a candidate new site. The sidebar's
 EVALUATE field is the GUI's own `--limit` (see above) — same
 brightest-first evaluation order, same unconditional exemption for
 starred favorites. See [ROADMAP.md](./ROADMAP.md) for the toolkit

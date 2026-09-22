@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 from nachtlotse import best_sky
@@ -35,19 +36,6 @@ from nachtlotse.planning import (
     RankedTargetForBestRig,
 )
 from nachtlotse.weather import open_meteo
-
-# Same 16-point compass rose `cli.py`'s own private `_compass_direction`
-# uses for `lotse best-sky` — duplicated rather than shared, per this
-# module's own "small adapter per UI boundary" rule above.
-_COMPASS_POINTS = (
-    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
-)  # fmt: skip
-
-
-def _compass_direction(bearing_deg: float) -> str:
-    index = round(bearing_deg / 22.5) % len(_COMPASS_POINTS)
-    return _COMPASS_POINTS[index]
 
 # Same two reference sky-darkness classes `cli.py`'s `_format_rig_line`
 # quotes a rough limiting magnitude for.
@@ -264,6 +252,84 @@ def build_site_info(record: SiteRecord) -> SiteInfo:
     )
 
 
+# "file" = sites_local.yaml's own order (store.SITES already preserves
+# it — nothing to compute); "region"/"distance" are the two additional
+# orders the Sites tab's SORT control offers (gui/sites_rigs.py).
+SiteSortMode = Literal["file", "region", "distance"]
+
+
+@dataclass(frozen=True)
+class SortedSiteRow:
+    """One `SiteRecord` in the Sites tab's current display order.
+
+    `distance_text` is only set for `mode="distance"` — the same
+    "104 km 70° ENE" shape `BestSkyRow.distance_text` uses, via the
+    same `best_sky.distance_km`/`bearing_deg`/`compass_direction`
+    the Best Sky tab's own Distance column computes from, not a second
+    implementation of the same haversine math.
+    """
+
+    site_record: SiteRecord
+    distance_text: str | None
+
+
+def sort_sites(
+    sites: list[SiteRecord],
+    mode: SiteSortMode,
+    reference: SiteRecord | None = None,
+    regions: set[str] | None = None,
+) -> list[SortedSiteRow]:
+    """`sites` in the requested display order.
+
+    "region" sorts alphabetically by region, then site name (stable
+    ordering within a region — region alone isn't necessarily unique).
+    "distance" ranks nearest-first from `reference` (required for this
+    mode — raises `ValueError` without one) — no network call, unlike
+    `best_sky.compare_sites`: this is pure geometry against each site's
+    own lat/lon, nothing weather-related. "file" (or any other value)
+    returns `sites` in the order given, i.e. whatever order the caller
+    already has them in (`store.SITES`'s own sites_local.yaml order).
+
+    `regions`, if given, keeps only sites whose own `region` is in that
+    set, applied before sorting/ranking — the Sites tab's own region
+    filter (relevant alongside `mode="region"`, but not tied to it).
+    `None` (the default) applies no filter; an empty set filters out
+    every site, it does not mean "unfiltered".
+    """
+    if regions is not None:
+        sites = [record for record in sites if record.region in regions]
+
+    if mode == "region":
+        ordered = sorted(
+            sites,
+            key=lambda record: (record.region.casefold(), record.site.name.casefold()),
+        )
+        return [
+            SortedSiteRow(site_record=record, distance_text=None) for record in ordered
+        ]
+
+    if mode == "distance":
+        if reference is None:
+            raise ValueError('sort_sites(mode="distance") requires a reference site')
+        with_distance = [
+            (record, best_sky.distance_km(reference.site, record.site))
+            for record in sites
+        ]
+        with_distance.sort(key=lambda pair: pair[1])
+        rows = []
+        for record, distance in with_distance:
+            if distance <= 0.01:
+                distance_text = "0 km"
+            else:
+                bearing = best_sky.bearing_deg(reference.site, record.site)
+                direction = best_sky.compass_direction(bearing)
+                distance_text = f"{distance:.0f} km {bearing:.0f}° {direction}"
+            rows.append(SortedSiteRow(site_record=record, distance_text=distance_text))
+        return rows
+
+    return [SortedSiteRow(site_record=record, distance_text=None) for record in sites]
+
+
 @dataclass(frozen=True)
 class RigInfo:
     """One configured rig, display-ready — mirrors `cli.py`'s own
@@ -356,7 +422,7 @@ def build_best_sky_rows(
         if report.bearing_deg is None:
             distance_text = f"{report.distance_km:.0f} km"
         else:
-            direction = _compass_direction(report.bearing_deg)
+            direction = best_sky.compass_direction(report.bearing_deg)
             distance_text = f"{report.distance_km:.0f} km {report.bearing_deg:.0f}° {direction}"
         site_record = by_name[report.site.name]
         rows.append(

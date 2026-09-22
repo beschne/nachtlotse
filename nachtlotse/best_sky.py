@@ -32,8 +32,10 @@ _EARTH_RADIUS_KM = 6371.0
 WeatherUnavailableReason = Literal["unreachable", "beyond_forecast_horizon"]
 
 
-def _distance_km(site_a: Site, site_b: Site) -> float:
-    """Great-circle distance between two sites (haversine)."""
+def distance_km(site_a: Site, site_b: Site) -> float:
+    """Great-circle distance between two sites (haversine). Public — also
+    used by `gui.data_adapter.sort_sites` (the Sites tab's distance
+    sort), not just `compare_sites` below."""
     lat1, lon1, lat2, lon2 = (
         math.radians(site_a.lat_deg),
         math.radians(site_a.lon_deg),
@@ -49,8 +51,9 @@ def _distance_km(site_a: Site, site_b: Site) -> float:
     return 2.0 * _EARTH_RADIUS_KM * math.asin(math.sqrt(a))
 
 
-def _bearing_deg(origin: Site, destination: Site) -> float:
-    """Initial compass bearing (0=N, 90=E, ...) from `origin` to `destination`."""
+def bearing_deg(origin: Site, destination: Site) -> float:
+    """Initial compass bearing (0=N, 90=E, ...) from `origin` to
+    `destination`. Public for the same reason as `distance_km` above."""
     lat1, lat2 = math.radians(origin.lat_deg), math.radians(destination.lat_deg)
     dlon = math.radians(destination.lon_deg - origin.lon_deg)
     x = math.sin(dlon) * math.cos(lat2)
@@ -58,6 +61,20 @@ def _bearing_deg(origin: Site, destination: Site) -> float:
         dlon
     )
     return math.degrees(math.atan2(x, y)) % 360.0
+
+
+_COMPASS_POINTS = (
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+)  # fmt: skip
+
+
+def compass_direction(bearing: float) -> str:
+    """`bearing` (degrees, 0=N/90=E/...) as one of 16 compass points —
+    the canonical version; `cli.py` and `gui.data_adapter` both import
+    this rather than keeping their own copy."""
+    index = round(bearing / 22.5) % len(_COMPASS_POINTS)
+    return _COMPASS_POINTS[index]
 
 
 @dataclass(frozen=True)
@@ -99,10 +116,10 @@ def compare_sites(
     """
     reports = []
     for site in candidates:
-        distance_km = _distance_km(reference, site)
-        if max_distance_km is not None and distance_km > max_distance_km:
+        site_distance_km = distance_km(reference, site)
+        if max_distance_km is not None and site_distance_km > max_distance_km:
             continue
-        bearing_deg = _bearing_deg(reference, site) if distance_km > 0.01 else None
+        site_bearing_deg = bearing_deg(reference, site) if site_distance_km > 0.01 else None
 
         evening_start, morning_end = constraints.dark_window(site, when)
         weather_unavailable_reason: WeatherUnavailableReason | None
@@ -125,8 +142,8 @@ def compare_sites(
         reports.append(
             SiteSkyReport(
                 site=site,
-                distance_km=distance_km,
-                bearing_deg=bearing_deg,
+                distance_km=site_distance_km,
+                bearing_deg=site_bearing_deg,
                 weather=weather,
                 hourly_cloud_cover=hourly_cloud_cover,
                 weather_unavailable_reason=weather_unavailable_reason,

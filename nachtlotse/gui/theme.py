@@ -118,6 +118,24 @@ class RoundedCard(QFrame):
         self.setGraphicsEffect(shadow)
 
 
+def field_label(text: str) -> QLabel:
+    """A small all-caps label above/before a control-row field (CENTER,
+    RADIUS, SORT, ...) — promoted here once a third screen (`gui/
+    sites_rigs.py`'s Sites-tab sort row) needed the exact style
+    `gui/best_sky_card.py`'s own private `_field_label` already had,
+    itself following `sidebar.py`'s own local (still separate — its
+    stacked vertical layout needs an extra top margin this doesn't)
+    version of the same label."""
+    label = QLabel(text)
+    label.setStyleSheet(
+        label_style(
+            f"color: {COLORS['ink_secondary']}; font-size: 11px; "
+            "font-weight: 600; letter-spacing: 0.8px;"
+        )
+    )
+    return label
+
+
 def secondary_button(text: str) -> QPushButton:
     """A small outline button for a repeatable, secondary control (chart
     zoom, an Export action) — deliberately quieter than a filled clay

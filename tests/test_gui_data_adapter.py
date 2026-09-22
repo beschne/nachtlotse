@@ -10,6 +10,8 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from nachtlotse import best_sky
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import ephemeris
@@ -284,11 +286,88 @@ def test_build_rig_info_covers_optics_sensor_fov_and_limiting_magnitude() -> Non
     assert "Bortle 2" in info.limiting_mag_text and "Bortle 5" in info.limiting_mag_text
 
 
-def test_compass_direction_rounds_to_the_nearest_16_point() -> None:
-    assert data_adapter._compass_direction(0.0) == "N"
-    assert data_adapter._compass_direction(90.0) == "E"
-    assert data_adapter._compass_direction(200.0) == "SSW"
-    assert data_adapter._compass_direction(359.0) == "N"  # wraps past 360
+_ZULU = SiteRecord(
+    site=replace(SITE, name="Zulu Site", lat_deg=51.0),
+    region="Alpha Region",
+    bortle="4",
+)
+_ALPHA = SiteRecord(
+    site=replace(SITE, name="Alpha Site", lat_deg=50.0),
+    region="Beta Region",
+    bortle="4",
+)
+_MID = SiteRecord(
+    site=replace(SITE, name="Mid Site", lat_deg=50.5),
+    region="Alpha Region",
+    bortle="4",
+)
+# Deliberately not already in any sorted order.
+_SORT_TEST_SITES = [_ZULU, _ALPHA, _MID]
+
+
+def test_sort_sites_file_mode_keeps_the_given_order() -> None:
+    rows = data_adapter.sort_sites(_SORT_TEST_SITES, "file")
+
+    assert [row.site_record for row in rows] == _SORT_TEST_SITES
+    assert all(row.distance_text is None for row in rows)
+
+
+def test_sort_sites_region_mode_sorts_by_region_then_name() -> None:
+    rows = data_adapter.sort_sites(_SORT_TEST_SITES, "region")
+
+    # Alpha Region (Mid, Zulu — by name within the region) before Beta Region.
+    assert [row.site_record.site.name for row in rows] == [
+        "Mid Site",
+        "Zulu Site",
+        "Alpha Site",
+    ]
+    assert all(row.distance_text is None for row in rows)
+
+
+def test_sort_sites_distance_mode_ranks_nearest_first_from_the_reference() -> None:
+    rows = data_adapter.sort_sites(_SORT_TEST_SITES, "distance", reference=_ALPHA)
+
+    # _ALPHA (lat 50.0) itself first (0 km), then _MID (50.5), then _ZULU (51.0).
+    assert [row.site_record.site.name for row in rows] == [
+        "Alpha Site",
+        "Mid Site",
+        "Zulu Site",
+    ]
+    assert rows[0].distance_text == "0 km"
+    assert rows[1].distance_text is not None and "km" in rows[1].distance_text
+    assert rows[1].distance_text != rows[2].distance_text
+
+
+def test_sort_sites_distance_mode_requires_a_reference() -> None:
+    with pytest.raises(ValueError, match="reference"):
+        data_adapter.sort_sites(_SORT_TEST_SITES, "distance")
+
+
+def test_sort_sites_regions_filters_before_sorting() -> None:
+    """The `regions` filter is independent of `mode` (Sites tab's own
+    REGIONS checkboxes, orthogonal to SORT) — file order is preserved
+    here among the sites that pass the filter."""
+    rows = data_adapter.sort_sites(_SORT_TEST_SITES, "file", regions={"Alpha Region"})
+
+    assert [row.site_record.site.name for row in rows] == ["Zulu Site", "Mid Site"]
+
+
+def test_sort_sites_regions_combines_with_region_sort() -> None:
+    rows = data_adapter.sort_sites(_SORT_TEST_SITES, "region", regions={"Alpha Region"})
+
+    assert [row.site_record.site.name for row in rows] == ["Mid Site", "Zulu Site"]
+
+
+def test_sort_sites_empty_regions_set_excludes_every_site() -> None:
+    """An empty set is a real filter result (nothing matches), not the
+    same as `regions=None` (no filtering at all)."""
+    assert data_adapter.sort_sites(_SORT_TEST_SITES, "file", regions=set()) == []
+
+
+def test_sort_sites_regions_none_means_unfiltered() -> None:
+    rows = data_adapter.sort_sites(_SORT_TEST_SITES, "file", regions=None)
+
+    assert len(rows) == len(_SORT_TEST_SITES)
 
 
 def test_build_best_sky_rows_covers_weather_distance_and_site_lookup() -> None:

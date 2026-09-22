@@ -225,3 +225,17 @@ def test_compare_sites_includes_hourly_cloud_cover_clipped_to_the_dark_window(
     assert all(
         evening_start <= hour.when <= morning_end for hour in report.hourly_cloud_cover
     )
+
+
+def test_compass_direction_rounds_to_the_nearest_16_point() -> None:
+    assert best_sky.compass_direction(0.0) == "N"
+    assert best_sky.compass_direction(90.0) == "E"
+    assert best_sky.compass_direction(200.0) == "SSW"
+    assert best_sky.compass_direction(359.0) == "N"  # wraps past 360
+
+
+def test_distance_km_is_symmetric_and_zero_for_the_same_site() -> None:
+    assert best_sky.distance_km(BAD_HOMBURG, BAD_HOMBURG) == pytest.approx(0.0, abs=0.01)
+    assert best_sky.distance_km(BAD_HOMBURG, MUNICH) == pytest.approx(
+        best_sky.distance_km(MUNICH, BAD_HOMBURG)
+    )

@@ -47,7 +47,13 @@ from nachtlotse import best_sky
 from nachtlotse.data.store import SiteRecord
 from nachtlotse.gui import data_adapter
 from nachtlotse.gui.hourly_cloud_bar import build_cloud_sparkline
-from nachtlotse.gui.theme import COLORS, RoundedCard, label_style, secondary_button
+from nachtlotse.gui.theme import (
+    COLORS,
+    RoundedCard,
+    field_label,
+    label_style,
+    secondary_button,
+)
 
 # Sites you'd realistically drive to for one night, not a hard engine
 # limit — best_sky.compare_sites itself accepts any distance.
@@ -144,14 +150,14 @@ class BestSkyCard(RoundedCard):
         """
 
         controls_row = QHBoxLayout()
-        controls_row.addWidget(self._field_label("CENTER"))
+        controls_row.addWidget(field_label("CENTER"))
         self.center_combo = QComboBox()
         for record in sites:
             self.center_combo.addItem(record.site.name)
         self.center_combo.setStyleSheet(controls_style)
         controls_row.addWidget(self.center_combo)
 
-        controls_row.addWidget(self._field_label("RADIUS"))
+        controls_row.addWidget(field_label("RADIUS"))
         self.radius_spin = QSpinBox()
         self.radius_spin.setRange(0, _MAX_RADIUS_KM)
         self.radius_spin.setSingleStep(10)
@@ -200,17 +206,6 @@ class BestSkyCard(RoundedCard):
         plan_row.addStretch(1)
         plan_row.addWidget(self.plan_button)
         layout.addLayout(plan_row)
-
-    @staticmethod
-    def _field_label(text: str) -> QLabel:
-        label = QLabel(text)
-        label.setStyleSheet(
-            label_style(
-                f"color: {COLORS['ink_secondary']}; font-size: 11px; "
-                "font-weight: 600; letter-spacing: 0.8px;"
-            )
-        )
-        return label
 
     def _build_table(self) -> QTableWidget:
         table = QTableWidget(0, len(_COLUMN_HEADERS))

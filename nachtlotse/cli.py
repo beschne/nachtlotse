@@ -419,17 +419,6 @@ def _cmd_rigs() -> int:
     return 0
 
 
-_COMPASS_POINTS = (
-    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
-)  # fmt: skip
-
-
-def _compass_direction(bearing_deg: float) -> str:
-    index = round(bearing_deg / 22.5) % len(_COMPASS_POINTS)
-    return _COMPASS_POINTS[index]
-
-
 def _format_site_sky_line(rank: int, report: best_sky.SiteSkyReport) -> str:
     site = report.site
     if report.weather is None:
@@ -442,7 +431,7 @@ def _format_site_sky_line(rank: int, report: best_sky.SiteSkyReport) -> str:
     if report.bearing_deg is None:
         distance_part = f"{report.distance_km:.0f} km"
     else:
-        direction = _compass_direction(report.bearing_deg)
+        direction = best_sky.compass_direction(report.bearing_deg)
         distance_part = (
             f"{report.distance_km:.0f} km {report.bearing_deg:.0f}° {direction}"
         )
