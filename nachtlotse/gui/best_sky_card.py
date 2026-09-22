@@ -19,11 +19,15 @@ needs an explicit click same as always.
 The compared date instead *does* follow the sidebar: `set_date` is
 called from `MainWindow._on_plan_ready` after every successful plan, so
 Best Sky always compares the same night currently being planned rather
-than needing a second date picker of its own. It's a passive update,
-though — changing the sidebar's date doesn't itself trigger a network
-refetch here; only clicking Refresh does, so switching site/rig/date on
-the main sidebar can never silently fire an extra round of per-site
-Open-Meteo requests.
+than needing a second date picker of its own. `set_date` also re-clicks
+Refresh itself, every time — every Re-plan, not just a changed date —
+so the table's actual cloud data never lags behind the header showing
+what night it's for (the header alone used to update; the boxes stayed
+from whatever was last fetched, silently wrong once the date moved on).
+Cheap even though it re-queries every configured site: each site's own
+Open-Meteo fetch is cached for `CACHE_TTL_HOURS`, so a Re-plan on a
+night already fetched this session costs no extra request, just a
+re-render.
 
 The request runs on a background `QThread` (`_BestSkyWorker`), same
 reasoning as `briefing._BriefingWorker`/`main_window._PlanWorker`: it's
@@ -81,8 +85,10 @@ _DEFAULT_RADIUS_KM = 50
 
 # "Clouds up to" carries the phrasing that used to repeat in every row's
 # own cell text (data_adapter.BestSkyRow.clouds_text is now just the
-# numbers) — and "Tonight" is the hourly sparkline column, the widest
-# one, so it gets the header resize Stretch below.
+# numbers) — and the last column is the hourly sparkline column, the
+# widest one, so it gets the header resize Stretch below. Its label
+# itself is dynamic (see _tonight_column_label) — "Tonight" here is only
+# the placeholder used until the first _update_tonight_header() call.
 _COLUMN_HEADERS = ["Site", "Distance", "Clouds up to", "Tonight"]
 _TONIGHT_COLUMN_INDEX = 3
 
@@ -94,6 +100,19 @@ def _local_when(selected_date: date, local_tz: ZoneInfo) -> datetime:
     duplicated rather than imported to avoid a `main_window` <->
     `best_sky_card` import cycle."""
     return datetime.combine(selected_date, time(12, 0), tzinfo=local_tz)
+
+
+def _tonight_column_label(selected_date: date, local_tz: ZoneInfo) -> str:
+    """"Tonight" for today (in the CENTER site's own timezone), else the
+    actual date — same "Tonight" vs. real-date rule as
+    `main_window.title_for_date`, duplicated rather than imported for the
+    same reason `_local_when` above is. Abbreviated ("Fri, Oct 3") rather
+    than `title_for_date`'s full spelled-out form, since this is a table
+    column header sharing space with three other columns, not a
+    standalone page title."""
+    if selected_date == datetime.now(local_tz).date():
+        return "Tonight"
+    return f"{selected_date:%a, %b %-d}"
 
 
 class _BestSkyWorker(QThread):
@@ -185,6 +204,7 @@ class BestSkyCard(RoundedCard):
         for record in sites:
             self.center_combo.addItem(record.site.name)
         self.center_combo.setStyleSheet(controls_style)
+        self.center_combo.currentIndexChanged.connect(self._update_tonight_header)
         controls_row.addWidget(self.center_combo)
 
         controls_row.addWidget(field_label("RADIUS"))
@@ -235,6 +255,11 @@ class BestSkyCard(RoundedCard):
         self.table = self._build_table()
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
         layout.addWidget(self.table, stretch=1)
+        # center_combo's currentIndexChanged is wired above, before self.table
+        # exists — safe in practice (nothing changes its index between that
+        # connect and here), but the header still needs its first real label
+        # now that the table it targets actually exists.
+        self._update_tonight_header()
 
         self.plan_button = secondary_button("Plan this site")
         self.plan_button.setEnabled(False)
@@ -283,9 +308,36 @@ class BestSkyCard(RoundedCard):
 
     def set_date(self, selected_date: date) -> None:
         """Called from `MainWindow._on_plan_ready` after every successful
-        plan — see module docstring for why this doesn't itself trigger
-        a refetch."""
+        plan (i.e. every Re-plan click) — see module docstring: this both
+        updates the "Tonight"/date column header and re-clicks Refresh,
+        so the table's own cloud data never sits stale against a night
+        that's moved on.
+
+        `refresh_button.click()` no-ops if a fetch is already in flight
+        (Qt: a disabled button ignores click()) — a Re-plan fired while a
+        previous Best Sky refresh is still running leaves that one to
+        finish rather than starting a second, overlapping fetch; the
+        table then reflects whichever `_selected_date` was current when
+        *that* fetch was kicked off, not necessarily the newest one, on
+        the rare case of two Re-plans in quick succession."""
         self._selected_date = selected_date
+        self._update_tonight_header()
+        self._auto_refresh_pending = False
+        self.refresh_button.click()
+
+    def _update_tonight_header(self) -> None:
+        """Keeps the sparkline column's header labeled "Tonight" only
+        when `self._selected_date` actually is tonight — in the CENTER
+        site's own timezone, since that's whose local noon `_local_when`
+        anchors the compared night to. Re-run whenever either input
+        changes: CENTER (`center_combo`'s own signal) or the staged date
+        (`set_date`)."""
+        reference = self._sites[self.center_combo.currentIndex()]
+        local_tz = ZoneInfo(reference.site.tz)
+        label = _tonight_column_label(self._selected_date, local_tz)
+        header_item = self.table.horizontalHeaderItem(_TONIGHT_COLUMN_INDEX)
+        if header_item is not None:
+            header_item.setText(label)
 
     def refresh_if_needed(self) -> None:
         """Called from `MainWindow` on every tab switch; only the first
