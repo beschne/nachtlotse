@@ -33,7 +33,7 @@ favorites_local.yaml
 prose_local.yaml
 
 # Local secrets — never committed.
-scratch.md/
+scratch.md
 
 # `lotse plan --chart`'s default PNG output at the repo root — generated
 # on demand wherever you run it from, never a build artifact to commit.
