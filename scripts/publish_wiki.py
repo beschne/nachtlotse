@@ -4,8 +4,12 @@ The wiki is a separate git repository (<repo>.wiki.git). The pages live in
 this repository under docs/wiki/ (English in en/, German in de/, plus Home,
 Startseite, _Sidebar and _Footer); this script copies them into a fresh
 clone of the wiki, flattened into one folder (GitHub shows wiki pages flat
-anyway, and relative image links only resolve from the top level), adds the
-screenshots from screenshots/ as images/, and commits.
+anyway), adds the screenshots from screenshots/ as images/, and commits.
+Pages link those images by absolute URL
+(https://raw.githubusercontent.com/wiki/<owner>/<repo>/images/...): a
+relative "images/x.png" resolves against the page address, and from
+".../wiki/Startseite/" GitHub reads "images" as a page version ("Could not
+find version images").
 
     uv run python scripts/publish_wiki.py          # show what would change
     uv run python scripts/publish_wiki.py --push   # commit and push

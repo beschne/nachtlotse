@@ -16,7 +16,7 @@ kleines Symbol mit seiner Phase.
 
 Mit `-`, `+` und Fit zoomst du die Karte.
 
-![Die Himmelskarte](images/gui-sky-chart.png)
+![Die Himmelskarte](https://raw.githubusercontent.com/wiki/beschne/nachtlotse/images/gui-sky-chart.png)
 
 Auf der Kommandozeile schreibt `lotse plan --chart` die Karte als PNG
 (`nachtlotse-shortlist.png` im aktuellen Ordner oder ein Pfad deiner Wahl).

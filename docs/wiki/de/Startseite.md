@@ -11,7 +11,7 @@ sagst ihm, wo du stehst und mit welcher Ausrüstung. Es rechnet den Himmel
 Zielen, jedes mit einer Bewertung (GO, MARGINAL oder SKIP) und der
 Begründung dazu.
 
-![Der Reiter Shortlist in der Nachtlotse-App](images/gui-shortlist.png)
+![Der Reiter Shortlist in der Nachtlotse-App](https://raw.githubusercontent.com/wiki/beschne/nachtlotse/images/gui-shortlist.png)
 
 ## Wo du anfängst
 

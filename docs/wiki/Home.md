@@ -10,7 +10,7 @@ are and what equipment you use. It checks the sky over your site for that
 night and gives you a short list of targets, each with a verdict (GO,
 MARGINAL or SKIP) and the reasons for it.
 
-![The Shortlist tab of the Nachtlotse app](images/gui-shortlist.png)
+![The Shortlist tab of the Nachtlotse app](https://raw.githubusercontent.com/wiki/beschne/nachtlotse/images/gui-shortlist.png)
 
 ## Where to start
 

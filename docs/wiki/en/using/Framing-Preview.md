@@ -14,7 +14,7 @@ uv run lotse frame "NGC 7000" --no-survey     # without the sky image
 In the app, double-click a row in Shortlist, All ranked or Events, or select
 it and press Framing preview….
 
-![The framing preview window](images/gui-framing.png)
+![The framing preview window](https://raw.githubusercontent.com/wiki/beschne/nachtlotse/images/gui-framing.png)
 
 ## What you see
 

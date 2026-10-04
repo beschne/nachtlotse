@@ -15,7 +15,7 @@ and a small icon showing its phase.
 
 With `-`, `+` and Fit you zoom the chart.
 
-![The sky chart](images/gui-sky-chart.png)
+![The sky chart](https://raw.githubusercontent.com/wiki/beschne/nachtlotse/images/gui-sky-chart.png)
 
 From the command line, `lotse plan --chart` writes the chart as a PNG
 (`nachtlotse-shortlist.png` in the current folder, or a path you give). It

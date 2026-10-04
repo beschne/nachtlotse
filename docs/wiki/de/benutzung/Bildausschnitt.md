@@ -14,7 +14,7 @@ uv run lotse frame "NGC 7000" --no-survey     # ohne Himmelsbild
 In der App doppelklickst du auf eine Zeile in Shortlist, All ranked oder
 Events, oder du wählst sie aus und drückst Framing preview….
 
-![Das Fenster mit dem Bildausschnitt](images/gui-framing.png)
+![Das Fenster mit dem Bildausschnitt](https://raw.githubusercontent.com/wiki/beschne/nachtlotse/images/gui-framing.png)
 
 ## Was du siehst
 
