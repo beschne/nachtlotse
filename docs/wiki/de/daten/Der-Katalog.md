@@ -1,5 +1,3 @@
-# Der Katalog
-
 **English:** [The Catalog](The-Catalog)
 
 Nachtlotse bringt einen ausgewählten Katalog mit 236 Deep-Sky-Objekten mit:

@@ -1,5 +1,3 @@
-# Helligkeitsgrenzen
-
 **English:** [Brightness Limits](Brightness-Limits)
 
 Nachtlotse schätzt, wie lichtschwache Objekte dein Rig an einem Standort

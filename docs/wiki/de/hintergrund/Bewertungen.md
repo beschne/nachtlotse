@@ -1,5 +1,3 @@
-# Bewertungen
-
 **English:** [Verdicts](Verdicts)
 
 Jedes Ziel auf der Shortlist bekommt eine Bewertung: GO, MARGINAL oder SKIP.

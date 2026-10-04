@@ -1,5 +1,3 @@
-# Framing Preview
-
 **Deutsch:** [Bildausschnitt](Bildausschnitt)
 
 The framing preview shows how a target sits in your camera frame at its best

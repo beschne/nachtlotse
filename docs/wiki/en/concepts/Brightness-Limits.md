@@ -1,5 +1,3 @@
-# Brightness Limits
-
 **Deutsch:** [Helligkeitsgrenzen](Helligkeitsgrenzen)
 
 Nachtlotse estimates how faint your rig can go at a site. This rough

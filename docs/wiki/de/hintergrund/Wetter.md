@@ -1,5 +1,3 @@
-# Wetter
-
 **English:** [Weather](Weather)
 
 Das Wetter kommt von Open-Meteo, einem kostenlosen Vorhersagedienst ohne

@@ -1,5 +1,3 @@
-# Installation
-
 **Deutsch:** [Installieren](Installieren)
 
 Every step below is a shell command. You can type them yourself or let

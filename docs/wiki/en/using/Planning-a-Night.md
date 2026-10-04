@@ -1,5 +1,3 @@
-# Planning a Night
-
 **Deutsch:** [Eine Nacht planen](Eine-Nacht-planen)
 
 ```bash

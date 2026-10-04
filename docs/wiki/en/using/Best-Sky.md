@@ -1,5 +1,3 @@
-# Best Sky
-
 **Deutsch:** [Bester Himmel](Bester-Himmel)
 
 Best Sky answers a different question: not what to shoot, but where the sky

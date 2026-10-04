@@ -1,5 +1,3 @@
-# Nightly Briefing
-
 **Deutsch:** [Nachtbriefing](Nachtbriefing)
 
 The briefing is a short written summary of the night, as you might hear it

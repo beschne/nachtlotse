@@ -1,5 +1,3 @@
-# Bildausschnitt
-
 **English:** [Framing Preview](Framing-Preview)
 
 Die Vorschau zeigt, wie ein Ziel zu seiner besten Zeit in der Nacht in deinem

@@ -1,5 +1,3 @@
-# Offline and Caching
-
 **Deutsch:** [Offline und Zwischenspeicher](Offline-und-Zwischenspeicher)
 
 After the first run, the core of Nachtlotse works without internet: ranking,

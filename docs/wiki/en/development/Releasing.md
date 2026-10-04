@@ -1,5 +1,3 @@
-# Releasing
-
 **Deutsch:** [Release erstellen](Release-erstellen)
 
 A release goes like this:

@@ -1,5 +1,3 @@
-# How Ranking Works
-
 **Deutsch:** [Wie die Rangfolge entsteht](Wie-die-Rangfolge-entsteht)
 
 Nachtlotse ranks targets in three steps: find the best time for each target,

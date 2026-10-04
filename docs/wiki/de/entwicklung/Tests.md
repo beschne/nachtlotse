@@ -1,5 +1,3 @@
-# Tests
-
 **English:** [Testing](Testing)
 
 ```bash

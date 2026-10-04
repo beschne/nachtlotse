@@ -1,5 +1,3 @@
-# Troubleshooting
-
 **Deutsch:** [Fehlerbehebung](Fehlerbehebung)
 
 ## Installation

@@ -1,5 +1,3 @@
-# Installieren
-
 **English:** [Installation](Installation)
 
 Jeder Schritt unten ist ein Befehl im Terminal. Du kannst ihn selbst

@@ -1,5 +1,3 @@
-# Nachtbriefing
-
 **English:** [Nightly Briefing](Nightly-Briefing)
 
 Das Briefing ist eine kurze geschriebene Zusammenfassung der Nacht, so wie

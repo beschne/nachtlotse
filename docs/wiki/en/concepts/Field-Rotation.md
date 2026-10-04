@@ -1,5 +1,3 @@
-# Field Rotation
-
 **Deutsch:** [Bildfeldrotation](Bildfeldrotation)
 
 An alt-az mount moves up-down and left-right. It keeps the camera level with

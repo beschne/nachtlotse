@@ -1,5 +1,3 @@
-# Standorte einrichten
-
 **English:** [Configuring Sites](Configuring-Sites)
 
 Deine Beobachtungsorte stehen in `nachtlotse/data/sites_local.yaml`. Git

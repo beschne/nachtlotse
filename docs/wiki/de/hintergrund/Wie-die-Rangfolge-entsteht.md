@@ -1,5 +1,3 @@
-# Wie die Rangfolge entsteht
-
 **English:** [How Ranking Works](How-Ranking-Works)
 
 Nachtlotse sortiert in drei Schritten: für jedes Ziel die beste Zeit finden,

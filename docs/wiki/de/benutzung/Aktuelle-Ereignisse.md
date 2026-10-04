@@ -1,5 +1,3 @@
-# Aktuelle Ereignisse
-
 **English:** [Current Events](Current-Events)
 
 Neben dem festen Katalog schaut Nachtlotse auch darauf, was gerade am Himmel

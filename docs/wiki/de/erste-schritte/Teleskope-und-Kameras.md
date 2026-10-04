@@ -1,5 +1,3 @@
-# Teleskope und Kameras
-
 **English:** [Configuring Rigs](Configuring-Rigs)
 
 Ein „Rig“ ist bei Nachtlotse eine Kombination aus Teleskop, Kamera und

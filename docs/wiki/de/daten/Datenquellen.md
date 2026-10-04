@@ -1,5 +1,3 @@
-# Datenquellen
-
 **English:** [Data Sources](Data-Sources)
 
 | Was | Quelle | Wann es geholt wird |

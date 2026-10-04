@@ -1,5 +1,3 @@
-# Bildfeldrotation
-
 **English:** [Field Rotation](Field-Rotation)
 
 Eine Alt-Az-Montierung bewegt sich hoch-runter und links-rechts. Sie hält die

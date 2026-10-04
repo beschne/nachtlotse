@@ -1,5 +1,3 @@
-# Data Sources
-
 **Deutsch:** [Datenquellen](Datenquellen)
 
 | What | Source | When it's fetched |

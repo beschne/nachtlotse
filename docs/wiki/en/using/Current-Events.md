@@ -1,5 +1,3 @@
-# Current Events
-
 **Deutsch:** [Aktuelle Ereignisse](Aktuelle-Ereignisse)
 
 Besides the fixed catalog, Nachtlotse looks at what is happening in the sky

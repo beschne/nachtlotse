@@ -1,5 +1,3 @@
-# First Run
-
 **Deutsch:** [Erster Start](Erster-Start)
 
 Once [Installation](Installation) is done and your [sites](Configuring-Sites)

@@ -1,5 +1,3 @@
-# Weather
-
 **Deutsch:** [Wetter](Wetter)
 
 Weather comes from Open-Meteo, a free forecast service without an account or

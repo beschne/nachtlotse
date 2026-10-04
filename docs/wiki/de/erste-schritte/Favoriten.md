@@ -1,5 +1,3 @@
-# Favoriten
-
 **English:** [Favorites](Favorites)
 
 Favoriten sind Objekte, die du immer auf deiner Liste haben willst, egal wie

@@ -1,5 +1,3 @@
-# Configuring Rigs
-
 **Deutsch:** [Teleskope und Kameras](Teleskope-und-Kameras)
 
 A rig is one combination of telescope, camera and mount. Your rigs are in

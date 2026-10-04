@@ -1,5 +1,3 @@
-# Verdicts
-
 **Deutsch:** [Bewertungen](Bewertungen)
 
 Every target on the shortlist gets a verdict: GO, MARGINAL or SKIP. The

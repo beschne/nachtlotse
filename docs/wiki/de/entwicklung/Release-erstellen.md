@@ -1,5 +1,3 @@
-# Release erstellen
-
 **English:** [Releasing](Releasing)
 
 Ein Release läuft so ab:

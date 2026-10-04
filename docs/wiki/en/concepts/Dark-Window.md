@@ -1,5 +1,3 @@
-# Dark Window
-
 **Deutsch:** [Dunkelphase](Dunkelphase)
 
 The dark window is the part of the night Nachtlotse plans for. Normally it

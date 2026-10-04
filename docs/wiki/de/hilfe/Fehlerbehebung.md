@@ -1,5 +1,3 @@
-# Fehlerbehebung
-
 **English:** [Troubleshooting](Troubleshooting)
 
 ## Installation

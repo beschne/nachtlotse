@@ -1,5 +1,3 @@
-# Bester Himmel
-
 **English:** [Best Sky](Best-Sky)
 
 Best Sky beantwortet eine andere Frage: nicht was, sondern wo. Der Befehl

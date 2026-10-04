@@ -1,5 +1,3 @@
-# The Catalog
-
 **Deutsch:** [Der Katalog](Der-Katalog)
 
 Nachtlotse comes with a curated catalog of 236 deep-sky objects: 63 Messier

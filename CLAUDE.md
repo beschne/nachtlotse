@@ -216,6 +216,10 @@ overwritten.
 
 - A feature that changes what users see or do updates its wiki pages in
   both languages in the same change.
+- Wiki pages start without a `#` heading: GitHub shows the file name as the
+  page title already. Only `Home.md` and `Startseite.md` keep theirs
+  ("Nachtlotse", which differs from the page title). Each page begins with
+  the link to its counterpart in the other language.
 - Write plainly: short, concrete sentences, no em dashes, no filler or
   marketing phrases, no decorative bold. German pages are written as
   natural German (informal "du"), not translated word for word; app labels

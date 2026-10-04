@@ -1,5 +1,3 @@
-# Erster Start
-
 **English:** [First Run](First-Run)
 
 Wenn [Installieren](Installieren) erledigt ist und deine

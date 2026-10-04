@@ -1,5 +1,3 @@
-# FAQ
-
 **Deutsch:** [Fragen und Antworten](Fragen-und-Antworten)
 
 **Why do I hardly ever see GO?**

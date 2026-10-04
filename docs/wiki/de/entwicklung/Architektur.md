@@ -1,5 +1,3 @@
-# Architektur
-
 **English:** [Architecture](Architecture)
 
 Nachtlotse ist in Python geschrieben. Der Code ist in Schichten aufgeteilt,

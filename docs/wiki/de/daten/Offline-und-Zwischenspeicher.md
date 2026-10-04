@@ -1,5 +1,3 @@
-# Offline und Zwischenspeicher
-
 **English:** [Offline and Caching](Offline-and-Caching)
 
 Nach dem ersten Start funktioniert der Kern von Nachtlotse ohne Internet:

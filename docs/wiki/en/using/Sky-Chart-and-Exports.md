@@ -1,5 +1,3 @@
-# Sky Chart and Exports
-
 **Deutsch:** [Himmelskarte und Export](Himmelskarte-und-Export)
 
 ## The sky chart

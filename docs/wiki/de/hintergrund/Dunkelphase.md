@@ -1,5 +1,3 @@
-# Dunkelphase
-
 **English:** [Dark Window](Dark-Window)
 
 Die Dunkelphase ist der Teil der Nacht, für den Nachtlotse plant.

@@ -1,5 +1,3 @@
-# CLI Reference
-
 **Deutsch:** [Befehlsreferenz](Befehlsreferenz)
 
 All commands start with `uv run lotse`. `uv run lotse <command> --help`

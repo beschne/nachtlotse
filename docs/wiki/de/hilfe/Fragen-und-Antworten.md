@@ -1,5 +1,3 @@
-# Fragen und Antworten
-
 **English:** [FAQ](FAQ)
 
 **Warum sehe ich fast nie GO?**

@@ -1,5 +1,3 @@
-# Configuring Sites
-
 **Deutsch:** [Standorte einrichten](Standorte-einrichten)
 
 Your observing sites are in `nachtlotse/data/sites_local.yaml`. Git ignores
