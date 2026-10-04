@@ -10,6 +10,8 @@ Every screen from the original scaffolding plan is now here: the
 shortlist, the full ranked table, the polar sky chart, the LLM
 briefing, and read-only Sites/Rigs reference screens (see
 `sites_rigs.py`'s own docstring for why they're read-only, not an editor).
+Either table also opens a framing preview for its selected row (see
+`framing_view.py`), by double-click or its "Framing preview…" button.
 
 `planning.plan_night` runs on a background `QThread` (`_PlanWorker`),
 same reasoning as `briefing._BriefingWorker`: it's not instant (catalog
@@ -52,6 +54,7 @@ from nachtlotse.gui import data_adapter
 from nachtlotse.gui import export as gui_export
 from nachtlotse.gui.best_sky_card import BestSkyCard
 from nachtlotse.gui.briefing import BriefingCard
+from nachtlotse.gui.framing_view import FramingWindow
 from nachtlotse.gui.hourly_cloud_bar import HourlyCloudCoverBar
 from nachtlotse.gui.sidebar import Sidebar
 from nachtlotse.gui.sites_rigs import RigsCard, SitesCard
@@ -267,8 +270,13 @@ class MainWindow(QMainWindow):
         self.shortlist_export_button = secondary_button("Export CSV…")
         self.shortlist_export_button.setEnabled(False)
         self.shortlist_export_button.clicked.connect(self._on_export_shortlist_csv)
-        shortlist_layout.addLayout(self._export_row(self.shortlist_export_button))
         self.shortlist_table = self._build_table(_SHORTLIST_COLUMNS)
+        self.shortlist_framing_button = self._framing_button(self.shortlist_table)
+        shortlist_layout.addLayout(
+            self._export_row(
+                self.shortlist_framing_button, self.shortlist_export_button
+            )
+        )
         shortlist_layout.addWidget(self.shortlist_table)
         self.tabs.addTab(shortlist_card, "Shortlist")
 
@@ -278,8 +286,11 @@ class MainWindow(QMainWindow):
         self.ranked_export_button = secondary_button("Export CSV…")
         self.ranked_export_button.setEnabled(False)
         self.ranked_export_button.clicked.connect(self._on_export_ranked_csv)
-        ranked_layout.addLayout(self._export_row(self.ranked_export_button))
         self.ranked_table = self._build_table(_RANKED_COLUMNS)
+        self.ranked_framing_button = self._framing_button(self.ranked_table)
+        ranked_layout.addLayout(
+            self._export_row(self.ranked_framing_button, self.ranked_export_button)
+        )
         ranked_layout.addWidget(self.ranked_table)
         self.tabs.addTab(ranked_card, "All ranked")
 
@@ -309,6 +320,8 @@ class MainWindow(QMainWindow):
         # `ranked_rows` computed fresh from `plan` each replan).
         self._plan: NightPlan | None = None
         self._local_tz: ZoneInfo | None = None
+        # Created on first use, then reused (see `_open_framing`).
+        self._framing_window: FramingWindow | None = None
         self._replan(
             self.sidebar.current_site_record(),
             self.sidebar.current_rig_record(),
@@ -317,14 +330,49 @@ class MainWindow(QMainWindow):
         )
 
     @staticmethod
-    def _export_row(button: QWidget) -> QHBoxLayout:
-        """A right-aligned single-button row above a table — same shape
+    def _export_row(*buttons: QWidget) -> QHBoxLayout:
+        """A right-aligned button row above a table — same shape
         `sky_chart.ChartPanel`'s own zoom row uses for its Export PNG
         button, so all three Export actions sit in a consistent spot."""
         row = QHBoxLayout()
         row.addStretch(1)
-        row.addWidget(button)
+        for button in buttons:
+            row.addWidget(button)
         return row
+
+    def _framing_button(self, table: QTableWidget) -> QWidget:
+        """ "Framing preview…" for `table`'s selected row — enabled only
+        while a row is selected. Double-clicking a row does the same."""
+        button = secondary_button("Framing preview…")
+        button.setEnabled(False)
+        button.setToolTip(
+            "How the selected target frames in the rig's field of view\n"
+            "at its best time (or double-click a row)."
+        )
+        button.clicked.connect(lambda: self._open_framing(table))
+        table.itemSelectionChanged.connect(
+            lambda: button.setEnabled(bool(table.selectionModel().selectedRows()))
+        )
+        table.cellDoubleClicked.connect(lambda _row, _col: self._open_framing(table))
+        return button
+
+    def _open_framing(self, table: QTableWidget) -> None:
+        if self._plan is None or self._local_tz is None:
+            return
+        selected = table.selectionModel().selectedRows()
+        if not selected:
+            return
+        row = selected[0].row()
+        entries = (
+            [entry.ranked for entry in self._plan.shortlist]
+            if table is self.shortlist_table
+            else self._plan.ranked
+        )
+        if not 0 <= row < len(entries):
+            return
+        if self._framing_window is None:
+            self._framing_window = FramingWindow(self)
+        self._framing_window.show_entry(self._plan, entries[row], self._local_tz)
 
     def _on_export_shortlist_csv(self) -> None:
         self._export_csv(

@@ -25,9 +25,11 @@ from datetime import datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from nachtlotse import best_sky
+from nachtlotse import best_sky, frame_export, sky_survey
+from nachtlotse.data import catalog
 from nachtlotse.data.store import RigRecord, SiteRecord
-from nachtlotse.engine import framing
+from nachtlotse.engine import framing, framing_preview
+from nachtlotse.engine.framing_preview import FramingPreview
 from nachtlotse.engine.models import TARGET_TYPE_LABELS, Target, WeatherSummary
 from nachtlotse.planning import (
     NightPlan,
@@ -470,3 +472,44 @@ def shared_hourly_axis(
         axis.append(current)
         current += step
     return axis
+
+
+@dataclass(frozen=True)
+class FramingView:
+    """Everything the framing preview window shows for one plan entry —
+    see `engine.framing_preview` (geometry) and `frame_export` (the same
+    summary text and title `lotse frame` prints)."""
+
+    title: str
+    targets: tuple[Target, ...]
+    preview: FramingPreview
+    summary_lines: tuple[str, ...]
+    # The survey cutout to request as backdrop (see `sky_survey`).
+    cutout_fov_deg: float
+
+
+def build_framing_view(
+    plan: NightPlan, ranked: object, local_tz: ZoneInfo
+) -> FramingView:
+    """A framing preview for one of `plan`'s entries (a shortlist row's
+    `.ranked`, or any `plan.ranked` entry), at that entry's own best time
+    — the moment the table shows, so no new time is computed here."""
+    targets = _entry_targets(ranked)
+    preview = framing_preview.framing_preview(
+        plan.site,
+        plan.rig,
+        targets,
+        ranked.best_time,  # type: ignore[attr-defined]
+        neighbors=catalog.CATALOG,
+    )
+    return FramingView(
+        title=f"{' + '.join(target_label(t) for t in targets)} — {plan.rig.name}",
+        targets=targets,
+        preview=preview,
+        summary_lines=tuple(
+            frame_export.summary_lines(preview, plan.rig, targets, local_tz)
+        ),
+        cutout_fov_deg=sky_survey.cutout_fov_deg(
+            preview.fov_width_arcmin, preview.fov_height_arcmin
+        ),
+    )

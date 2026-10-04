@@ -10,9 +10,11 @@ after any resize/reposition; this doesn't, since the script already
 holds the `MainWindow` object it's capturing.
 
 Only `gui-shortlist.png` and `gui-sky-chart.png` are embedded in
-README.md; `gui-best-sky.png` is kept here for reference only (not
-embedded anywhere) — still regenerated alongside the other two so it
-doesn't go stale unnoticed.
+README.md; `gui-best-sky.png` and `gui-framing.png` (the framing preview
+window for the top shortlist entry, with the alt-az Seestar) are kept
+here for reference only (not embedded anywhere) — still regenerated
+alongside the other two so they don't go stale unnoticed. The framing
+capture fetches a real DSS2 sky image (or reuses `.cache/sky_survey/`).
 
 Needs `screencapture` (macOS, always present) and `pyobjc-framework-
 Quartz` (to look up the window's CGWindowID — not part of the `gui`
@@ -182,8 +184,30 @@ def main() -> int:
     _pump(app, window.best_sky, 30.0)  # a real per-site Open-Meteo fetch, not instant
     _capture(window_id, SCREENSHOTS_DIR / "gui-best-sky.png")
 
+    # Framing preview for the top shortlist entry — still the Seestar
+    # plan from the Best Sky step above (alt-az, so the rotated frame
+    # and zenith arrow show).
+    _switch_tab(app, window, SHORTLIST_TAB_INDEX)
+    window.shortlist_table.selectRow(0)
+    window.shortlist_framing_button.click()
+    framing = window._framing_window
+    deadline = time.time() + 60.0
+    while framing._workers and time.time() < deadline:
+        app.processEvents()
+        time.sleep(0.05)
+    for _ in range(20):
+        app.processEvents()
+        time.sleep(0.02)
+    _capture(
+        _find_window_id(framing.windowTitle()), SCREENSHOTS_DIR / "gui-framing.png"
+    )
+    framing.close()
+
     window.close()
-    print("Wrote gui-shortlist.png, gui-sky-chart.png, and gui-best-sky.png")
+    print(
+        "Wrote gui-shortlist.png, gui-sky-chart.png, gui-best-sky.png, "
+        "and gui-framing.png"
+    )
     return 0
 
 

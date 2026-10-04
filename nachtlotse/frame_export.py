@@ -26,15 +26,20 @@ from nachtlotse import sky_survey
 from nachtlotse.engine.framing_preview import FramingPreview
 from nachtlotse.engine.models import Rig, Target
 
-_BACKGROUND_COLOR = "#0b0d12"
-_FRAME_COLOR = "#f5b83d"
-_PRIMARY_COLOR = "#ffffff"
-_NEIGHBOR_COLOR = "#a9b4c2"
-_CHROME_COLOR = "#c3c2b7"
+BACKGROUND_COLOR = "#0b0d12"
+FRAME_COLOR = "#f5b83d"
+PRIMARY_COLOR = "#ffffff"
+NEIGHBOR_COLOR = "#a9b4c2"
+CHROME_COLOR = "#c3c2b7"
 
 # Scale-bar lengths to choose from, in arcmin — the longest that stays
 # within ~a quarter of the view wins.
 _SCALE_BAR_CHOICES_ARCMIN = (1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0, 180.0)
+
+
+# Shown wherever a preview is drawn (PNG caption, GUI) — the circles are
+# a stand-in for shape, see `save_framing_preview`.
+CIRCLE_NOTE = "Dashed circles: catalog major axis (orientation not in catalog)"
 
 
 class FrameExportUnavailable(Exception):
@@ -49,7 +54,7 @@ def default_filename(targets: Sequence[Target]) -> str:
     return f"nachtlotse-frame-{slug}.png"
 
 
-def _format_angle_arcmin(value_arcmin: float, *, degrees: bool | None = None) -> str:
+def format_angle_arcmin(value_arcmin: float, *, degrees: bool | None = None) -> str:
     """Degrees from 2° up (or when forced), arcmin below."""
     if degrees if degrees is not None else value_arcmin >= 120.0:
         return f"{value_arcmin / 60.0:.1f}°"
@@ -61,8 +66,8 @@ def _format_size(target: Target) -> str:
     major, minor = target.size_arcmin
     in_degrees = major >= 120.0
     return (
-        f"{_format_angle_arcmin(major, degrees=in_degrees)} × "
-        f"{_format_angle_arcmin(minor, degrees=in_degrees)}"
+        f"{format_angle_arcmin(major, degrees=in_degrees)} × "
+        f"{format_angle_arcmin(minor, degrees=in_degrees)}"
     )
 
 
@@ -82,7 +87,7 @@ def summary_lines(
         what = (
             f"Target {_format_size(targets[0])}"
             if len(targets) == 1
-            else f"Group span {_format_angle_arcmin(preview.span_arcmin)}"
+            else f"Group span {format_angle_arcmin(preview.span_arcmin)}"
         )
         lines.append(
             f"{what} · {preview.fill_fraction * 100:.0f}% of the frame's "
@@ -107,6 +112,29 @@ def summary_lines(
     return lines
 
 
+def view_half_width_arcmin(
+    preview: FramingPreview, image: sky_survey.SurveyImage | None
+) -> float:
+    """Half the drawn view's width in tangent-plane arcmin: the survey
+    image's own extent when there is one, otherwise the extent such an
+    image would have — so the layout doesn't jump when it arrives."""
+    if image is not None:
+        return image.half_width_tangent_arcmin
+    cutout_deg = sky_survey.cutout_fov_deg(
+        preview.fov_width_arcmin, preview.fov_height_arcmin
+    )
+    return math.degrees(math.tan(math.radians(cutout_deg / 2.0))) * 60.0
+
+
+def labels_below(preview: FramingPreview) -> bool:
+    """Whether object labels go below their markers — unless the alt-az
+    zenith arrow points downward (target north of the zenith), where it
+    would run into them; then above."""
+    if preview.rotation_rate_deg_per_min is None:
+        return True
+    return math.cos(math.radians(preview.frame_angle_deg)) >= 0.0
+
+
 def _import_matplotlib():
     """The lazy-import seam, factored out so tests can force the
     "matplotlib missing" path without needing to actually uninstall it."""
@@ -119,7 +147,9 @@ def _import_matplotlib():
     return plt, Circle, FancyArrowPatch, Polygon
 
 
-def _scale_bar_arcmin(view_half_arcmin: float) -> float:
+def scale_bar_arcmin(view_half_arcmin: float) -> float:
+    """The longest of `_SCALE_BAR_CHOICES_ARCMIN` within half the view's
+    half-width."""
     fitting = [c for c in _SCALE_BAR_CHOICES_ARCMIN if c <= view_half_arcmin / 2.0]
     return fitting[-1] if fitting else _SCALE_BAR_CHOICES_ARCMIN[0]
 
@@ -144,16 +174,10 @@ def save_framing_preview(
             "`uv sync --extra charts` and try again."
         ) from exc
 
-    if image is not None:
-        half = image.half_width_tangent_arcmin
-    else:
-        cutout_deg = sky_survey.cutout_fov_deg(
-            preview.fov_width_arcmin, preview.fov_height_arcmin
-        )
-        half = math.degrees(math.tan(math.radians(cutout_deg / 2.0))) * 60.0
+    half = view_half_width_arcmin(preview, image)
 
-    fig, ax = plt.subplots(figsize=(7, 7), facecolor=_BACKGROUND_COLOR)
-    ax.set_facecolor(_BACKGROUND_COLOR)
+    fig, ax = plt.subplots(figsize=(7, 7), facecolor=BACKGROUND_COLOR)
+    ax.set_facecolor(BACKGROUND_COLOR)
     ax.set_aspect("equal")
     # North up, east left: inverted x axis, so east_arcmin plots as-is.
     ax.set_xlim(half, -half)
@@ -173,7 +197,7 @@ def save_framing_preview(
             preview.frame_corners,
             closed=True,
             fill=False,
-            edgecolor=_FRAME_COLOR,
+            edgecolor=FRAME_COLOR,
             linewidth=2.0,
             zorder=3,
         )
@@ -192,7 +216,7 @@ def save_framing_preview(
                 end,
                 arrowstyle="-|>",
                 mutation_scale=12,
-                color=_FRAME_COLOR,
+                color=FRAME_COLOR,
                 linewidth=1.5,
                 zorder=3,
             )
@@ -200,15 +224,16 @@ def save_framing_preview(
         ax.annotate(
             "zenith",
             (end[0] + up[0] * length * 0.4, end[1] + up[1] * length * 0.4),
-            color=_FRAME_COLOR,
+            color=FRAME_COLOR,
             fontsize=8,
             ha="center",
             va="center",
             zorder=4,
         )
 
+    below = labels_below(preview)
     for obj in preview.objects:
-        color = _PRIMARY_COLOR if obj.primary else _NEIGHBOR_COLOR
+        color = PRIMARY_COLOR if obj.primary else NEIGHBOR_COLOR
         center = (obj.east_arcmin, obj.north_arcmin)
         if obj.size_known:
             # The catalog has no position angle, so the major axis is
@@ -229,16 +254,17 @@ def save_framing_preview(
         else:
             ax.plot(*center, marker="+", markersize=12, color=color, zorder=2)
             label_offset = half * 0.03
+        sign = -1.0 if below else 1.0
         ax.annotate(
             obj.target.catalog_id or obj.target.name,
-            (center[0], center[1] - label_offset),
-            xytext=(0, -4),
+            (center[0], center[1] + sign * label_offset),
+            xytext=(0, sign * 4),
             textcoords="offset points",
             color=color,
             fontsize=9 if obj.primary else 7.5,
             fontweight="bold" if obj.primary else "normal",
             ha="center",
-            va="top",
+            va="top" if below else "bottom",
             zorder=4,
         )
 
@@ -253,7 +279,7 @@ def save_framing_preview(
                 tip,
                 arrowstyle="-|>",
                 mutation_scale=10,
-                color=_CHROME_COLOR,
+                color=CHROME_COLOR,
                 linewidth=1.0,
                 zorder=4,
             )
@@ -261,7 +287,7 @@ def save_framing_preview(
         ax.annotate(
             label,
             (origin[0] + dx * 1.35, origin[1] + dy * 1.35),
-            color=_CHROME_COLOR,
+            color=CHROME_COLOR,
             fontsize=8,
             ha="center",
             va="center",
@@ -269,22 +295,22 @@ def save_framing_preview(
         )
 
     # Scale bar (lower right).
-    bar = _scale_bar_arcmin(half)
+    bar = scale_bar_arcmin(half)
     bar_right = -half * 0.85
     bar_y = -half * 0.9
     ax.plot(
         [bar_right + bar, bar_right],
         [bar_y, bar_y],
-        color=_CHROME_COLOR,
+        color=CHROME_COLOR,
         linewidth=2.0,
         zorder=4,
     )
     ax.annotate(
-        _format_angle_arcmin(bar),
+        format_angle_arcmin(bar),
         (bar_right + bar / 2.0, bar_y),
         xytext=(0, 4),
         textcoords="offset points",
-        color=_CHROME_COLOR,
+        color=CHROME_COLOR,
         fontsize=8,
         ha="center",
         va="bottom",
@@ -295,7 +321,7 @@ def save_framing_preview(
         0.02,
         0.985,
         title,
-        color=_PRIMARY_COLOR,
+        color=PRIMARY_COLOR,
         fontsize=12 if len(title) <= 60 else 10,
         ha="left",
         va="top",
@@ -307,12 +333,12 @@ def save_framing_preview(
         if image is not None
         else "Sky image: none (offline or not requested)"
     )
-    footer.append("Dashed circles: catalog major axis (orientation not in catalog)")
+    footer.append(CIRCLE_NOTE)
     fig.text(
         0.02,
         0.01,
         "\n".join(footer),
-        color=_CHROME_COLOR,
+        color=CHROME_COLOR,
         fontsize=8,
         ha="left",
         va="bottom",
@@ -321,5 +347,5 @@ def save_framing_preview(
     fig.subplots_adjust(
         left=0.02, right=0.98, top=0.94, bottom=0.02 + 0.026 * len(footer)
     )
-    fig.savefig(path, dpi=150, facecolor=_BACKGROUND_COLOR)
+    fig.savefig(path, dpi=150, facecolor=BACKGROUND_COLOR)
     plt.close(fig)

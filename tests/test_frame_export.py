@@ -8,6 +8,7 @@ and skip otherwise.
 
 from __future__ import annotations
 
+import dataclasses
 import io
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
@@ -112,3 +113,12 @@ def test_save_writes_a_png_over_a_sky_image(tmp_path) -> None:
         _preview(), path, title="M31", caption_lines=["line"], image=image
     )
     assert path.read_bytes().startswith(b"\x89PNG")
+
+
+def test_labels_go_above_when_the_zenith_arrow_points_down() -> None:
+    preview = _preview()
+    flipped = dataclasses.replace(preview, frame_angle_deg=172.0)
+    assert frame_export.labels_below(dataclasses.replace(preview, frame_angle_deg=-20.0))
+    assert not frame_export.labels_below(flipped)
+    # Eq mounts draw no zenith arrow at all.
+    assert frame_export.labels_below(_preview(rig=EQ_RIG))

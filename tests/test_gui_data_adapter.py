@@ -504,3 +504,38 @@ def test_build_best_sky_rows_distinguishes_beyond_forecast_horizon() -> None:
 
     assert row.clouds_text == "Beyond forecast range"
     assert row.clouds_available is False
+
+
+def test_build_framing_view_frames_an_entry_at_its_own_best_time() -> None:
+    ranked = RankedTarget(_TARGET_A, _WHEN, _pos(60.0, 90.0), 1.0, 1.0)
+    view = data_adapter.build_framing_view(_night_plan([ranked]), ranked, BERLIN)
+
+    assert view.title == "TA1 target a — Test Rig"
+    assert view.targets == (_TARGET_A,)
+    assert view.preview.when == _WHEN
+    assert (view.preview.center_ra_deg, view.preview.center_dec_deg) == (10.0, 20.0)
+    assert view.summary_lines[0].startswith("Frame: ")
+    # The cutout holds the frame at any rotation (see sky_survey).
+    diagonal_deg = (
+        view.preview.fov_width_arcmin**2 + view.preview.fov_height_arcmin**2
+    ) ** 0.5 / 60.0
+    assert view.cutout_fov_deg > diagonal_deg
+
+
+def test_build_framing_view_frames_a_group_around_its_centroid() -> None:
+    group = RankedGroup(
+        targets=(_TARGET_A, _TARGET_B),
+        best_time=_WHEN,
+        pos=_pos(60.0, 90.0),
+        fit=0.8,
+        reach=1.0,
+    )
+    view = data_adapter.build_framing_view(_night_plan([group]), group, BERLIN)
+
+    assert view.title == "TA1 target a + TB2 target b — Test Rig"
+    assert {obj.target for obj in view.preview.objects if obj.primary} == {
+        _TARGET_A,
+        _TARGET_B,
+    }
+    assert view.preview.center_ra_deg == pytest.approx(10.5, abs=0.01)
+    assert any(line.startswith("Group span") for line in view.summary_lines)
