@@ -46,6 +46,9 @@ filterwarnings = [
     # Benign third-party noise, not actionable from this codebase.
     "ignore::astropy.coordinates.errors.NonRotationTransformationWarning",
     "ignore:Setting the dtype on a NumPy array:DeprecationWarning:skyfield",
+    # skyfield 1.55's keplerlib (comet orbits) still sets `.shape` in place,
+    # deprecated in NumPy 2.5 — upstream, harmless until NumPy removes it.
+    "ignore:Setting the shape on a NumPy array:DeprecationWarning:skyfield",
 ]
 
 [tool.ruff]

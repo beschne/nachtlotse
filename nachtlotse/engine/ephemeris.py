@@ -15,9 +15,12 @@ from pathlib import Path
 import numpy as np
 from skyfield import almanac
 from skyfield.api import Loader, Star, wgs84
+from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2
+from skyfield.data.spice import inertial_frames
+from skyfield.keplerlib import _KeplerOrbit
 from skyfield.timelib import Time
 
-from nachtlotse.engine.models import Site, Target
+from nachtlotse.engine.models import CometOrbit, Site, Target
 
 _CACHE_DIR = Path(__file__).resolve().parents[2] / ".cache" / "skyfield"
 _load = Loader(str(_CACHE_DIR))
@@ -25,6 +28,7 @@ _timescale = _load.timescale()
 _ephemeris = _load("de421.bsp")
 _earth = _ephemeris["earth"]
 _moon = _ephemeris["moon"]
+_sun = _ephemeris["sun"]
 
 
 @dataclass(frozen=True)
@@ -143,6 +147,65 @@ def moon_phase_angle_deg(when: datetime) -> float:
     so a phase icon can show the correct crescent/gibbous shape, not
     just how much of the disk is lit."""
     return almanac.moon_phase(_ephemeris, _time(when)).degrees
+
+
+@dataclass(frozen=True)
+class CometPosition:
+    """Where a comet is, seen from a site at one moment."""
+
+    ra_deg: float  # astrometric, ICRS/J2000 — the frame catalog targets use
+    dec_deg: float
+    earth_distance_au: float  # Δ, from the observer
+    sun_distance_au: float  # r, heliocentric
+
+
+def _comet_orbit(orbit: CometOrbit) -> _KeplerOrbit:
+    """A skyfield Kepler orbit around the Sun from MPC elements — the
+    same construction as `skyfield.data.mpc.comet_orbit`, which can't be
+    used directly here because that module needs pandas just to import.
+    """
+    e = orbit.eccentricity
+    if e == 1.0:
+        semilatus_rectum_au = orbit.perihelion_distance_au * 2.0
+    else:
+        semimajor_axis_au = orbit.perihelion_distance_au / (1.0 - e)
+        semilatus_rectum_au = semimajor_axis_au * (1.0 - e * e)
+    t_perihelion = _timescale.tt(
+        orbit.perihelion_year, orbit.perihelion_month, orbit.perihelion_day
+    )
+    kepler = _KeplerOrbit._from_periapsis(
+        semilatus_rectum_au,
+        e,
+        orbit.inclination_deg,
+        orbit.longitude_of_ascending_node_deg,
+        orbit.argument_of_perihelion_deg,
+        t_perihelion,
+        GM_SUN_Pitjeva_2005_km3_s2,
+        10,  # NAIF ID of the Sun: positions are heliocentric
+        orbit.designation,
+    )
+    # MPC elements refer to the J2000 ecliptic; skyfield works equatorial.
+    kepler._rotation = inertial_frames["ECLIPJ2000"].T
+    return kepler
+
+
+def comet_position(orbit: CometOrbit, site: Site, when: datetime) -> CometPosition:
+    """The comet's astrometric position from `site` at `when` — a two-body
+    propagation of the MPC's osculating elements, light-time corrected.
+    Accurate to well under an arcminute within weeks of the elements'
+    epoch (the MPC refreshes them daily), which is far more than ranking
+    and framing need; planetary perturbations aren't modeled."""
+    kepler = _comet_orbit(orbit)
+    t = _time(when)
+    astrometric = (_earth + _topos(site)).at(t).observe(_sun + kepler)
+    ra, dec, distance = astrometric.radec()
+    sun_distance_au = float(kepler.at(t).distance().au)
+    return CometPosition(
+        ra_deg=float(ra._degrees),
+        dec_deg=float(dec.degrees),
+        earth_distance_au=float(distance.au),
+        sun_distance_au=sun_distance_au,
+    )
 
 
 def find_transit(

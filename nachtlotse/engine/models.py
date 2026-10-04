@@ -136,6 +136,11 @@ TargetType = Literal[
     "open_cluster",
     "globular_cluster",
     "variable_star",
+    # Current events (see ROADMAP.md): transient or moving objects that
+    # never live in the static catalog files.
+    "comet",
+    "supernova",
+    "nova",
 ]
 
 # Human-readable labels for TargetType, shared by every front end so
@@ -150,7 +155,35 @@ TARGET_TYPE_LABELS: dict[TargetType, str] = {
     "open_cluster": "Open Cluster",
     "globular_cluster": "Globular Cluster",
     "variable_star": "Variable Star",
+    "comet": "Comet",
+    "supernova": "Supernova",
+    "nova": "Nova",
 }
+
+
+@dataclass(frozen=True)
+class CometOrbit:
+    """Osculating heliocentric orbital elements of a comet, as the Minor
+    Planet Center publishes them (`CometEls.txt`): angles referred to the
+    J2000 ecliptic and equinox, perihelion time in TT. Enough for a
+    two-body (Keplerian) position — see `engine.ephemeris.comet_position`.
+
+    No magnitude parameters on purpose: the MPC file's H/slope values
+    didn't reproduce the MPC's own ephemeris magnitudes (10P/Tempel,
+    2026-10-04: 13-14 mag from the file vs. 9.0 from the MPC ephemeris
+    service vs. 10.2 observed), so comet brightness comes from
+    observations instead, never from a formula here.
+    """
+
+    designation: str  # e.g. "10P/Tempel", "C/2026 A1 (PANSTARRS)"
+    perihelion_year: int
+    perihelion_month: int
+    perihelion_day: float  # fractional day, TT
+    perihelion_distance_au: float
+    eccentricity: float
+    argument_of_perihelion_deg: float
+    longitude_of_ascending_node_deg: float
+    inclination_deg: float
 
 
 @dataclass(frozen=True)
