@@ -190,3 +190,27 @@ def test_ring_sits_outside_the_frame_corners_and_inside_the_view() -> None:
     corner_arcmin = max(math.hypot(*c) for c in preview.frame_corners)
     ring = frame_export.orientation_ring_radius_arcmin(preview)
     assert corner_arcmin < ring < frame_export.view_half_width_arcmin(preview, None)
+
+
+def test_a_neighbor_next_to_the_target_labels_on_the_other_side() -> None:
+    from nachtlotse.engine.framing_preview import FramedObject
+
+    preview = _preview(rig=EQ_RIG)  # labels below by default
+    half = frame_export.view_half_width_arcmin(preview, None)
+    target = next(o for o in preview.objects if o.primary)
+    host = FramedObject(M110, target.east_arcmin + 1.0, target.north_arcmin, False)
+    far = FramedObject(M110, target.east_arcmin + half / 2, target.north_arcmin, False)
+    assert frame_export.label_below(preview, target, half)
+    assert not frame_export.label_below(preview, host, half)
+    assert frame_export.label_below(preview, far, half)
+
+
+def test_summary_calls_a_supernova_a_point_source() -> None:
+    supernova = framing_preview.Target(
+        name="SN 2026aaiv", ra_deg=339.2735, dec_deg=34.4098, types=("supernova",)
+    )
+    preview = framing_preview.framing_preview(SITE, ALTAZ_RIG, [supernova], WHEN)
+    text = "\n".join(
+        frame_export.summary_lines(preview, ALTAZ_RIG, [supernova], BERLIN)
+    )
+    assert "Point source (supernova) — fits any frame" in text

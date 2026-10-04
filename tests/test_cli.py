@@ -752,7 +752,7 @@ def test_plan_command_shows_current_events_or_why_not(
 ) -> None:
     assert cli.main(["plan", "--limit", "5"]) == 0
     output = capsys.readouterr().out
-    assert "Current events (comets observed in the last two weeks):" in output
+    assert "Current events (comets, supernovae, novae):" in output
     # The suite is offline (see conftest): explained, not an error.
     assert "Comets unavailable" in output
 

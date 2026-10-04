@@ -36,7 +36,7 @@ from nachtlotse.engine.models import (
     Verdict,
     WeatherSummary,
 )
-from nachtlotse.events import EventsUnavailable, cobs, mpc
+from nachtlotse.events import EventsUnavailable, cobs, mpc, rochester, tns
 from nachtlotse.weather import open_meteo
 
 
@@ -721,113 +721,34 @@ def current_events(
     weather: WeatherSummary | None = None,
     darkness: Darkness = "astronomical",
 ) -> EventsReport:
-    """Tonight's current events for `site`/`rig`: comets observed in the
-    last two weeks (COBS) with a known orbit (MPC), positioned by the
-    engine, filtered by the rig's brightness limit and tonight's
-    observability, and verdicted like catalog targets (`weather` and
-    `darkness` as for `plan_night`'s own shortlist).
+    """Tonight's current events for `site`/`rig`, verdicted like catalog
+    targets (`weather` and `darkness` as for `plan_night`'s own shortlist):
 
-    Never raises for a missing source: what couldn't be fetched becomes a
-    note, and the report is simply shorter (or empty).
+    - comets observed in the last two weeks (COBS) with a known orbit
+      (MPC), positioned by the engine;
+    - supernovae and extragalactic novae on Rochester's list of active
+      bright transients (current magnitudes), positioned and typed by TNS;
+    - recent novae from TNS, listed with their discovery magnitude when no
+      current brightness is known.
+
+    Each is filtered by the rig's brightness limit and tonight's
+    observability. Never raises for a missing source: what couldn't be
+    fetched becomes a note, and the report is simply shorter (or empty).
     """
-    notes: list[str] = []
-    try:
-        orbits = mpc.fetch_comet_orbits()
-        brightness = cobs.fetch_comet_brightness()
-    except EventsUnavailable as exc:
-        return EventsReport([], [], [f"Comets unavailable: {exc}"])
-    evening_start, morning_end = constraints.dark_window(site, when)
-    if abs(evening_start - brightness.fetched_at) > timedelta(days=EVENTS_HORIZON_DAYS):
-        return EventsReport(
-            [],
-            [],
-            [
-                (
-                    "Current events only cover nights within "
-                    f"{EVENTS_HORIZON_DAYS} days of today — this one is "
-                    f"{evening_start:%Y-%m-%d}."
-                )
-            ],
-        )
-    notes.append(f"Comet orbits: MPC, {orbits.fetched_at:%Y-%m-%d %H:%M} UTC")
-    notes.append(
-        f"Comet brightness: COBS reports of the last {brightness.window_days} "
-        f"days, {brightness.fetched_at:%Y-%m-%d %H:%M} UTC"
-    )
-
-    snapshot_time = evening_start + (morning_end - evening_start) / 2
-    limit_mag = framing.event_limiting_magnitude(rig, site, "comet")
-
+    night = _EventNight(site, rig, when, weather, darkness)
     ranked: list[RankedEvent] = []
     skipped: list[SkippedEvent] = []
-    for observed in brightness.comets.values():
-        orbit = orbits.orbits.get(observed.mpc_key)
-        if orbit is None:
-            skipped.append(
-                SkippedEvent(
-                    "comet",
-                    observed.designation,
-                    observed.magnitude,
-                    "no MPC comet orbit (e.g. filed as an asteroid)",
-                )
-            )
-            continue
-        if limit_mag is not None and observed.magnitude > limit_mag:
-            skipped.append(
-                SkippedEvent(
-                    "comet",
-                    orbit.designation,
-                    observed.magnitude,
-                    f"too faint for this rig here (limit {limit_mag:.1f} mag)",
-                )
-            )
-            continue
-
-        coma_arcmin = observed.coma_diameter_arcmin or 0.0
-        target = replace(
-            comets.comet_target(orbit, site, snapshot_time),
-            magnitude=observed.magnitude,
-            size_arcmin=(coma_arcmin, coma_arcmin),
-        )
-        best = best_time_for(site, rig, (target,), when)
-        if best is None:
-            skipped.append(
-                SkippedEvent(
-                    "comet",
-                    orbit.designation,
-                    observed.magnitude,
-                    "not observable tonight (altitude, horizon, moon, or rotation)",
-                )
-            )
-            continue
-
-        best_time, pos = best
-        ranked.append(
-            RankedEvent(
-                kind="comet",
-                target=target,
-                best_time=best_time,
-                pos=pos,
-                fit=framing.framing_score(rig, target),
-                reach=framing.reach_factor(site, target.magnitude, target.size_arcmin),
-                verdict=scoring.verdict_for_target(
-                    pos.alt_deg, weather=weather, darkness=darkness
-                ),
-                magnitude_source=(
-                    f"COBS: median of {observed.report_count} report"
-                    f"{'' if observed.report_count == 1 else 's'}, latest "
-                    f"{observed.last_reported:%Y-%m-%d}"
-                ),
-                motion_deg_per_hour=comets.sky_motion_deg_per_hour(
-                    orbit, site, best_time
-                ),
-            )
-        )
+    notes: list[str] = []
+    for section in (_comet_events, _transient_events):
+        section_ranked, section_skipped, section_notes = section(night)
+        ranked += section_ranked
+        skipped += section_skipped
+        notes += section_notes
 
     # Altitude and reach only: unlike a catalog object, an event's size
     # isn't something to choose between — a comet's coma is a few arcmin
-    # in any rig's field, so `fit` (still reported, for framing) would
-    # just reorder events by coma size.
+    # in any rig's field, a supernova a point — so `fit` (still reported,
+    # for framing) would just reorder events by apparent size.
     ranked.sort(
         key=lambda e: framing.target_priority_score(e.pos.alt_deg, 1.0, e.reach),
         reverse=True,
@@ -836,11 +757,287 @@ def current_events(
     return EventsReport(ranked, skipped, notes)
 
 
+class _EventNight:
+    """What every current-events section needs about the night planned."""
+
+    def __init__(
+        self,
+        site: Site,
+        rig: Rig,
+        when: datetime,
+        weather: WeatherSummary | None,
+        darkness: Darkness,
+    ) -> None:
+        self.site = site
+        self.rig = rig
+        self.when = when
+        self.weather = weather
+        self.darkness = darkness
+        self.evening_start, self.morning_end = constraints.dark_window(site, when)
+
+    def too_far_from(self, data_time: datetime) -> str | None:
+        """A note if this night lies more than `EVENTS_HORIZON_DAYS` from
+        when the data was fetched, else None."""
+        if abs(self.evening_start - data_time) <= timedelta(days=EVENTS_HORIZON_DAYS):
+            return None
+        return (
+            "Current events only cover nights within "
+            f"{EVENTS_HORIZON_DAYS} days of today — this one is "
+            f"{self.evening_start:%Y-%m-%d}."
+        )
+
+    def rank(
+        self,
+        kind: EventKind,
+        target: Target,
+        magnitude_source: str,
+        motion_deg_per_hour: float | None = None,
+    ) -> RankedEvent | SkippedEvent:
+        """`target` ranked for tonight, or skipped with the reason — too
+        faint for the rig here, or not observable."""
+        assert target.magnitude is not None
+        limit_mag = framing.event_limiting_magnitude(self.rig, self.site, kind)
+        if limit_mag is not None and target.magnitude > limit_mag:
+            return SkippedEvent(
+                kind,
+                target.name,
+                target.magnitude,
+                f"too faint for this rig here (limit {limit_mag:.1f} mag)",
+            )
+        best = best_time_for(self.site, self.rig, (target,), self.when)
+        if best is None:
+            return SkippedEvent(
+                kind,
+                target.name,
+                target.magnitude,
+                "not observable tonight (altitude, horizon, moon, or rotation)",
+            )
+        best_time, pos = best
+        return RankedEvent(
+            kind=kind,
+            target=target,
+            best_time=best_time,
+            pos=pos,
+            fit=framing.framing_score(self.rig, target),
+            reach=framing.reach_factor(self.site, target.magnitude, target.size_arcmin),
+            verdict=scoring.verdict_for_target(
+                pos.alt_deg, weather=self.weather, darkness=self.darkness
+            ),
+            magnitude_source=magnitude_source,
+            motion_deg_per_hour=motion_deg_per_hour,
+        )
+
+
+_Section = tuple[list[RankedEvent], list[SkippedEvent], list[str]]
+
+
+def _split(results: list[RankedEvent | SkippedEvent]) -> tuple[list, list]:
+    ranked = [r for r in results if isinstance(r, RankedEvent)]
+    skipped = [r for r in results if isinstance(r, SkippedEvent)]
+    return ranked, skipped
+
+
+def _comet_events(night: _EventNight) -> _Section:
+    try:
+        orbits = mpc.fetch_comet_orbits()
+        brightness = cobs.fetch_comet_brightness()
+    except EventsUnavailable as exc:
+        return [], [], [f"Comets unavailable: {exc}"]
+    too_far = night.too_far_from(brightness.fetched_at)
+    if too_far:
+        return [], [], [too_far]
+
+    snapshot_time = night.evening_start + (night.morning_end - night.evening_start) / 2
+    results: list[RankedEvent | SkippedEvent] = []
+    for observed in brightness.comets.values():
+        orbit = orbits.orbits.get(observed.mpc_key)
+        if orbit is None:
+            results.append(
+                SkippedEvent(
+                    "comet",
+                    observed.designation,
+                    observed.magnitude,
+                    "no MPC comet orbit (e.g. filed as an asteroid)",
+                )
+            )
+            continue
+        coma_arcmin = observed.coma_diameter_arcmin or 0.0
+        target = replace(
+            comets.comet_target(orbit, night.site, snapshot_time),
+            magnitude=observed.magnitude,
+            size_arcmin=(coma_arcmin, coma_arcmin),
+        )
+        result = night.rank(
+            "comet",
+            target,
+            magnitude_source=(
+                f"COBS: median of {observed.report_count} report"
+                f"{'' if observed.report_count == 1 else 's'}, latest "
+                f"{observed.last_reported:%Y-%m-%d}"
+            ),
+        )
+        if isinstance(result, RankedEvent):
+            result = result._replace(
+                motion_deg_per_hour=comets.sky_motion_deg_per_hour(
+                    orbit, night.site, result.best_time
+                )
+            )
+        results.append(result)
+
+    ranked, skipped = _split(results)
+    return (
+        ranked,
+        skipped,
+        [
+            f"Comet orbits: MPC, {orbits.fetched_at:%Y-%m-%d %H:%M} UTC",
+            (
+                f"Comet brightness: COBS reports of the last "
+                f"{brightness.window_days} days, "
+                f"{brightness.fetched_at:%Y-%m-%d %H:%M} UTC"
+            ),
+        ],
+    )
+
+
+def _transient_events(night: _EventNight) -> _Section:
+    try:
+        brightness = rochester.fetch_transient_brightness()
+    except EventsUnavailable as exc:
+        return [], [], [f"Supernovae unavailable: {exc}"]
+    too_far = night.too_far_from(brightness.fetched_at)
+    if too_far:
+        return [], [], []  # the comet section already says so
+
+    results: list[RankedEvent | SkippedEvent] = []
+    to_locate: list[str] = []
+    for item in brightness.transients.values():
+        kind: EventKind = "nova" if item.rochester_type == "EGN" else "supernova"
+        if item.rochester_type == "unk":
+            results.append(
+                SkippedEvent(
+                    "supernova",
+                    f"AT {item.objname}",
+                    item.magnitude,
+                    "unclassified transient (not yet a confirmed supernova or nova)",
+                )
+            )
+        elif item.stale:
+            results.append(
+                SkippedEvent(
+                    kind,
+                    f"{'AT' if kind == 'nova' else 'SN'} {item.objname}",
+                    item.magnitude,
+                    "last brightness report over a month old",
+                )
+            )
+        else:
+            to_locate.append(item.objname)
+
+    # Positions normally come with Rochester's list; TNS only for the rest.
+    records = tns.lookup_objects(
+        [n for n in to_locate if brightness.transients[n].ra_deg is None]
+    )
+    for objname in to_locate:
+        item = brightness.transients[objname]
+        if item.ra_deg is not None and item.dec_deg is not None:
+            kind = "nova" if item.rochester_type == "EGN" else "supernova"
+            label = (
+                "nova"
+                if kind == "nova"
+                else f"SN {item.rochester_type}".removesuffix(" ")
+            )
+            host = f" in {item.host}" if item.host else ""
+            target = Target(
+                name=f"{'AT' if kind == 'nova' else 'SN'} {objname}",
+                ra_deg=item.ra_deg,
+                dec_deg=item.dec_deg,
+                magnitude=item.magnitude,
+                types=(kind,),
+            )
+            results.append(
+                night.rank(
+                    kind,
+                    target,
+                    magnitude_source=(
+                        f"Rochester list {brightness.fetched_at:%Y-%m-%d}; "
+                        f"{label}{host}"
+                    ),
+                )
+            )
+            continue
+        record = records.get(objname)
+        if record is None:
+            is_nova = item.rochester_type == "EGN"
+            results.append(
+                SkippedEvent(
+                    "nova" if is_nova else "supernova",
+                    f"{'AT' if is_nova else 'SN'} {objname}",
+                    item.magnitude,
+                    "position not known yet (TNS lookups are rate-limited — "
+                    "a later plan fills it in)",
+                )
+            )
+            continue
+        kind = "nova" if record.tns_type == "Nova" else "supernova"
+        host = f" in {record.host}" if record.host else ""
+        target = Target(
+            name=record.name,
+            ra_deg=record.ra_deg,
+            dec_deg=record.dec_deg,
+            magnitude=item.magnitude,
+            types=(kind,),
+        )
+        results.append(
+            night.rank(
+                kind,
+                target,
+                magnitude_source=(
+                    f"Rochester list {brightness.fetched_at:%Y-%m-%d}; "
+                    f"{record.tns_type}{host}"
+                ),
+            )
+        )
+
+    notes = [
+        (
+            "Supernova/nova brightness: Rochester 'Latest Supernovae', "
+            f"{brightness.fetched_at:%Y-%m-%d %H:%M} UTC (positions from its "
+            "links, else TNS); recent novae: TNS"
+        )
+    ]
+    try:
+        novae = tns.fetch_recent_novae()
+    except EventsUnavailable as exc:
+        notes.append(f"Recent novae unavailable: {exc}")
+    else:
+        for nova in novae.novae:
+            if nova.objname in brightness.transients:
+                continue  # already handled with its current magnitude
+            discovered = f"discovered {nova.discovery_date[:10]}" + (
+                f" at {nova.discovery_mag:.1f} mag"
+                if nova.discovery_mag is not None
+                else ""
+            )
+            results.append(
+                SkippedEvent(
+                    "nova",
+                    nova.name,
+                    None,
+                    f"no current brightness report ({discovered}"
+                    f"{', in ' + nova.host if nova.host else ''})",
+                )
+            )
+
+    ranked, skipped = _split(results)
+    return ranked, skipped, notes
+
+
 def _event_name_keys(name: str) -> set[str]:
     """The ways a user might type an event's name, normalized: the full
-    name ("C/2026 A2 (Bok)"), without the discoverer ("C/2026 A2"), and
-    for a numbered periodic comet its number alone ("161P" for
-    "161P/Hartley-IRAS")."""
+    name ("C/2026 A2 (Bok)"), without the discoverer ("C/2026 A2"), for a
+    numbered periodic comet its number alone ("161P" for
+    "161P/Hartley-IRAS"), and for a supernova or nova its TNS name without
+    prefix ("2026aaiv" for "SN 2026aaiv")."""
 
     def norm(text: str) -> str:
         return "".join(text.split()).casefold()
@@ -849,6 +1046,9 @@ def _event_name_keys(name: str) -> set[str]:
     head = name.split("/")[0]
     if head[:-1].isdigit():
         keys.add(norm(head))
+    # "SN 2026aaiv" / "AT 2026aaom" also answer to their bare TNS name.
+    if name[:3] in ("SN ", "AT "):
+        keys.add(norm(name[3:]))
     return keys
 
 

@@ -151,9 +151,11 @@ def test_current_events_is_empty_but_explained_when_offline(
     monkeypatch.setattr(mpc, "fetch_comet_orbits", offline)
     report = planning.current_events(SITE, SEESTAR, WHEN)
     assert report.events == [] and report.skipped == []
-    assert report.notes == [
+    assert report.notes[0] == (
         "Comets unavailable: MPC comet elements request failed: offline"
-    ]
+    )
+    # The suite is offline (conftest), so the transient sources say so too.
+    assert any(n.startswith("Supernovae unavailable") for n in report.notes)
 
 
 def test_plan_night_gathers_events_only_when_asked(live_sources) -> None:

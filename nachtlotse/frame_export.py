@@ -25,7 +25,7 @@ from pathlib import Path
 
 from nachtlotse import sky_survey
 from nachtlotse.engine.constraints import DEFAULT_MIN_ALT_DEG
-from nachtlotse.engine.framing_preview import FramingPreview
+from nachtlotse.engine.framing_preview import FramedObject, FramingPreview
 from nachtlotse.engine.models import Rig, Target
 
 BACKGROUND_COLOR = "#0b0d12"
@@ -97,7 +97,10 @@ def summary_lines(
         + f"{preview.fov_height_arcmin / 60.0:.2f}° · {rig.name}"
     ]
 
-    if preview.fill_fraction is None:
+    point_kinds = {"supernova", "nova"} & set(targets[0].types)
+    if preview.fill_fraction is None and len(targets) == 1 and point_kinds:
+        lines.append(f"Point source ({point_kinds.pop()}) — fits any frame")
+    elif preview.fill_fraction is None:
         lines.append("Size: unknown — framing fit not constrained")
     else:
         what = (
@@ -229,6 +232,27 @@ def text_anchor(screen_dx: float, screen_dy: float) -> tuple[str, str]:
     ha = "left" if screen_dx > 0.4 else "right" if screen_dx < -0.4 else "center"
     va = "bottom" if screen_dy > 0.4 else "top" if screen_dy < -0.4 else "center"
     return ha, va
+
+
+def label_below(
+    preview: FramingPreview, obj: FramedObject, view_half_arcmin: float
+) -> bool:
+    """Which side of its marker `obj`'s label goes: `labels_below` for
+    the preview's own targets; a neighbor close to one of them (a
+    supernova's host galaxy, say) takes the other side, so the two
+    labels don't print over each other."""
+    default = labels_below(preview)
+    if obj.primary:
+        return default
+    near_a_primary = any(
+        other.primary
+        and math.hypot(
+            other.east_arcmin - obj.east_arcmin, other.north_arcmin - obj.north_arcmin
+        )
+        < view_half_arcmin * 0.08
+        for other in preview.objects
+    )
+    return not default if near_a_primary else default
 
 
 def _import_matplotlib():
@@ -370,8 +394,8 @@ def save_framing_preview(
                     zorder=4,
                 )
 
-    below = labels_below(preview)
     for obj in preview.objects:
+        below = label_below(preview, obj, half)
         color = PRIMARY_COLOR if obj.primary else NEIGHBOR_COLOR
         center = (obj.east_arcmin, obj.north_arcmin)
         if obj.size_known:

@@ -192,7 +192,7 @@ def _print_events(report: planning.EventsReport | None, local_tz: ZoneInfo) -> N
     if report is None:
         return
     print()
-    print("Current events (comets observed in the last two weeks):")
+    print("Current events (comets, supernovae, novae):")
     if not report.events:
         print("  none observable and bright enough tonight")
     for rank, event in enumerate(report.events, start=1):
@@ -579,8 +579,13 @@ def _cmd_events(
         print(exc, file=sys.stderr)
         return 2
 
-    limit = framing.event_limiting_magnitude(rig, site, "comet")
-    limit_text = f"comets to {limit:.1f} mag" if limit is not None else "no limit"
+    comet_limit = framing.event_limiting_magnitude(rig, site, "comet")
+    point_limit = framing.event_limiting_magnitude(rig, site, "supernova")
+    limit_text = (
+        f"comets to {comet_limit:.1f} mag, supernovae/novae to {point_limit:.1f} mag"
+        if comet_limit is not None and point_limit is not None
+        else "none (the site has no Bortle class)"
+    )
     print(f"Nachtlotse — current events · {site.name} ({rig.name})")
     print(f"Brightness limit for this rig here: {limit_text}")
     print()

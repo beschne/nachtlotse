@@ -241,8 +241,8 @@ class FramingCanvas(QWidget):
         bold.setBold(True)
         plain = QFont(painter.font().family(), 10)
         painter.setBrush(Qt.NoBrush)
-        below = frame_export.labels_below(self._view.preview)
         for obj in self._view.preview.objects:
+            below = frame_export.label_below(self._view.preview, obj, half)
             color = QColor(
                 frame_export.PRIMARY_COLOR
                 if obj.primary

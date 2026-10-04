@@ -624,10 +624,21 @@ def test_events_status_text_counts_or_explains() -> None:
     assert data_adapter.events_status_text(one) == "Events: 1 comet observable tonight"
     none = replace(_night_plan([]), events=_events_report())
     assert data_adapter.events_status_text(none) == (
-        "Events: no comet observable tonight"
+        "Events: nothing observable tonight"
     )
     offline = replace(
         _night_plan([]), events=_events_report(notes=["Comets unavailable: offline"])
     )
     assert "unavailable" in data_adapter.events_status_text(offline)
     assert data_adapter.build_event_rows(_night_plan([]), BERLIN) == []
+
+
+def test_events_status_text_counts_each_kind() -> None:
+    comet = _comet_event()
+    supernova = comet._replace(kind="supernova")
+    plan = replace(
+        _night_plan([]), events=_events_report([comet, supernova, supernova])
+    )
+    assert data_adapter.events_status_text(plan) == (
+        "Events: 2 supernovae, 1 comet observable tonight"
+    )

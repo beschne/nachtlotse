@@ -600,11 +600,18 @@ def events_status_text(plan: NightPlan) -> str:
     why there are none to show."""
     if plan.events is None:
         return ""
-    count = len(plan.events.events)
-    if count:
-        return f"Events: {count} comet{'' if count == 1 else 's'} observable tonight"
-    if any(note.startswith("Comets unavailable") for note in plan.events.notes):
+    counts: dict[str, int] = {}
+    for event in plan.events.events:
+        counts[event.kind] = counts.get(event.kind, 0) + 1
+    if counts:
+        plurals = {"comet": "comets", "supernova": "supernovae", "nova": "novae"}
+        parts = [
+            f"{n} {kind if n == 1 else plurals[kind]}"
+            for kind, n in sorted(counts.items(), key=lambda kv: -kv[1])
+        ]
+        return f"Events: {', '.join(parts)} observable tonight"
+    if all("unavailable" in note for note in plan.events.notes):
         return "Events unavailable (offline or sources unreachable)"
     if any(note.startswith("Current events only cover") for note in plan.events.notes):
         return "Events: only for nights within two weeks of today"
-    return "Events: no comet observable tonight"
+    return "Events: nothing observable tonight"
