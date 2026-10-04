@@ -71,7 +71,7 @@ nachtlotse/
 │                          profiles are azimuth→min-altitude points inline
 │                          in site YAML, no separate .HRZ import
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
-├── events/          # current events — MPC comet orbits, COBS brightness (cached)
+├── events/          # current events — MPC, COBS (comets), Rochester, TNS (supernovae/novae)
 ├── charting.py      # shared polar-chart geometry, no charting-library dependency
 ├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
 ├── sky_survey.py    # optional DSS2 cutouts (CDS hips2fits), disk-cached
@@ -242,7 +242,7 @@ uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
 uv run lotse frame M31         # framing preview: text + PNG (charts extra)
-uv run lotse events            # current comets: observable tonight, and why not
+uv run lotse events            # current comets/supernovae/novae: observable tonight, and why not
 uv run lotse gui                # the early native GUI (see ROADMAP.md)
 ```
 

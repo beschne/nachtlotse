@@ -500,6 +500,20 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   `lotse events` (everything, with reasons), comets by name in
   `lotse frame` ("161P", "C/2026 A2"), and an Events tab in the GUI
   (with framing preview).
+- Supernovae and novae (3.4.0): current brightness from David Bishop's
+  "Latest Supernovae" (`events/rochester.py`, 12 h cache) — TNS records
+  only the discovery magnitude (SN 2026aaiv: 17.3 at discovery, peak
+  ~11.5). Positions come from the same page's host links, which point at
+  the transient itself (matching TNS to 0.1"); TNS (`events/tns.py`, its
+  public search CSV, no account) is the fallback for entries without a
+  link — at most 8 lookups per run, cached for good once classified —
+  and the source for recent novae, galactic ones included, which are
+  listed with their discovery magnitude when no current one is known.
+  TNS allows anonymous search 10 requests a minute; a 429's
+  `x-rate-limit-reset` (or `Retry-After`) sets the backoff for every
+  source, which now stores an explicit "until". Point sources get a
+  1-mag margin on the rig's limit; unclassified transients and entries
+  whose last report is over a month old are listed with that reason.
 
 ## `nachtlotse/prose.py`
 
