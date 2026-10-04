@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import dataclasses
 import io
-from datetime import UTC, datetime
+import math
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -118,7 +119,74 @@ def test_save_writes_a_png_over_a_sky_image(tmp_path) -> None:
 def test_labels_go_above_when_the_zenith_arrow_points_down() -> None:
     preview = _preview()
     flipped = dataclasses.replace(preview, frame_angle_deg=172.0)
-    assert frame_export.labels_below(dataclasses.replace(preview, frame_angle_deg=-20.0))
+    assert frame_export.labels_below(
+        dataclasses.replace(preview, frame_angle_deg=-20.0)
+    )
     assert not frame_export.labels_below(flipped)
     # Eq mounts draw no zenith arrow at all.
     assert frame_export.labels_below(_preview(rig=EQ_RIG))
+
+
+def _track(*angles_deg: float) -> tuple[framing_preview.FrameOrientation, ...]:
+    start = datetime(2026, 9, 12, 21, 0, tzinfo=UTC)  # 23:00 CEST
+    return tuple(
+        framing_preview.FrameOrientation(start + timedelta(hours=i), angle, 45.0)
+        for i, angle in enumerate(angles_deg)
+    )
+
+
+def test_preview_title_names_the_moment_drawn() -> None:
+    title = frame_export.preview_title([M31, M32], ALTAZ_RIG, _preview(), BERLIN)
+    assert title == (
+        f"M31 Andromeda Galaxy + M32 M32 — {ALTAZ_RIG.name} · Sat 12 Sep, 23:00 CEST"
+    )
+
+
+def test_orientation_ticks_label_each_hour_plus_the_drawn_moment() -> None:
+    preview = dataclasses.replace(_preview(), orientation_track=_track(-60, -30, 0))
+    ticks = frame_export.orientation_ticks(preview, BERLIN)
+
+    assert [t.label for t in ticks] == ["23", "00", "01", ""]
+    assert [t.angle_deg for t in ticks[:3]] == [-60, -30, 0]
+    assert ticks[-1].highlight
+    assert ticks[-1].angle_deg == preview.frame_angle_deg
+
+
+def test_orientation_ticks_merge_crowded_hours_under_one_label() -> None:
+    preview = dataclasses.replace(
+        _preview(), orientation_track=_track(-44, -43, -40, 0)
+    )
+    labels = [t.label for t in frame_export.orientation_ticks(preview, BERLIN)]
+    # 23-01 lie within a few degrees: one label at the middle tick.
+    assert labels == ["", "23–01", "", "02", ""]
+
+
+def test_orientation_ticks_empty_without_a_track() -> None:
+    assert frame_export.orientation_ticks(_preview(), BERLIN) == []
+    assert frame_export.orientation_ticks(_preview(rig=EQ_RIG), BERLIN) == []
+
+
+def test_summary_lines_describe_the_night() -> None:
+    preview = dataclasses.replace(_preview(), orientation_track=_track(-60, -30, 0))
+    text = "\n".join(frame_export.summary_lines(preview, ALTAZ_RIG, [M31], BERLIN))
+    assert "Through the night: -60° at 23:00 → +0° at 01:00" in text
+
+
+@pytest.mark.parametrize(
+    ("dx", "dy", "expected"),
+    [
+        (1.0, 0.0, ("left", "center")),
+        (-1.0, 0.0, ("right", "center")),
+        (0.0, 1.0, ("center", "bottom")),
+        (0.0, -1.0, ("center", "top")),
+    ],
+)
+def test_text_anchor_extends_labels_away_from_their_line(dx, dy, expected) -> None:
+    assert frame_export.text_anchor(dx, dy) == expected
+
+
+def test_ring_sits_outside_the_frame_corners_and_inside_the_view() -> None:
+    preview = _preview()
+    corner_arcmin = max(math.hypot(*c) for c in preview.frame_corners)
+    ring = frame_export.orientation_ring_radius_arcmin(preview)
+    assert corner_arcmin < ring < frame_export.view_half_width_arcmin(preview, None)

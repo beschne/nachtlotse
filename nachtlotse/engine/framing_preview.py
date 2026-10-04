@@ -24,6 +24,12 @@ doesn't model camera rotation on an eq mount.
 
 The sensor's width is taken as the horizontal side (landscape), matching
 `Rig.fov_deg`'s (width, height) order.
+
+Since an alt-az frame keeps turning, a preview drawn at one moment only
+tells part of the story: given the night's dark window, `orientation_track`
+adds the frame angle at every full hour of it while the target clears the
+planner's minimum altitude — how far the frame turns before and after the
+moment drawn.
 """
 
 from __future__ import annotations
@@ -31,14 +37,18 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from astropy import units as u
 from astropy.coordinates import ICRS, AltAz, SkyCoord
 from astropy.time import Time
 
-from nachtlotse.engine import framing, grouping
-from nachtlotse.engine.constraints import build_fixed_target, build_observer
+from nachtlotse.engine import ephemeris, framing, grouping
+from nachtlotse.engine.constraints import (
+    DEFAULT_MIN_ALT_DEG,
+    build_fixed_target,
+    build_observer,
+)
 from nachtlotse.engine.models import Rig, Site, Target
 
 # How far `frame_angle_deg` steps toward the zenith to read off the "up"
@@ -64,6 +74,15 @@ class FramedObject:
 
 
 @dataclass(frozen=True)
+class FrameOrientation:
+    """The frame's orientation at one moment of the night."""
+
+    when: datetime
+    frame_angle_deg: float
+    alt_deg: float
+
+
+@dataclass(frozen=True)
 class FramingPreview:
     when: datetime
     center_ra_deg: float
@@ -86,6 +105,9 @@ class FramingPreview:
     # Exactly the value ranking used (`framing.fill_fraction_score`).
     fit: float
     objects: tuple[FramedObject, ...]
+    # Hourly orientations across the night (see `orientation_track`) —
+    # empty for an eq mount, or when no night was given.
+    orientation_track: tuple[FrameOrientation, ...] = ()
 
 
 def gnomonic_offset_arcmin(
@@ -137,6 +159,38 @@ def frame_angle_deg(rig: Rig, site: Site, target: Target, when: datetime) -> flo
     return 180.0 if wrapped == -180.0 else wrapped
 
 
+def orientation_track(
+    rig: Rig,
+    site: Site,
+    target: Target,
+    night_start: datetime,
+    night_end: datetime,
+    *,
+    min_alt_deg: float = DEFAULT_MIN_ALT_DEG,
+) -> tuple[FrameOrientation, ...]:
+    """The frame angle at every full hour within [night_start, night_end]
+    (typically `constraints.dark_window`) at which `target` stands at
+    least `min_alt_deg` high — below that the planner wouldn't shoot it,
+    so its orientation there means nothing. Empty for an eq mount, whose
+    frame doesn't turn."""
+    if rig.mount.kind != "altaz":
+        return ()
+    hour = night_start.replace(minute=0, second=0, microsecond=0)
+    if hour < night_start:
+        hour += timedelta(hours=1)
+    track: list[FrameOrientation] = []
+    while hour <= night_end:
+        alt_deg = ephemeris.altaz(site, target, hour).alt_deg
+        if alt_deg >= min_alt_deg:
+            track.append(
+                FrameOrientation(
+                    hour, frame_angle_deg(rig, site, target, hour), alt_deg
+                )
+            )
+        hour += timedelta(hours=1)
+    return tuple(track)
+
+
 def frame_corners(
     fov_width_arcmin: float, fov_height_arcmin: float, angle_deg: float
 ) -> tuple[tuple[float, float], ...]:
@@ -179,11 +233,14 @@ def framing_preview(
     when: datetime,
     *,
     neighbors: Sequence[Target] = (),
+    night: tuple[datetime, datetime] | None = None,
 ) -> FramingPreview:
     """Lay out `targets` (one target, or a co-visible group) in `rig`'s
     frame at `when`, plus any of `neighbors` (typically the whole catalog
     — the engine never loads it itself) whose position falls inside the
-    frame. Raises ValueError for an empty `targets`.
+    frame. Given `night` (the dark window's start and end), also the
+    hourly `orientation_track` across it. Raises ValueError for an empty
+    `targets`.
     """
     if not targets:
         raise ValueError("framing_preview needs at least one target")
@@ -237,4 +294,7 @@ def framing_preview(
         fill_fraction=span_arcmin / fov_short if span_arcmin > 0.0 else None,
         fit=framing.fill_fraction_score(span_arcmin, fov_short),
         objects=tuple(objects),
+        orientation_track=(
+            orientation_track(rig, site, center, *night) if night is not None else ()
+        ),
     )

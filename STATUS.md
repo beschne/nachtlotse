@@ -397,6 +397,14 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   takes the hour angle from J2000 RA without precession: ~1.7° off near
   the zenith (M31 at 81° altitude). Eq mounts: fixed frame, long side
   east–west (camera rotation isn't modeled).
+- Because an alt-az frame keeps turning, the preview also carries
+  `orientation_track`: the frame angle at every full hour of the dark
+  window while the target stands at least `DEFAULT_MIN_ALT_DEG` (20°)
+  high — empty for eq mounts. Both front ends draw it as a ring of hour
+  ticks around the frame, with the drawn moment highlighted; its time is
+  in the title and on the zenith arrow. Hours within 8° of each other
+  share one label ("23–02"), since early or late in the night the angle
+  can barely move per hour.
 - Tested against independent derivations: the textbook parallactic-angle
   formula on apparent (TETE) coordinates (constant ~0.04° offset — the
   ICRS-vs-true-of-date north tilt), astroplan away from the zenith, 0° at

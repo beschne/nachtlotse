@@ -83,6 +83,22 @@ class _SurveyWorker(QThread):
         self.succeeded.emit(image)
 
 
+def _draw_anchored_text(
+    painter: QPainter, point: QPointF, screen_dx: float, screen_dy: float, text: str
+) -> None:
+    """Text placed past the end of a line pointing (screen_dx, screen_dy)
+    — y up — extending away from it, per `frame_export.text_anchor` (the
+    same placement the PNG export uses)."""
+    ha, va = frame_export.text_anchor(screen_dx, screen_dy)
+    width, height = 120.0, 18.0
+    x = {"left": point.x(), "right": point.x() - width}.get(ha, point.x() - width / 2)
+    # Qt's y grows downward: "bottom" (text above the point) moves up.
+    y = {"bottom": point.y() - height, "top": point.y()}.get(va, point.y() - height / 2)
+    h_flag = {"left": Qt.AlignLeft, "right": Qt.AlignRight}.get(ha, Qt.AlignHCenter)
+    v_flag = {"bottom": Qt.AlignBottom, "top": Qt.AlignTop}.get(va, Qt.AlignVCenter)
+    painter.drawText(QRectF(x, y, width, height), h_flag | v_flag, text)
+
+
 class FramingCanvas(QWidget):
     """Paints a `FramingView`, optionally over a decoded survey image."""
 
@@ -128,6 +144,7 @@ class FramingCanvas(QWidget):
                 QRectF(cx - side / 2.0, cy - side / 2.0, side, side), self._qimage
             )
 
+        self._paint_orientation_ring(painter, to_px, scale, half)
         self._paint_frame(painter, to_px, half)
         self._paint_objects(painter, to_px, scale, half)
         self._paint_chrome(painter, to_px, half, scale)
@@ -170,12 +187,52 @@ class FramingCanvas(QWidget):
             )
         )
         painter.setFont(QFont(painter.font().family(), 10))
-        label_at = to_px(up[0] * (edge + length * 1.5), up[1] * (edge + length * 1.5))
-        painter.drawText(
-            QRectF(label_at.x() - 40, label_at.y() - 9, 80, 18),
-            Qt.AlignCenter,
-            "zenith",
+        label_at = to_px(up[0] * (edge + length * 1.2), up[1] * (edge + length * 1.2))
+        when_text = preview.when.astimezone(self._view.local_tz)
+        _draw_anchored_text(
+            painter, label_at, -up[0], up[1], f"zenith {when_text:%H:%M}"
         )
+
+    def _paint_orientation_ring(
+        self, painter: QPainter, to_px, scale: float, half: float
+    ) -> None:
+        """Hourly "up" directions across the night (see
+        `engine.framing_preview.orientation_track`) as ticks on a faint
+        ring just outside the frame's corners; the drawn moment's tick in
+        the frame color."""
+        preview = self._view.preview
+        ticks = frame_export.orientation_ticks(preview, self._view.local_tz)
+        if not ticks:
+            return
+        ring = frame_export.orientation_ring_radius_arcmin(preview)
+        chrome = QColor(frame_export.CHROME_COLOR)
+        faint = QColor(chrome)
+        faint.setAlpha(90)
+        painter.setPen(QPen(faint, 0.8))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(to_px(0.0, 0.0), ring * scale, ring * scale)
+
+        painter.setFont(QFont(painter.font().family(), 9))
+        tick_length = half * 0.035
+        for tick in ticks:
+            angle_rad = math.radians(tick.angle_deg)
+            up = (math.sin(angle_rad), math.cos(angle_rad))
+            outer = ring + tick_length * (1.6 if tick.highlight else 1.0)
+            color = QColor(frame_export.FRAME_COLOR) if tick.highlight else chrome
+            painter.setPen(QPen(color, 2.4 if tick.highlight else 1.3))
+            painter.drawLine(
+                to_px(up[0] * ring, up[1] * ring), to_px(up[0] * outer, up[1] * outer)
+            )
+            if tick.label:
+                painter.setPen(chrome)
+                label_r = outer + tick_length * 0.3
+                _draw_anchored_text(
+                    painter,
+                    to_px(up[0] * label_r, up[1] * label_r),
+                    -up[0],
+                    up[1],
+                    tick.label,
+                )
 
     def _paint_objects(
         self, painter: QPainter, to_px, scale: float, half: float
@@ -401,6 +458,7 @@ class FramingWindow(QDialog):
                 title=view.title,
                 caption_lines=view.summary_lines,
                 image=self._image,
+                local_tz=view.local_tz,
             )
         except (frame_export.FrameExportUnavailable, OSError) as exc:
             QMessageBox.critical(self, "Export failed", str(exc))

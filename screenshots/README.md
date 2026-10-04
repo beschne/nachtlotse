@@ -5,6 +5,11 @@
 top of the main [README.md](../README.md). No illustrative/fake data;
 same rule the GUI itself follows.
 
+`gui-framing.png` is the framing preview window for the top shortlist
+entry of the same night, with the alt-az ZWO Seestar S30 Pro instead —
+embedded in README.md's Native GUI section. It fetches a real DSS2 sky
+image (or reuses `.cache/sky_survey/`).
+
 `gui-best-sky.png` is the same real run's Best sky tab (Center defaulted
 to the same site as the other two) — kept here for reference, not
 currently embedded in README.md.
@@ -32,7 +37,7 @@ To capture a different site/rig/date combination, edit `SITE_NAME`,
 `RIG_NAME`, and `TARGET_DATE` at the top of `update_screenshots.py` —
 whatever you pick must already exist in your own `sites_local.yaml`/
 `rigs_local.yaml`. Update the caption text in README.md's screenshot
-block to match; the script only overwrites the three PNGs, not that text.
+blocks to match; the script only overwrites the four PNGs, not that text.
 
 Images are resized to 1600px wide (`sips -Z`) to keep the repo
 reasonable — full native screen resolution isn't needed for a README.

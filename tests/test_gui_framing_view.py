@@ -60,7 +60,7 @@ def test_window_shows_the_entry_and_falls_back_without_a_sky_image(
     window.show_entry(_night_plan([ranked]), ranked, BERLIN)
     _wait_for_workers(window, qapp)  # the suite is offline (see conftest)
 
-    assert window._title.text() == "TA1 target a — Test Rig"
+    assert window._title.text().startswith("TA1 target a — Test Rig · ")
     assert window._summary.text().startswith("Frame: ")
     assert "Sky image unavailable" in window._status.text()
     assert not window.canvas.grab().isNull()

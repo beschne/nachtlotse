@@ -9,12 +9,12 @@ finding the window on screen and hoping the coordinates still matched
 after any resize/reposition; this doesn't, since the script already
 holds the `MainWindow` object it's capturing.
 
-Only `gui-shortlist.png` and `gui-sky-chart.png` are embedded in
-README.md; `gui-best-sky.png` and `gui-framing.png` (the framing preview
-window for the top shortlist entry, with the alt-az Seestar) are kept
-here for reference only (not embedded anywhere) — still regenerated
-alongside the other two so they don't go stale unnoticed. The framing
-capture fetches a real DSS2 sky image (or reuses `.cache/sky_survey/`).
+`gui-shortlist.png`, `gui-sky-chart.png`, and `gui-framing.png` (the
+framing preview window for the top shortlist entry, with the alt-az
+Seestar) are embedded in README.md; `gui-best-sky.png` is kept here for
+reference only (not embedded anywhere) — still regenerated alongside the
+others so it doesn't go stale unnoticed. The framing capture fetches a
+real DSS2 sky image (or reuses `.cache/sky_survey/`).
 
 Needs `screencapture` (macOS, always present) and `pyobjc-framework-
 Quartz` (to look up the window's CGWindowID — not part of the `gui`

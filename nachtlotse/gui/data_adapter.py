@@ -486,6 +486,8 @@ class FramingView:
     summary_lines: tuple[str, ...]
     # The survey cutout to request as backdrop (see `sky_survey`).
     cutout_fov_deg: float
+    # For the times drawn on the canvas (zenith arrow, ring hours).
+    local_tz: ZoneInfo
 
 
 def build_framing_view(
@@ -501,9 +503,10 @@ def build_framing_view(
         targets,
         ranked.best_time,  # type: ignore[attr-defined]
         neighbors=catalog.CATALOG,
+        night=(plan.evening_start, plan.morning_end),
     )
     return FramingView(
-        title=f"{' + '.join(target_label(t) for t in targets)} — {plan.rig.name}",
+        title=frame_export.preview_title(targets, plan.rig, preview, local_tz),
         targets=targets,
         preview=preview,
         summary_lines=tuple(
@@ -512,4 +515,5 @@ def build_framing_view(
         cutout_fov_deg=sky_survey.cutout_fov_deg(
             preview.fov_width_arcmin, preview.fov_height_arcmin
         ),
+        local_tz=local_tz,
     )

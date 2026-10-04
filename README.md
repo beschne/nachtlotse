@@ -129,7 +129,10 @@ cp nachtlotse/data/prose_local.template.yaml nachtlotse/data/prose_local.yaml
 # frame shows how a target sits in your rig's field of view at its best
 # time tonight: the frame (rotated as an alt-az mount holds it), the
 # target and any catalog neighbors inside it, over a DSS2 sky image when
-# online. Several targets are framed together if they fit one frame.
+# online. An alt-az frame keeps turning through the night, so a ring of
+# hour ticks shows where its top edge points at each full hour of
+# astronomical night; the moment drawn is in the title. Several targets
+# are framed together if they fit one frame.
 # Prints the numbers and writes a PNG (needs the charts extra, like
 # --chart) to nachtlotse-frame-<target>.png in the current directory —
 # catalog IDs without spaces, several joined by "+", e.g.
@@ -231,6 +234,12 @@ starred favorites. See [ROADMAP.md](./ROADMAP.md) for the toolkit
 decision (PySide6 over PyObjC/AppKit) and what's still open (an in-app
 sites/rigs editor, a GUI catalog/favorites tab, GUI-side exports, among
 others).
+
+<p align="center">
+  <img src="screenshots/gui-framing.png" alt="Nachtlotse GUI: the framing preview window" width="60%">
+</p>
+
+<p align="center"><sub>The framing preview — Sh2-129 with the ZWO Seestar S30 Pro (alt-az) at its best time, 22:09 on September 25, over the DSS2 sky image. The hour ticks around the frame show it turning through the night: Sh2-129 passes close to the zenith.</sub></p>
 
 ## Architecture
 

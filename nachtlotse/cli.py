@@ -388,9 +388,9 @@ def _cmd_frame(
     print(f"Nachtlotse — framing {label}")
     print(f"{site.name} · {rig.name}")
 
+    evening_start, morning_end = constraints.dark_window(site, now)
     best = planning.best_time_for(site, rig, targets, now)
     if best is None:
-        evening_start, morning_end = constraints.dark_window(site, now)
         frame_time = evening_start + (morning_end - evening_start) / 2
         print(
             "Not observable tonight (altitude, horizon, moon, or field "
@@ -405,7 +405,12 @@ def _cmd_frame(
         )
 
     preview = framing_preview.framing_preview(
-        site, rig, targets, frame_time, neighbors=catalog.CATALOG
+        site,
+        rig,
+        targets,
+        frame_time,
+        neighbors=catalog.CATALOG,
+        night=(evening_start, morning_end),
     )
     caption = frame_export.summary_lines(preview, rig, targets, local_tz)
     for line in caption:
@@ -430,9 +435,10 @@ def _cmd_frame(
         frame_export.save_framing_preview(
             preview,
             path,
-            title=f"{label} — {rig.name}",
+            title=frame_export.preview_title(targets, rig, preview, local_tz),
             caption_lines=caption,
             image=image,
+            local_tz=local_tz,
         )
     except frame_export.FrameExportUnavailable as exc:
         print(f"\n{exc}", file=sys.stderr)

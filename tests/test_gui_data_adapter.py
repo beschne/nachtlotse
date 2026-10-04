@@ -510,7 +510,7 @@ def test_build_framing_view_frames_an_entry_at_its_own_best_time() -> None:
     ranked = RankedTarget(_TARGET_A, _WHEN, _pos(60.0, 90.0), 1.0, 1.0)
     view = data_adapter.build_framing_view(_night_plan([ranked]), ranked, BERLIN)
 
-    assert view.title == "TA1 target a — Test Rig"
+    assert view.title == "TA1 target a — Test Rig · Mon 21 Sep, 00:00 CEST"
     assert view.targets == (_TARGET_A,)
     assert view.preview.when == _WHEN
     assert (view.preview.center_ra_deg, view.preview.center_dec_deg) == (10.0, 20.0)
@@ -532,7 +532,9 @@ def test_build_framing_view_frames_a_group_around_its_centroid() -> None:
     )
     view = data_adapter.build_framing_view(_night_plan([group]), group, BERLIN)
 
-    assert view.title == "TA1 target a + TB2 target b — Test Rig"
+    assert view.title == (
+        "TA1 target a + TB2 target b — Test Rig · Mon 21 Sep, 00:00 CEST"
+    )
     assert {obj.target for obj in view.preview.objects if obj.primary} == {
         _TARGET_A,
         _TARGET_B,

@@ -19,10 +19,12 @@ from __future__ import annotations
 import io
 import math
 from collections.abc import Sequence
-from datetime import tzinfo
+from dataclasses import dataclass
+from datetime import UTC, tzinfo
 from pathlib import Path
 
 from nachtlotse import sky_survey
+from nachtlotse.engine.constraints import DEFAULT_MIN_ALT_DEG
 from nachtlotse.engine.framing_preview import FramingPreview
 from nachtlotse.engine.models import Rig, Target
 
@@ -71,6 +73,17 @@ def _format_size(target: Target) -> str:
     )
 
 
+def preview_title(
+    targets: Sequence[Target], rig: Rig, preview: FramingPreview, local_tz: tzinfo
+) -> str:
+    """e.g. "M31 Andromeda Galaxy — ZWO Seestar S30 Pro · Mon 05 Oct, 01:14
+    CEST": the moment drawn belongs in the title, since an alt-az frame
+    only looks like this at that time."""
+    label = " + ".join(f"{t.catalog_id} {t.name}".strip() for t in targets)
+    local_time = preview.when.astimezone(local_tz)
+    return f"{label} — {rig.name} · {local_time:%a %d %b, %H:%M %Z}"
+
+
 def summary_lines(
     preview: FramingPreview, rig: Rig, targets: Sequence[Target], local_tz: tzinfo
 ) -> list[str]:
@@ -102,6 +115,15 @@ def summary_lines(
             f"Orientation at {local_time:%H:%M %Z}: frame top toward the zenith at "
             f"{preview.frame_angle_deg:+.0f}° (N through E) · rotating "
             f"{preview.rotation_rate_deg_per_min:.2f}°/min"
+        )
+    track = preview.orientation_track
+    if track:
+        first, last = track[0], track[-1]
+        lines.append(
+            f"Through the night: {first.frame_angle_deg:+.0f}° at "
+            f"{first.when.astimezone(local_tz):%H:%M} → {last.frame_angle_deg:+.0f}° "
+            f"at {last.when.astimezone(local_tz):%H:%M} (ticks: hourly, "
+            f"astronomical night, altitude ≥ {DEFAULT_MIN_ALT_DEG:.0f}°)"
         )
 
     neighbors = [obj.target for obj in preview.objects if not obj.primary]
@@ -135,6 +157,77 @@ def labels_below(preview: FramingPreview) -> bool:
     return math.cos(math.radians(preview.frame_angle_deg)) >= 0.0
 
 
+@dataclass(frozen=True)
+class OrientationTick:
+    """One tick on the orientation ring: the frame's "up" direction (N
+    through E) at one moment."""
+
+    angle_deg: float
+    label: str
+    # The moment the frame itself is drawn for.
+    highlight: bool
+
+
+# Hour ticks closer together than this share one label ("23–01") —
+# early or late in the night the angle can barely move per hour.
+_TICK_LABEL_MIN_SEPARATION_DEG = 8.0
+
+
+def orientation_ticks(
+    preview: FramingPreview, local_tz: tzinfo
+) -> list[OrientationTick]:
+    """The ring's ticks: one per `preview.orientation_track` hour, plus an
+    unlabeled highlighted one for the drawn moment (its time is on the
+    zenith arrow and in the title). Consecutive hours within
+    `_TICK_LABEL_MIN_SEPARATION_DEG` of a run's first tick form one run,
+    labeled once, at its middle tick, with its first and last hour.
+    Empty without a track (eq mount, or no night given)."""
+    track = preview.orientation_track
+    if not track:
+        return []
+
+    runs: list[list[int]] = []
+    for index, orientation in enumerate(track):
+        if runs:
+            first = track[runs[-1][0]].frame_angle_deg
+            gap = abs((orientation.frame_angle_deg - first + 180.0) % 360.0 - 180.0)
+            if gap < _TICK_LABEL_MIN_SEPARATION_DEG:
+                runs[-1].append(index)
+                continue
+        runs.append([index])
+
+    labels = [""] * len(track)
+    for run in runs:
+        first_hour = f"{track[run[0]].when.astimezone(local_tz):%H}"
+        last_hour = f"{track[run[-1]].when.astimezone(local_tz):%H}"
+        labels[run[len(run) // 2]] = (
+            first_hour if len(run) == 1 else f"{first_hour}–{last_hour}"
+        )
+
+    ticks = [
+        OrientationTick(o.frame_angle_deg, label, highlight=False)
+        for o, label in zip(track, labels, strict=True)
+    ]
+    ticks.append(OrientationTick(preview.frame_angle_deg, "", highlight=True))
+    return ticks
+
+
+def orientation_ring_radius_arcmin(preview: FramingPreview) -> float:
+    """Just outside the frame's corners, so ticks never cross the frame
+    whatever its rotation — and inside the survey cutout, which holds
+    the diagonal plus a margin (see `sky_survey.cutout_fov_deg`)."""
+    return math.hypot(preview.fov_width_arcmin, preview.fov_height_arcmin) / 2.0 * 1.03
+
+
+def text_anchor(screen_dx: float, screen_dy: float) -> tuple[str, str]:
+    """matplotlib-style (ha, va) for a label placed past the end of a
+    line pointing (screen_dx, screen_dy) — screen axes, y up — so the
+    text extends away from the line instead of across it."""
+    ha = "left" if screen_dx > 0.4 else "right" if screen_dx < -0.4 else "center"
+    va = "bottom" if screen_dy > 0.4 else "top" if screen_dy < -0.4 else "center"
+    return ha, va
+
+
 def _import_matplotlib():
     """The lazy-import seam, factored out so tests can force the
     "matplotlib missing" path without needing to actually uninstall it."""
@@ -161,9 +254,11 @@ def save_framing_preview(
     title: str,
     caption_lines: Sequence[str],
     image: sky_survey.SurveyImage | None = None,
+    local_tz: tzinfo | None = None,
 ) -> None:
     """Render `preview` as a PNG to `path`, overwriting whatever was
-    there, with `image` as the backdrop if given. Raises
+    there, with `image` as the backdrop if given. `local_tz` labels the
+    zenith arrow and the orientation ring's hours (UTC if omitted). Raises
     `FrameExportUnavailable` if matplotlib isn't installed.
     """
     try:
@@ -221,15 +316,56 @@ def save_framing_preview(
                 zorder=3,
             )
         )
+        ha, va = text_anchor(-up[0], up[1])
+        when_text = preview.when.astimezone(local_tz or UTC)
         ax.annotate(
-            "zenith",
-            (end[0] + up[0] * length * 0.4, end[1] + up[1] * length * 0.4),
+            f"zenith {when_text:%H:%M}",
+            (end[0] + up[0] * length * 0.2, end[1] + up[1] * length * 0.2),
             color=FRAME_COLOR,
             fontsize=8,
-            ha="center",
-            va="center",
+            ha=ha,
+            va=va,
             zorder=4,
         )
+
+    ticks = orientation_ticks(preview, local_tz or UTC)
+    if ticks:
+        ring = orientation_ring_radius_arcmin(preview)
+        ax.add_patch(
+            Circle(
+                (0.0, 0.0),
+                ring,
+                fill=False,
+                edgecolor=CHROME_COLOR,
+                linewidth=0.6,
+                alpha=0.35,
+                zorder=3,
+            )
+        )
+        tick_length = half * 0.035
+        for tick in ticks:
+            angle_rad = math.radians(tick.angle_deg)
+            up = (math.sin(angle_rad), math.cos(angle_rad))
+            outer = ring + tick_length * (1.6 if tick.highlight else 1.0)
+            ax.plot(
+                [up[0] * ring, up[0] * outer],
+                [up[1] * ring, up[1] * outer],
+                color=FRAME_COLOR if tick.highlight else CHROME_COLOR,
+                linewidth=2.2 if tick.highlight else 1.2,
+                zorder=4,
+            )
+            if tick.label:
+                ha, va = text_anchor(-up[0], up[1])
+                label_r = outer + tick_length * 0.3
+                ax.annotate(
+                    tick.label,
+                    (up[0] * label_r, up[1] * label_r),
+                    color=CHROME_COLOR,
+                    fontsize=7,
+                    ha=ha,
+                    va=va,
+                    zorder=4,
+                )
 
     below = labels_below(preview)
     for obj in preview.objects:

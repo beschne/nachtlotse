@@ -10,6 +10,7 @@ and, away from the zenith, against astroplan's own `parallactic_angle`.
 
 from __future__ import annotations
 
+import itertools
 import math
 from datetime import UTC, datetime, timedelta
 
@@ -18,7 +19,7 @@ from astropy import units as u
 from astropy.coordinates import TETE, SkyCoord
 from astropy.time import Time
 
-from nachtlotse.engine import framing, framing_preview, grouping
+from nachtlotse.engine import constraints, framing, framing_preview, grouping
 from nachtlotse.engine.constraints import build_fixed_target, build_observer
 from nachtlotse.engine.models import Target
 from tests.test_framing import ALTAZ_RIG, EQ_RIG, SITE
@@ -251,3 +252,50 @@ def test_preview_with_unknown_size_has_no_fill_fraction() -> None:
 def test_preview_needs_at_least_one_target() -> None:
     with pytest.raises(ValueError):
         framing_preview.framing_preview(SITE, ALTAZ_RIG, [], WHEN)
+
+
+# --- orientation through the night ----------------------------------------
+
+NIGHT = constraints.dark_window(SITE, datetime(2026, 9, 12, 12, 0, tzinfo=UTC))
+
+
+def test_orientation_track_samples_full_hours_inside_the_night() -> None:
+    track = framing_preview.orientation_track(ALTAZ_RIG, SITE, M31, *NIGHT)
+
+    assert len(track) >= 6  # M31 is up most of a September night
+    for orientation in track:
+        assert NIGHT[0] <= orientation.when <= NIGHT[1]
+        assert (orientation.when.minute, orientation.when.second) == (0, 0)
+        assert orientation.frame_angle_deg == pytest.approx(
+            framing_preview.frame_angle_deg(ALTAZ_RIG, SITE, M31, orientation.when)
+        )
+    hours = [o.when for o in track]
+    assert all(b - a == timedelta(hours=1) for a, b in itertools.pairwise(hours))
+
+
+def test_orientation_track_skips_hours_below_the_minimum_altitude() -> None:
+    full = framing_preview.orientation_track(
+        ALTAZ_RIG, SITE, M42, *NIGHT, min_alt_deg=-90.0
+    )
+    gated = framing_preview.orientation_track(ALTAZ_RIG, SITE, M42, *NIGHT)
+
+    # M42 only rises late on a September night: the gate drops the early hours.
+    assert len(gated) < len(full)
+    assert all(o.alt_deg >= constraints.DEFAULT_MIN_ALT_DEG for o in gated)
+
+
+def test_orientation_track_is_empty_for_an_eq_mount() -> None:
+    assert framing_preview.orientation_track(EQ_RIG, SITE, M31, *NIGHT) == ()
+
+
+def test_preview_carries_the_track_only_when_given_a_night() -> None:
+    assert (
+        framing_preview.framing_preview(SITE, ALTAZ_RIG, [M31], WHEN).orientation_track
+        == ()
+    )
+    with_night = framing_preview.framing_preview(
+        SITE, ALTAZ_RIG, [M31], WHEN, night=NIGHT
+    )
+    assert with_night.orientation_track == framing_preview.orientation_track(
+        ALTAZ_RIG, SITE, M31, *NIGHT
+    )
