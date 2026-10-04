@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from astropy import units as u
 from astropy.coordinates import EarthLocation, get_body
 from astropy.time import Time
@@ -147,6 +148,9 @@ def test_best_time_tonight_returns_a_horizon_clearing_position_when_open() -> No
     assert constraints.clears_horizon(BAD_HOMBURG, pos) is True
 
 
+# ERFA flags any UTC date past its leap-second table as a "dubious year" —
+# expected here, since the date is deliberately far in the future.
+@pytest.mark.filterwarnings("ignore::erfa.ErfaWarning")
 def test_stale_iers_table_does_not_block_planning() -> None:
     """Regression: the bundled IERS table ages; astropy must not raise on it."""
     from astropy.utils import iers
