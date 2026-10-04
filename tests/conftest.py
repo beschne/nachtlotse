@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from nachtlotse import sky_survey
+from nachtlotse import events, sky_survey
 from nachtlotse.data import store
+from nachtlotse.events import _http as events_http
 from nachtlotse.weather import open_meteo
 
 
@@ -83,6 +84,25 @@ def _offline_sky_survey(
 
     monkeypatch.setattr(sky_survey, "DEFAULT_CACHE_DIR", tmp_path / "sky_survey")
     monkeypatch.setattr(sky_survey, "fetch_cutout", _unavailable)
+
+
+@pytest.fixture(autouse=True)
+def _offline_events(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Keep current-events sources (MPC, COBS, ...) offline and out of the
+    real `.cache/events/`: every test gets an empty cache directory, and
+    every download fails as if the network were down. Skipped for
+    test_events.py, which tests the clients themselves with its own mocks.
+    """
+    if request.module.__name__.rsplit(".", 1)[-1] == "test_events":
+        return
+
+    def _unavailable(url: str, source: str) -> bytes:
+        raise events.EventsUnavailable(f"{source}: offline (test suite)")
+
+    monkeypatch.setattr(events, "DEFAULT_CACHE_DIR", tmp_path / "events")
+    monkeypatch.setattr(events_http, "get", _unavailable)
 
 
 @pytest.fixture
