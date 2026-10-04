@@ -347,3 +347,11 @@ def test_generate_nightly_briefing_wraps_a_request_failure(
     )
     with pytest.raises(prose.ProseUnavailable, match="network down"):
         prose.generate_nightly_briefing(_night_plan([ranked]))
+
+
+def test_build_briefing_facts_states_a_nautical_only_night() -> None:
+    from dataclasses import replace
+
+    plan = replace(_night_plan([]), darkness="nautical")
+    assert "no astronomical darkness tonight" in prose.build_briefing_facts(plan)
+    assert "Darkness:" not in prose.build_briefing_facts(_night_plan([]))

@@ -120,6 +120,12 @@ class Rig:
 # A target can carry more than one — e.g. M42 is both an emission and a
 # reflection nebula, and a Local Group member is both a galaxy and (if
 # catalogued as part of one) a galaxy_group.
+# How dark a night's dark window is: "astronomical" (Sun below -18°), or
+# "nautical" (below -12°) — the fallback for nights that never get
+# astronomically dark, around midsummer at mid-northern latitudes (see
+# `engine.constraints.dark_window`).
+Darkness = Literal["astronomical", "nautical"]
+
 TargetType = Literal[
     "emission_nebula",
     "reflection_nebula",

@@ -541,3 +541,13 @@ def test_build_framing_view_frames_a_group_around_its_centroid() -> None:
     }
     assert view.preview.center_ra_deg == pytest.approx(10.5, abs=0.01)
     assert any(line.startswith("Group span") for line in view.summary_lines)
+
+
+def test_build_header_summary_flags_a_nautical_only_night() -> None:
+    plan = replace(_night_plan([]), darkness="nautical")
+    summary = data_adapter.build_header_summary(plan, BERLIN)
+    assert summary.dark_window_text.endswith(
+        "(nautical only — no astronomical darkness)"
+    )
+    plain = data_adapter.build_header_summary(_night_plan([]), BERLIN)
+    assert "nautical" not in plain.dark_window_text

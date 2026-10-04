@@ -130,8 +130,8 @@ cp nachtlotse/data/prose_local.template.yaml nachtlotse/data/prose_local.yaml
 # time tonight: the frame (rotated as an alt-az mount holds it), the
 # target and any catalog neighbors inside it, over a DSS2 sky image when
 # online. An alt-az frame keeps turning through the night, so a ring of
-# hour ticks shows where its top edge points at each full hour of
-# astronomical night; the moment drawn is in the title. Several targets
+# hour ticks shows where its top edge points at each full hour of the
+# dark window; the moment drawn is in the title. Several targets
 # are framed together if they fit one frame.
 # Prints the numbers and writes a PNG (needs the charts extra, like
 # --chart) to nachtlotse-frame-<target>.png in the current directory —

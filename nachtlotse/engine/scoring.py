@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from nachtlotse.engine.models import Verdict, WeatherSummary
+from nachtlotse.engine.models import Darkness, Verdict, WeatherSummary
 
 _Level = Literal["GO", "MARGINAL", "SKIP"]
 
@@ -42,7 +42,10 @@ _LEVEL_ORDER = {"GO": 0, "MARGINAL": 1, "SKIP": 2}
 
 
 def verdict_for_target(
-    alt_deg: float, *, weather: WeatherSummary | None = None
+    alt_deg: float,
+    *,
+    weather: WeatherSummary | None = None,
+    darkness: Darkness = "astronomical",
 ) -> Verdict:
     """GO/MARGINAL/SKIP for a target at its best altitude tonight.
 
@@ -52,6 +55,11 @@ def verdict_for_target(
     shortlisted target (see `planning.plan_night`), not once for the night
     as a whole — two targets in the same shortlist can land on different
     verdicts if their altitudes differ.
+
+    `darkness` is the night's darkness level (`constraints.darkness`): a
+    night that only gets nautically dark (Sun below -12°, around midsummer)
+    caps every verdict at MARGINAL — the sky background stays noticeably
+    brighter than in a real astronomical night, however clear it is.
     """
     level: _Level = "GO"
     reasons: list[str] = []
@@ -87,6 +95,13 @@ def verdict_for_target(
                 "MARGINAL",
                 f"dew risk (only {weather.min_dew_point_spread_c:.1f}°C above dew point)",
             )
+
+    if darkness == "nautical":
+        downgrade(
+            "MARGINAL",
+            "no astronomical darkness tonight — nautical twilight only "
+            "(Sun below -12°, not -18°)",
+        )
 
     if alt_deg < MARGINAL_ALTITUDE_DEG:
         downgrade("MARGINAL", f"target only reaches {alt_deg:.0f}° altitude")

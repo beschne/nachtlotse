@@ -155,6 +155,21 @@ def _print_prose_briefing(
     return None
 
 
+def _dark_window_line(
+    plan: planning.NightPlan | planning.NightPlanForBestRig, local_tz: ZoneInfo
+) -> str:
+    nautical_note = (
+        " (nautical only — no astronomical darkness tonight)"
+        if plan.darkness == "nautical"
+        else ""
+    )
+    return (
+        f"Dark window: {plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
+        f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}{nautical_note}  ·  "
+        f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
+    )
+
+
 def _cmd_plan(
     site_name: str | None,
     rig_name: str | None,
@@ -203,14 +218,14 @@ def _cmd_plan(
         return _cmd_plan_best_rig(site, now, type_filter, limit, local_tz, want_prose)
 
     rig = rig_record.rig
-    plan = planning.plan_night(site, rig, now, types=type_filter, limit=limit)
+    try:
+        plan = planning.plan_night(site, rig, now, types=type_filter, limit=limit)
+    except constraints.NoDarkWindow as exc:
+        print(exc, file=sys.stderr)
+        return 2
 
     print(f"Nachtlotse — {site.name} ({rig.name})")
-    print(
-        f"Dark window: {plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
-        f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}  ·  "
-        f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
-    )
+    print(_dark_window_line(plan, local_tz))
     print(_format_weather_line(plan.weather))
     hourly_line = _hourly_cloud_cover_line(plan.hourly_cloud_cover, local_tz)
     if hourly_line is not None:
@@ -288,16 +303,16 @@ def _cmd_plan_best_rig(
         return 2
     rigs = store.load_rigs()
 
-    plan = planning.plan_night_for_best_rig(
-        site, rigs, when, types=type_filter, limit=limit
-    )
+    try:
+        plan = planning.plan_night_for_best_rig(
+            site, rigs, when, types=type_filter, limit=limit
+        )
+    except constraints.NoDarkWindow as exc:
+        print(exc, file=sys.stderr)
+        return 2
 
     print(f"Nachtlotse — {site.name} (best rig per target, {len(rigs)} configured)")
-    print(
-        f"Dark window: {plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
-        f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}  ·  "
-        f"Moon: {plan.moon_illumination_pct:.0f}% illuminated"
-    )
+    print(_dark_window_line(plan, local_tz))
     print(_format_weather_line(plan.weather))
     hourly_line = _hourly_cloud_cover_line(plan.hourly_cloud_cover, local_tz)
     if hourly_line is not None:
@@ -388,7 +403,11 @@ def _cmd_frame(
     print(f"Nachtlotse — framing {label}")
     print(f"{site.name} · {rig.name}")
 
-    evening_start, morning_end = constraints.dark_window(site, now)
+    try:
+        evening_start, morning_end = constraints.dark_window(site, now)
+    except constraints.NoDarkWindow as exc:
+        print(exc, file=sys.stderr)
+        return 2
     best = planning.best_time_for(site, rig, targets, now)
     if best is None:
         frame_time = evening_start + (morning_end - evening_start) / 2
@@ -536,7 +555,9 @@ def _cmd_rigs() -> int:
 
 def _format_site_sky_line(rank: int, report: best_sky.SiteSkyReport) -> str:
     site = report.site
-    if report.weather is None:
+    if report.weather_unavailable_reason == "no_dark_window":
+        weather_part = "no dark window that night"
+    elif report.weather is None:
         weather_part = "weather: unavailable"
     else:
         weather_part = (

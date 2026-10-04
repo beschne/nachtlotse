@@ -693,3 +693,30 @@ def test_frame_command_reports_the_setup_hint_when_matplotlib_is_missing(
     monkeypatch.setattr(frame_export, "save_framing_preview", _unavailable)
     assert cli.main(["frame", "M31", "--out", str(tmp_path / "x.png")]) == 2
     assert "--extra charts" in capsys.readouterr().err
+
+
+def test_plan_command_flags_a_nautical_only_midsummer_night(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["plan", "--date", "2026-06-21"]) == 0
+    output = capsys.readouterr().out
+    assert "nautical only — no astronomical darkness tonight" in output
+    assert "nautical twilight only" in output  # in the verdict reasons
+
+
+def test_plan_command_reports_a_missing_dark_window_cleanly(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from nachtlotse.engine import constraints
+
+    def no_night(*_args, **_kwargs):
+        raise constraints.NoDarkWindow("No dark window around 2026-06-21")
+
+    monkeypatch.setattr(planning, "plan_night", no_night)
+    assert cli.main(["plan", "--date", "2026-06-21"]) == 2
+    assert "No dark window" in capsys.readouterr().err

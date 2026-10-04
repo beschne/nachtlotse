@@ -20,6 +20,7 @@ from astropy.time import Time
 from nachtlotse.data.catalog import CATALOG
 from nachtlotse.engine import constraints, ephemeris, framing, grouping, scoring
 from nachtlotse.engine.models import (
+    Darkness,
     Rig,
     Site,
     Target,
@@ -115,6 +116,9 @@ class NightPlan:
     # when a favorite is why. Empty only when no catalog target clears
     # constraints tonight at all.
     shortlist: list[ShortlistEntry]
+    # "nautical" on a night without astronomical darkness (midsummer) —
+    # see `constraints.dark_window`; verdicts are capped accordingly.
+    darkness: Darkness = "astronomical"
 
 
 def _rotation_gate(
@@ -528,6 +532,7 @@ def plan_night(
     `limit` is passed straight through to `rank_targets` — see there.
     """
     evening_start, morning_end = constraints.dark_window(site, when)
+    darkness = constraints.darkness(site, when)
     illumination_pct = moon_illumination(Time(when)) * 100
     moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
@@ -536,7 +541,10 @@ def plan_night(
 
     shortlist = [
         ShortlistEntry(
-            row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather)
+            row,
+            scoring.verdict_for_target(
+                row.pos.alt_deg, weather=weather, darkness=darkness
+            ),
         )
         for row in _fold_favorites_into_shortlist(ranked)
     ]
@@ -553,6 +561,7 @@ def plan_night(
         hourly_cloud_cover=hourly_cloud_cover,
         ranked=ranked,
         shortlist=shortlist,
+        darkness=darkness,
     )
 
 
@@ -581,6 +590,9 @@ class NightPlanForBestRig:
     hourly_cloud_cover: list[open_meteo.HourlyWeather]
     ranked: list[RankedTargetForBestRig]
     shortlist: list[BestRigShortlistEntry]
+    # "nautical" on a night without astronomical darkness (midsummer) —
+    # see `constraints.dark_window`; verdicts are capped accordingly.
+    darkness: Darkness = "astronomical"
 
 
 def plan_night_for_best_rig(
@@ -595,6 +607,7 @@ def plan_night_for_best_rig(
     target instead of one for the whole plan; no grouping).
     """
     evening_start, morning_end = constraints.dark_window(site, when)
+    darkness = constraints.darkness(site, when)
     illumination_pct = moon_illumination(Time(when)) * 100
     moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
@@ -603,7 +616,10 @@ def plan_night_for_best_rig(
 
     shortlist = [
         BestRigShortlistEntry(
-            row, scoring.verdict_for_target(row.pos.alt_deg, weather=weather)
+            row,
+            scoring.verdict_for_target(
+                row.pos.alt_deg, weather=weather, darkness=darkness
+            ),
         )
         for row in _fold_favorites_into_shortlist(ranked)
     ]
@@ -619,4 +635,5 @@ def plan_night_for_best_rig(
         hourly_cloud_cover=hourly_cloud_cover,
         ranked=ranked,
         shortlist=shortlist,
+        darkness=darkness,
     )

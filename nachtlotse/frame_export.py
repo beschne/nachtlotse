@@ -122,8 +122,8 @@ def summary_lines(
         lines.append(
             f"Through the night: {first.frame_angle_deg:+.0f}° at "
             f"{first.when.astimezone(local_tz):%H:%M} → {last.frame_angle_deg:+.0f}° "
-            f"at {last.when.astimezone(local_tz):%H:%M} (ticks: hourly, "
-            f"astronomical night, altitude ≥ {DEFAULT_MIN_ALT_DEG:.0f}°)"
+            f"at {last.when.astimezone(local_tz):%H:%M} (ticks: hourly through "
+            f"the dark window, altitude ≥ {DEFAULT_MIN_ALT_DEG:.0f}°)"
         )
 
     neighbors = [obj.target for obj in preview.objects if not obj.primary]

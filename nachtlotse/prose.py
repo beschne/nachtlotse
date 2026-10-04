@@ -130,6 +130,11 @@ def build_briefing_facts(plan: NightPlan | NightPlanForBestRig) -> str:
         f"Dark window: {plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} "
         f"to {plan.morning_end.astimezone(local_tz):%H:%M %Z}."
     )
+    if plan.darkness == "nautical":
+        lines.append(
+            "Darkness: no astronomical darkness tonight — the dark window is "
+            "nautical twilight only (Sun below -12°, not -18°)."
+        )
     lines.append(f"Moon illumination: {plan.moon_illumination_pct:.0f}%.")
     lines.append(_weather_line(plan.weather))
     lines.append("")

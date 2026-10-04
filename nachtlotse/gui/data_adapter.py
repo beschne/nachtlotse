@@ -217,11 +217,15 @@ def build_header_summary(
     if event_text:
         moon_text = f"{moon_text} · {event_text}"
 
+    dark_window_text = (
+        f"{plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
+        f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}"
+    )
+    if plan.darkness == "nautical":
+        dark_window_text += " (nautical only — no astronomical darkness)"
+
     return HeaderSummary(
-        dark_window_text=(
-            f"{plan.evening_start.astimezone(local_tz):%Y-%m-%d %H:%M} – "
-            f"{plan.morning_end.astimezone(local_tz):%H:%M %Z}"
-        ),
+        dark_window_text=dark_window_text,
         moon_text=moon_text,
         weather_text=weather_line(plan.weather),
         counts_text=(
@@ -422,6 +426,8 @@ def build_best_sky_rows(
             # `WeatherUnavailableReason`), a routine, not-alarming case
             # for a date picked far ahead.
             clouds_text = "Beyond forecast range"
+        elif report.weather_unavailable_reason == "no_dark_window":
+            clouds_text = "No dark window that night"
         else:
             # Same phrasing `weather_line` uses for the main plan's own
             # header (just without its parenthetical — this is a table

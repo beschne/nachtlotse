@@ -69,6 +69,17 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
 
 - Astronomical-twilight dark window, altitude/night/moon-separation gating
   via `astroplan`.
+- Nights without astronomical darkness (the Sun never below −18° — about
+  six weeks around midsummer at 50°N, e.g. May 30 – July 13 at the
+  Volkssternwarte Hochtaunus) fall back to nautical twilight (Sun below
+  −12°) instead of crashing, as they used to (astroplan reports a missing
+  twilight crossing as a masked time). `constraints.darkness` says which
+  level applies; the plan carries it (`NightPlan.darkness`), every
+  verdict is capped at MARGINAL with a stated reason, and CLI, GUI header,
+  Best sky, and the prose briefing all flag the night as nautical. A
+  night without even nautical darkness (far north) raises
+  `constraints.NoDarkWindow` — a clean message in the CLI/GUI, a "No dark
+  window that night" row in Best sky.
 - Horizon-profile clearance (`site.horizon.min_alt(az)`) via per-sample
   `skyfield` checks.
 - Performance: ranking the full catalog (236 objects) takes ~1.5–2.5 s,

@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import numpy as np
-from astroplan import FixedTarget, Observer
+from astroplan import FixedTarget, Observer, TargetAlwaysUpWarning
 from astropy import units as u
 from astropy.coordinates import EarthLocation, SkyCoord, get_body, get_sun
 from astropy.coordinates.errors import NonRotationTransformationWarning
@@ -37,7 +37,7 @@ from astropy.time import Time
 from astropy.utils import iers
 
 from nachtlotse.engine import ephemeris
-from nachtlotse.engine.models import Site, Target
+from nachtlotse.engine.models import Darkness, Site, Target
 
 iers.conf.auto_download = False
 # The bundled IERS table ages; astropy raises once its predictions are >30 days
@@ -53,9 +53,6 @@ warnings.filterwarnings("ignore", category=NonRotationTransformationWarning)
 DEFAULT_MIN_ALT_DEG = 20.0
 DEFAULT_MIN_MOON_SEP_DEG = 30.0
 _SAMPLES_PER_NIGHT = 25
-# Astronomical twilight: the Sun at or below -18° (astroplan's
-# `AtNightConstraint.twilight_astronomical`).
-_MAX_SOLAR_ALT_DEG = -18.0
 
 
 def build_observer(site: Site) -> Observer:
@@ -112,41 +109,93 @@ def clears_horizon(site: Site, pos: ephemeris.AltAz) -> bool:
     return bool(pos.alt_deg > site.horizon.min_alt(pos.az_deg))
 
 
+class NoDarkWindow(ValueError):
+    """The night in question never gets even nautically dark (Sun below
+    -12°) — far north around midsummer. Nothing can be planned for it."""
+
+
 def dark_window(site: Site, reference: datetime) -> tuple[datetime, datetime]:
-    """Astronomical-twilight dark window (sun below -18°) around `reference`.
+    """The dark window around `reference`: astronomical twilight to
+    astronomical twilight (Sun below -18°).
 
     If `reference` falls within a night, returns that night's window;
-    otherwise returns the next upcoming one. Memoized per location and
-    `reference` (see the module docstring): ranking asks this once per
-    catalog target, always for the same night.
+    otherwise returns the next upcoming one. On a night that never gets
+    astronomically dark — about six weeks around midsummer at 50°N —
+    falls back to nautical twilight (Sun below -12°) instead; `darkness`
+    says which one applies. Raises `NoDarkWindow` if not even that
+    exists. Memoized per location and `reference` (see the module
+    docstring): ranking asks this once per catalog target, always for the
+    same night.
     """
-    return _dark_window(site.lat_deg, site.lon_deg, site.elevation_m, reference)
+    start, end, _level = _dark_window(
+        site.lat_deg, site.lon_deg, site.elevation_m, reference
+    )
+    return start, end
+
+
+def darkness(site: Site, reference: datetime) -> Darkness:
+    """Which darkness `dark_window` found for this night — "nautical"
+    only when there's no astronomical night at all."""
+    return _dark_window(site.lat_deg, site.lon_deg, site.elevation_m, reference)[2]
+
+
+_DARKNESS_LEVELS: tuple[Darkness, ...] = ("astronomical", "nautical")
+# The Sun's altitude at or below which each darkness level holds — what
+# astroplan's `AtNightConstraint.twilight_astronomical`/`_nautical` use.
+_MAX_SOLAR_ALT_DEG: dict[Darkness, float] = {"astronomical": -18.0, "nautical": -12.0}
 
 
 @functools.lru_cache(maxsize=256)
 def _dark_window(
     lat_deg: float, lon_deg: float, elevation_m: float, reference: datetime
-) -> tuple[datetime, datetime]:
+) -> tuple[datetime, datetime, Darkness]:
     observer = Observer(
         latitude=lat_deg * u.deg,
         longitude=lon_deg * u.deg,
         elevation=elevation_m * u.m,
     )
     t_ref = Time(reference)
-
-    evening_start = observer.twilight_evening_astronomical(t_ref, which="previous")
-    morning_end = observer.twilight_morning_astronomical(evening_start, which="next")
-
-    if t_ref > morning_end:
-        evening_start = observer.twilight_evening_astronomical(t_ref, which="next")
-        morning_end = observer.twilight_morning_astronomical(
-            evening_start, which="next"
-        )
-
-    return (
-        evening_start.to_datetime(timezone=UTC),
-        morning_end.to_datetime(timezone=UTC),
+    for level in _DARKNESS_LEVELS:
+        window = _twilight_window(observer, t_ref, level)
+        if window is not None:
+            evening_start, morning_end = window
+            return (
+                evening_start.to_datetime(timezone=UTC),
+                morning_end.to_datetime(timezone=UTC),
+                level,
+            )
+    raise NoDarkWindow(
+        f"No dark window around {reference:%Y-%m-%d} at "
+        f"{lat_deg:.2f}°, {lon_deg:.2f}°: the Sun doesn't get below "
+        f"{_MAX_SOLAR_ALT_DEG['nautical']:.0f}° that night."
     )
+
+
+def _twilight_window(
+    observer: Observer, t_ref: Time, level: Darkness
+) -> tuple[Time, Time] | None:
+    """The `level` twilight window containing `t_ref`, else the next one
+    — or None if the Sun doesn't cross that twilight altitude around
+    `t_ref` at all. astroplan reports a missing crossing as a masked
+    `Time` (plus a TargetAlwaysUpWarning), not an exception; using one
+    as input to the next search used to crash with a TypeError."""
+    evening = getattr(observer, f"twilight_evening_{level}")
+    morning = getattr(observer, f"twilight_morning_{level}")
+    with warnings.catch_warnings():
+        # Expected whenever a level doesn't occur — handled via `masked`.
+        warnings.simplefilter("ignore", TargetAlwaysUpWarning)
+        previous_evening = evening(t_ref, which="previous")
+        if not previous_evening.masked:
+            morning_end = morning(previous_evening, which="next")
+            if not morning_end.masked and t_ref <= morning_end:
+                return previous_evening, morning_end
+        next_evening = evening(t_ref, which="next")
+        if next_evening.masked:
+            return None
+        morning_end = morning(next_evening, which="next")
+        if morning_end.masked:
+            return None
+        return next_evening, morning_end
 
 
 @dataclass(frozen=True)
@@ -159,13 +208,17 @@ class _NightSamples:
     datetimes: tuple[datetime, ...]
     sun_alt_deg: np.ndarray
     moon: SkyCoord
+    # The Sun's altitude limit for this night's darkness level.
+    max_solar_alt_deg: float
 
 
 @functools.lru_cache(maxsize=64)
 def _night_samples(
     lat_deg: float, lon_deg: float, elevation_m: float, reference: datetime
 ) -> _NightSamples:
-    evening_start, morning_end = _dark_window(lat_deg, lon_deg, elevation_m, reference)
+    evening_start, morning_end, level = _dark_window(
+        lat_deg, lon_deg, elevation_m, reference
+    )
     times = Time(
         np.linspace(Time(evening_start).jd, Time(morning_end).jd, _SAMPLES_PER_NIGHT),
         format="jd",
@@ -181,7 +234,9 @@ def _night_samples(
     datetimes = tuple(
         Time(jd, format="jd").to_datetime(timezone=UTC) for jd in times.jd
     )
-    return _NightSamples(times, datetimes, np.asarray(sun_alt_deg), moon)
+    return _NightSamples(
+        times, datetimes, np.asarray(sun_alt_deg), moon, _MAX_SOLAR_ALT_DEG[level]
+    )
 
 
 def _samples_for(site: Site, reference: datetime) -> _NightSamples:
@@ -197,7 +252,8 @@ def is_observable_tonight(
     min_moon_sep_deg: float = DEFAULT_MIN_MOON_SEP_DEG,
 ) -> bool:
     """Whether the target ever clears altitude/night/moon-separation
-    constraints during tonight's astronomical-twilight dark window.
+    constraints during tonight's dark window (see `dark_window` — the Sun
+    limit follows its darkness level).
 
     The same test astroplan's `observability_table` runs with
     `AltitudeConstraint`, `AtNightConstraint.twilight_astronomical()` and
@@ -230,7 +286,7 @@ def _observability(
     moon_sep_deg = np.asarray(night.moon.separation(fixed_target.coord).deg)
     observable = (
         (min_alt_deg <= target_alt_deg)
-        & (night.sun_alt_deg <= _MAX_SOLAR_ALT_DEG)
+        & (night.sun_alt_deg <= night.max_solar_alt_deg)
         & (min_moon_sep_deg <= moon_sep_deg)
     )
     return bool(np.any(observable)), moon_sep_deg

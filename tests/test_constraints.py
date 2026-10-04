@@ -241,3 +241,67 @@ def test_best_time_tonight_tries_extra_ok_highest_first_and_stops() -> None:
     assert len(asked) == 2  # the peak (rejected), then the runner-up
     assert asked[0] == full[1].alt_deg
     assert second[1].alt_deg == asked[1] <= full[1].alt_deg
+
+
+# --- nights without astronomical darkness (midsummer) ---------------------
+
+_MIDSUMMER = datetime(2026, 6, 21, 10, 0, tzinfo=UTC)
+
+
+def _sun_alt_deg(site: Site, when: datetime) -> float:
+    from astropy.coordinates import AltAz, get_sun
+
+    frame = AltAz(obstime=Time(when), location=constraints._earth_location(site))
+    return float(get_sun(Time(when)).transform_to(frame).alt.deg)
+
+
+def test_dark_window_is_astronomical_on_an_ordinary_night() -> None:
+    reference = datetime(2026, 10, 4, 10, 0, tzinfo=UTC)
+    start, end = constraints.dark_window(BAD_HOMBURG, reference)
+    assert constraints.darkness(BAD_HOMBURG, reference) == "astronomical"
+    assert _sun_alt_deg(BAD_HOMBURG, start) == pytest.approx(-18.0, abs=0.1)
+    assert _sun_alt_deg(BAD_HOMBURG, end) == pytest.approx(-18.0, abs=0.1)
+
+
+def test_dark_window_falls_back_to_nautical_at_midsummer() -> None:
+    """At 50°N the Sun never gets below -18° around the solstice — this
+    used to crash with a TypeError (astroplan's masked "no crossing")."""
+    start, end = constraints.dark_window(BAD_HOMBURG, _MIDSUMMER)
+    assert constraints.darkness(BAD_HOMBURG, _MIDSUMMER) == "nautical"
+    assert _sun_alt_deg(BAD_HOMBURG, start) == pytest.approx(-12.0, abs=0.1)
+    assert _sun_alt_deg(BAD_HOMBURG, end) == pytest.approx(-12.0, abs=0.1)
+    # Never astronomically dark in between: the deepest point stays above -18°.
+    midpoint = start + (end - start) / 2
+    assert -18.0 < _sun_alt_deg(BAD_HOMBURG, midpoint) < -12.0
+    # That night's evening, not some other night's.
+    assert start.date() == _MIDSUMMER.date()
+    assert timedelta(hours=2) < end - start < timedelta(hours=6)
+
+
+def test_dark_window_keeps_short_astronomical_nights_at_the_season_edges() -> None:
+    reference = datetime(2026, 7, 14, 10, 0, tzinfo=UTC)
+    start, end = constraints.dark_window(BAD_HOMBURG, reference)
+    assert constraints.darkness(BAD_HOMBURG, reference) == "astronomical"
+    assert end - start < timedelta(hours=2)
+
+
+def test_dark_window_raises_no_dark_window_far_north_at_midsummer() -> None:
+    far_north = Site(
+        name="Far north",
+        lat_deg=65.0,
+        lon_deg=20.0,
+        elevation_m=0.0,
+        tz="Europe/Stockholm",
+        horizon=HorizonProfile(points=[]),
+    )
+    with pytest.raises(constraints.NoDarkWindow, match="Sun doesn't get below -12°"):
+        constraints.dark_window(far_north, _MIDSUMMER)
+
+
+def test_targets_are_still_found_in_a_nautical_night() -> None:
+    result = constraints.best_time_tonight(
+        BAD_HOMBURG, CIRCUMPOLAR_TARGET, _MIDSUMMER, min_moon_sep_deg=0.0
+    )
+    assert result is not None
+    start, end = constraints.dark_window(BAD_HOMBURG, _MIDSUMMER)
+    assert start <= result[0] <= end

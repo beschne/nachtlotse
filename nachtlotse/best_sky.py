@@ -28,8 +28,12 @@ _EARTH_RADIUS_KM = 6371.0
 # `open_meteo.WeatherUnavailable`); "beyond_forecast_horizon" — the fetch
 # succeeded, but the requested night falls past Open-Meteo's own forecast
 # window (`open_meteo._FORECAST_DAYS`, 16 days), so no hourly forecast
-# overlaps the dark window at all.
-WeatherUnavailableReason = Literal["unreachable", "beyond_forecast_horizon"]
+# overlaps the dark window at all; "no_dark_window" — the site never gets
+# even nautically dark that night (far north around midsummer, see
+# `constraints.NoDarkWindow`), so there's no window to forecast for.
+WeatherUnavailableReason = Literal[
+    "unreachable", "beyond_forecast_horizon", "no_dark_window"
+]
 
 
 def distance_km(site_a: Site, site_b: Site) -> float:
@@ -123,8 +127,21 @@ def compare_sites(
             bearing_deg(reference, site) if site_distance_km > 0.01 else None
         )
 
-        evening_start, morning_end = constraints.dark_window(site, when)
         weather_unavailable_reason: WeatherUnavailableReason | None
+        try:
+            evening_start, morning_end = constraints.dark_window(site, when)
+        except constraints.NoDarkWindow:
+            reports.append(
+                SiteSkyReport(
+                    site=site,
+                    distance_km=site_distance_km,
+                    bearing_deg=site_bearing_deg,
+                    weather=None,
+                    hourly_cloud_cover=[],
+                    weather_unavailable_reason="no_dark_window",
+                )
+            )
+            continue
         try:
             hours = open_meteo.fetch_hourly_cached(site.lat_deg, site.lon_deg)
         except open_meteo.WeatherUnavailable:

@@ -113,3 +113,16 @@ def test_skip_outranks_marginal_even_when_both_apply() -> None:
 
     assert verdict.level == "SKIP"
     assert len(verdict.reasons) >= 2  # both the cloud and the altitude reason survive
+
+
+def test_a_nautical_only_night_caps_the_verdict_at_marginal() -> None:
+    clear = WeatherSummary(
+        max_cloud_cover_pct=5.0,
+        avg_cloud_cover_pct=2.0,
+        max_wind_kmh=5.0,
+        min_dew_point_spread_c=8.0,
+    )
+    assert scoring.verdict_for_target(70.0, weather=clear).level == "GO"
+    verdict = scoring.verdict_for_target(70.0, weather=clear, darkness="nautical")
+    assert verdict.level == "MARGINAL"
+    assert any("no astronomical darkness" in r for r in verdict.reasons)

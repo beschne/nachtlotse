@@ -243,3 +243,22 @@ def test_distance_km_is_symmetric_and_zero_for_the_same_site() -> None:
     assert best_sky.distance_km(BAD_HOMBURG, MUNICH) == pytest.approx(
         best_sky.distance_km(MUNICH, BAD_HOMBURG)
     )
+
+
+def test_compare_sites_flags_a_site_without_any_dark_window() -> None:
+    far_north = Site(
+        name="Far north",
+        lat_deg=65.0,
+        lon_deg=20.0,
+        elevation_m=0.0,
+        tz="Europe/Stockholm",
+        horizon=HorizonProfile(points=[]),
+    )
+    midsummer = datetime(2026, 6, 21, 10, 0, tzinfo=UTC)
+    reports = best_sky.compare_sites(BAD_HOMBURG, [BAD_HOMBURG, far_north], midsummer)
+    by_name = {r.site.name: r for r in reports}
+
+    assert by_name["Far north"].weather is None
+    assert by_name["Far north"].weather_unavailable_reason == "no_dark_window"
+    # Bad Homburg itself still gets a (nautical) window to forecast for.
+    assert by_name["Bad Homburg"].weather_unavailable_reason != "no_dark_window"
