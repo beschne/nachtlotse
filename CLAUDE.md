@@ -205,9 +205,12 @@ on why the Streamlit UI was retired), see
 User documentation is the GitHub wiki, maintained as files in
 [`docs/wiki/`](./docs/wiki/): English pages in `en/`, German pages in
 `de/` (each section in both languages, every page linking to its
-counterpart), plus `Home.md`, `Startseite.md`, `_Sidebar.md` and
-`_Footer.md`. Page file names must be unique across both languages, since
-the wiki is flat. Publish with `uv run python scripts/publish_wiki.py`
+counterpart), plus `Home.md` and `Startseite.md`. Each language has its
+own `_Sidebar.md` and `_Footer.md` (`docs/wiki/` for English,
+`docs/wiki/de/` for German); the publish script puts German pages into the
+wiki's `de/` folder, and GitHub shows each page with the sidebar of its
+folder. Page file names must be unique across both languages, since page
+addresses are flat. Publish with `uv run python scripts/publish_wiki.py`
 (dry run) and `--push`; edits made in the GitHub wiki itself get
 overwritten.
 

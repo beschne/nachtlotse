@@ -20,6 +20,7 @@ Ein Release läuft so ab:
 ## Das Wiki
 
 Die Wiki-Seiten liegen in `docs/wiki/` im Repository, Englisch in `en/`,
-Deutsch in `de/`. `scripts/publish_wiki.py` kopiert sie zusammen mit den
-Bildschirmfotos ins Wiki und pusht. Änderungen direkt im GitHub-Wiki werden
+Deutsch in `de/`, jede Sprache mit eigener Seitenleiste und Fußzeile.
+`scripts/publish_wiki.py` kopiert sie zusammen mit den Bildschirmfotos ins
+Wiki und pusht. Änderungen direkt im GitHub-Wiki werden
 dabei überschrieben, bearbeite also immer die Dateien im Repository.

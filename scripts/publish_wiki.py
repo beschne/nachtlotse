@@ -2,9 +2,14 @@
 
 The wiki is a separate git repository (<repo>.wiki.git). The pages live in
 this repository under docs/wiki/ (English in en/, German in de/, plus Home,
-Startseite, _Sidebar and _Footer); this script copies them into a fresh
-clone of the wiki, flattened into one folder (GitHub shows wiki pages flat
-anyway), adds the screenshots from screenshots/ as images/, and commits.
+Startseite, and a _Sidebar/_Footer per language); this script copies them
+into a fresh clone of the wiki, adds the screenshots from screenshots/ as
+images/, and commits.
+
+Layout in the wiki: English pages and Home at the top level, German pages
+in de/. GitHub shows every page at a flat address either way, but it takes
+the _Sidebar.md and _Footer.md from the folder of the page being shown, so
+German pages get the German sidebar and English pages the English one.
 Pages link those images by absolute URL
 (https://raw.githubusercontent.com/wiki/<owner>/<repo>/images/...): a
 relative "images/x.png" resolves against the page address, and from
@@ -48,13 +53,24 @@ def wiki_remote() -> str:
 
 
 def collect_pages() -> dict[str, Path]:
-    """Every page by its published file name; names must be unique,
-    because the wiki is flat."""
+    """Every file by its path in the wiki: German pages (anything under
+    docs/wiki/de/) in de/, everything else at the top level. Page names
+    must be unique across both, because page addresses are flat;
+    _Sidebar.md and _Footer.md exist once per language on purpose."""
     pages: dict[str, Path] = {}
+    names: dict[str, Path] = {}
     for path in sorted(WIKI_SOURCE.rglob("*.md")):
-        if path.name in pages:
-            sys.exit(f"Duplicate page name {path.name}: {pages[path.name]} and {path}")
-        pages[path.name] = path
+        german = WIKI_SOURCE / "de" in path.parents
+        target = f"de/{path.name}" if german else path.name
+        if target in pages:
+            sys.exit(f"Two files publish as {target}: {pages[target]} and {path}")
+        if not path.name.startswith("_"):
+            if path.name in names:
+                sys.exit(
+                    f"Duplicate page name {path.name}: {names[path.name]} and {path}"
+                )
+            names[path.name] = path
+        pages[target] = path
     return pages
 
 
@@ -88,8 +104,9 @@ def main() -> int:
             if item.name == ".git":
                 continue
             shutil.rmtree(item) if item.is_dir() else item.unlink()
-        for name, path in pages.items():
-            shutil.copy2(path, clone / name)
+        for target, path in pages.items():
+            (clone / target).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, clone / target)
         images = clone / "images"
         images.mkdir()
         for png in sorted(SCREENSHOTS.glob("*.png")):
@@ -100,7 +117,7 @@ def main() -> int:
         if not changes:
             print("The wiki is already up to date.")
             return 0
-        print(f"{len(pages)} pages, changes against the published wiki:")
+        print(f"{len(pages)} files, changes against the published wiki:")
         print(changes)
         if not args.push:
             print("\nDry run. Add --push to commit and publish.")

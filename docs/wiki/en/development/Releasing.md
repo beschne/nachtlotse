@@ -19,6 +19,7 @@ A release goes like this:
 ## The wiki
 
 The wiki pages live in `docs/wiki/` in the repository, English in `en/`,
-German in `de/`. `scripts/publish_wiki.py` copies them, together with the
-screenshots, into the wiki and pushes. Edits made directly in the GitHub
+German in `de/`, each language with its own sidebar and footer.
+`scripts/publish_wiki.py` copies them, together with the screenshots, into
+the wiki and pushes. Edits made directly in the GitHub
 wiki get overwritten, so always edit the files in the repository.
