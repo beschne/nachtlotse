@@ -52,7 +52,7 @@ TARGET_DATE = date(2026, 9, 25)
 # captured — the project's actual reference-case rig (CLAUDE.md: "First
 # rig (reference case)"), alt-az specifically, rather than RIG_NAME's
 # exotic APO refractor.
-BEST_SKY_RIG_NAME = "ZWO Seestar S30 Pro"
+BEST_SKY_RIG_NAME = "ZWO Seestar S30 Pro (Alt/Az)"
 
 SCREENSHOTS_DIR = Path(__file__).resolve().parent
 RESIZE_WIDTH = 1600
