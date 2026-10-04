@@ -806,3 +806,11 @@ def test_frame_command_rejects_something_neither_catalog_nor_event(
 ) -> None:
     assert cli.main(["frame", "M999"]) == 2
     assert "Nor is it a current event" in capsys.readouterr().err
+
+
+def test_type_filter_offers_catalog_categories_only(capsys) -> None:
+    """Event kinds are TargetTypes too, but the catalog has none of them —
+    `--type comet` could only ever produce an empty plan."""
+    with pytest.raises(SystemExit):
+        cli.main(["plan", "--type", "comet"])
+    assert "invalid choice: 'comet'" in capsys.readouterr().err

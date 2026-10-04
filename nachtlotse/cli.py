@@ -27,6 +27,7 @@ from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import constraints, framing, framing_preview, grouping
 from nachtlotse.engine.models import (
     TARGET_TYPE_LABELS,
+    EventKind,
     Site,
     Target,
     TargetType,
@@ -35,7 +36,9 @@ from nachtlotse.engine.models import (
 from nachtlotse.planning import RankedEntry, RankedGroup, RankedTargetForBestRig
 from nachtlotse.weather import open_meteo
 
-_TARGET_TYPE_CHOICES = sorted(get_args(TargetType))
+# Catalog categories only: event kinds (comet, supernova, nova) are
+# TargetTypes too, but never in the catalog `--type` filters.
+_TARGET_TYPE_CHOICES = sorted(set(get_args(TargetType)) - set(get_args(EventKind)))
 
 
 def _format_types(types: tuple[str, ...]) -> str:
@@ -770,7 +773,7 @@ def main(argv: list[str] | None = None) -> int:
 
     plan_parser = subparsers.add_parser(
         "plan",
-        help="Rank observable Messier-core targets for a night (default: tonight)",
+        help="Rank tonight's observable catalog targets, with verdicts (default: tonight)",
     )
     plan_parser.add_argument(
         "--site",
@@ -833,8 +836,8 @@ def main(argv: list[str] | None = None) -> int:
         dest="events",
         action="store_false",
         help=(
-            "Skip the 'Current events' block (comets observed in the last "
-            "two weeks — fetched from MPC/COBS, cached; offline it just "
+            "Skip the 'Current events' block (comets, supernovae, novae — "
+            "fetched from MPC/COBS/Rochester/TNS, cached; offline it just "
             "says so). Not shown with --best-rig either way."
         ),
     )
@@ -921,7 +924,10 @@ def main(argv: list[str] | None = None) -> int:
 
     events_parser = subparsers.add_parser(
         "events",
-        help="List current events (comets) — observable tonight, and why the rest aren't",
+        help=(
+            "List current events (comets, supernovae, novae) — observable "
+            "tonight, and why the rest aren't"
+        ),
     )
     events_parser.add_argument(
         "--site",
