@@ -10,7 +10,7 @@ twice. This module itself is not UI: no printing, no framework imports
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import NamedTuple
 
@@ -18,9 +18,17 @@ from astroplan import moon_illumination
 from astropy.time import Time
 
 from nachtlotse.data.catalog import CATALOG
-from nachtlotse.engine import constraints, ephemeris, framing, grouping, scoring
+from nachtlotse.engine import (
+    comets,
+    constraints,
+    ephemeris,
+    framing,
+    grouping,
+    scoring,
+)
 from nachtlotse.engine.models import (
     Darkness,
+    EventKind,
     Rig,
     Site,
     Target,
@@ -28,6 +36,7 @@ from nachtlotse.engine.models import (
     Verdict,
     WeatherSummary,
 )
+from nachtlotse.events import EventsUnavailable, cobs, mpc
 from nachtlotse.weather import open_meteo
 
 
@@ -119,6 +128,9 @@ class NightPlan:
     # "nautical" on a night without astronomical darkness (midsummer) —
     # see `constraints.dark_window`; verdicts are capped accordingly.
     darkness: Darkness = "astronomical"
+    # Current events tonight (comets, ...) — None unless asked for
+    # (`plan_night(..., include_events=True)`), see `current_events`.
+    events: EventsReport | None = None
 
 
 def _rotation_gate(
@@ -525,11 +537,16 @@ def plan_night(
     when: datetime,
     types: frozenset[TargetType] | None = None,
     limit: int | None = None,
+    *,
+    include_events: bool = False,
 ) -> NightPlan:
     """Rank tonight's (or `when`'s night's) observable targets and verdict.
 
     `types` is passed straight through to `rank_targets` — see there.
     `limit` is passed straight through to `rank_targets` — see there.
+    `include_events` also gathers tonight's current events
+    (`current_events` — network, cached, never fatal); off by default, so
+    a plan never reaches out to event sources unless a front end asks.
     """
     evening_start, morning_end = constraints.dark_window(site, when)
     darkness = constraints.darkness(site, when)
@@ -562,6 +579,11 @@ def plan_night(
         ranked=ranked,
         shortlist=shortlist,
         darkness=darkness,
+        events=(
+            current_events(site, rig, when, weather=weather, darkness=darkness)
+            if include_events
+            else None
+        ),
     )
 
 
@@ -637,3 +659,160 @@ def plan_night_for_best_rig(
         shortlist=shortlist,
         darkness=darkness,
     )
+
+
+# --- Current events (ROADMAP.md) ---------------------------------------------
+
+
+class RankedEvent(NamedTuple):
+    """A current event that's worth shooting tonight: observable (the same
+    constraints as any catalog target) and bright enough for the rig
+    (`framing.event_limiting_magnitude`)."""
+
+    kind: EventKind
+    # A fixed snapshot — for a comet, its position at the middle of the
+    # dark window (see `engine.comets`), with its observed magnitude and
+    # coma diameter as size when known.
+    target: Target
+    best_time: datetime
+    pos: ephemeris.AltAz
+    fit: float
+    reach: float
+    verdict: Verdict
+    # Where the magnitude comes from, for display — e.g. "COBS: median of
+    # 23 reports, latest 2026-10-03".
+    magnitude_source: str
+    # Comets only: how fast it moves against the stars (deg/h).
+    motion_deg_per_hour: float | None
+
+
+class SkippedEvent(NamedTuple):
+    """A current event that didn't make it tonight, and why — for a full
+    listing (`lotse events`), never for the plan itself."""
+
+    kind: EventKind
+    name: str
+    magnitude: float | None
+    reason: str
+
+
+@dataclass(frozen=True)
+class EventsReport:
+    # Ranked like the catalog (`framing.target_priority_score`).
+    events: list[RankedEvent]
+    skipped: list[SkippedEvent]
+    # Data provenance and gaps, in plain words — e.g. "COBS observations
+    # from 2026-10-04 09:12 UTC", "MPC comet orbits unavailable (offline)".
+    notes: list[str]
+
+
+def current_events(
+    site: Site,
+    rig: Rig,
+    when: datetime,
+    *,
+    weather: WeatherSummary | None = None,
+    darkness: Darkness = "astronomical",
+) -> EventsReport:
+    """Tonight's current events for `site`/`rig`: comets observed in the
+    last two weeks (COBS) with a known orbit (MPC), positioned by the
+    engine, filtered by the rig's brightness limit and tonight's
+    observability, and verdicted like catalog targets (`weather` and
+    `darkness` as for `plan_night`'s own shortlist).
+
+    Never raises for a missing source: what couldn't be fetched becomes a
+    note, and the report is simply shorter (or empty).
+    """
+    notes: list[str] = []
+    try:
+        orbits = mpc.fetch_comet_orbits()
+        brightness = cobs.fetch_comet_brightness()
+    except EventsUnavailable as exc:
+        return EventsReport([], [], [f"Comets unavailable: {exc}"])
+    notes.append(f"Comet orbits: MPC, {orbits.fetched_at:%Y-%m-%d %H:%M} UTC")
+    notes.append(
+        f"Comet brightness: COBS reports of the last {brightness.window_days} "
+        f"days, {brightness.fetched_at:%Y-%m-%d %H:%M} UTC"
+    )
+
+    evening_start, morning_end = constraints.dark_window(site, when)
+    snapshot_time = evening_start + (morning_end - evening_start) / 2
+    limit_mag = framing.event_limiting_magnitude(rig, site, "comet")
+
+    ranked: list[RankedEvent] = []
+    skipped: list[SkippedEvent] = []
+    for observed in brightness.comets.values():
+        orbit = orbits.orbits.get(observed.mpc_key)
+        if orbit is None:
+            skipped.append(
+                SkippedEvent(
+                    "comet",
+                    observed.designation,
+                    observed.magnitude,
+                    "no MPC comet orbit (e.g. filed as an asteroid)",
+                )
+            )
+            continue
+        if limit_mag is not None and observed.magnitude > limit_mag:
+            skipped.append(
+                SkippedEvent(
+                    "comet",
+                    orbit.designation,
+                    observed.magnitude,
+                    f"too faint for this rig here ({observed.magnitude:.1f} mag, "
+                    f"limit {limit_mag:.1f})",
+                )
+            )
+            continue
+
+        coma_arcmin = observed.coma_diameter_arcmin or 0.0
+        target = replace(
+            comets.comet_target(orbit, site, snapshot_time),
+            magnitude=observed.magnitude,
+            size_arcmin=(coma_arcmin, coma_arcmin),
+        )
+        best = best_time_for(site, rig, (target,), when)
+        if best is None:
+            skipped.append(
+                SkippedEvent(
+                    "comet",
+                    orbit.designation,
+                    observed.magnitude,
+                    "not observable tonight (altitude, horizon, moon, or rotation)",
+                )
+            )
+            continue
+
+        best_time, pos = best
+        ranked.append(
+            RankedEvent(
+                kind="comet",
+                target=target,
+                best_time=best_time,
+                pos=pos,
+                fit=framing.framing_score(rig, target),
+                reach=framing.reach_factor(site, target.magnitude, target.size_arcmin),
+                verdict=scoring.verdict_for_target(
+                    pos.alt_deg, weather=weather, darkness=darkness
+                ),
+                magnitude_source=(
+                    f"COBS: median of {observed.report_count} report"
+                    f"{'' if observed.report_count == 1 else 's'}, latest "
+                    f"{observed.last_reported:%Y-%m-%d}"
+                ),
+                motion_deg_per_hour=comets.sky_motion_deg_per_hour(
+                    orbit, site, best_time
+                ),
+            )
+        )
+
+    # Altitude and reach only: unlike a catalog object, an event's size
+    # isn't something to choose between — a comet's coma is a few arcmin
+    # in any rig's field, so `fit` (still reported, for framing) would
+    # just reorder events by coma size.
+    ranked.sort(
+        key=lambda e: framing.target_priority_score(e.pos.alt_deg, 1.0, e.reach),
+        reverse=True,
+    )
+    skipped.sort(key=lambda s: (s.magnitude is None, s.magnitude or 0.0))
+    return EventsReport(ranked, skipped, notes)

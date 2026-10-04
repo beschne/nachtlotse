@@ -37,7 +37,7 @@ from datetime import datetime, timedelta
 from astropy.time import Time
 
 from nachtlotse.engine.constraints import build_fixed_target, build_observer
-from nachtlotse.engine.models import Rig, Site, Target
+from nachtlotse.engine.models import EventKind, Rig, Site, Target
 
 # Symmetric baseline for the finite-difference rotation-rate estimate.
 # Differencing right at a near-zenith transit is numerically degenerate
@@ -337,3 +337,29 @@ def photographic_limiting_magnitude(
         _naked_eye_limiting_magnitude(bortle_class) - _NELM_FORMULA_REFERENCE
     )
     return visual_dark_sky_mag + integration_gain_mag + sky_adjustment_mag
+
+
+# How far inside the rig's photographic limiting magnitude a current event
+# has to be to count as worth shooting. Comets are diffuse — their total
+# magnitude spreads over the coma — so they need a bigger margin than a
+# point-like supernova or nova. Starting heuristics, like the rest of this
+# module: for the Seestar S30 Pro at Bortle 5 (limit ~16.0) this lets
+# comets to ~14 mag through, supernovae/novae to ~15.
+EVENT_LIMIT_MARGIN_MAG: dict[EventKind, float] = {
+    "comet": 2.0,
+    "supernova": 1.0,
+    "nova": 1.0,
+}
+
+
+def event_limiting_magnitude(rig: Rig, site: Site, kind: EventKind) -> float | None:
+    """The faintest magnitude a current event of `kind` may have to be
+    worth shooting with `rig` at `site`: `photographic_limiting_magnitude`
+    minus `EVENT_LIMIT_MARGIN_MAG`. None (no limit) when the site has no
+    Bortle class — an absent input is never treated as a worst case."""
+    if site.bortle_class is None:
+        return None
+    return (
+        photographic_limiting_magnitude(rig.optics.aperture_mm, site.bortle_class)
+        - EVENT_LIMIT_MARGIN_MAG[kind]
+    )
