@@ -37,6 +37,10 @@ from nachtlotse.engine import ephemeris
 from nachtlotse.engine.models import Site, Target
 
 iers.conf.auto_download = False
+# The bundled IERS table ages; astropy raises once its predictions are >30 days
+# old. UT1-UTC drifts well under a second over months — irrelevant here — so a
+# stale table must never block planning.
+iers.conf.auto_max_age = None
 
 # Separation constraints on a FixedTarget vs. the (fast-moving) Moon trigger
 # an ICRS->GCRS frame transform that astropy flags as direction-dependent.

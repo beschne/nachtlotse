@@ -145,3 +145,14 @@ def test_best_time_tonight_returns_a_horizon_clearing_position_when_open() -> No
     _best_time, pos = result
     assert pos.alt_deg > 0.0
     assert constraints.clears_horizon(BAD_HOMBURG, pos) is True
+
+
+def test_stale_iers_table_does_not_block_planning() -> None:
+    """Regression: the bundled IERS table ages; astropy must not raise on it."""
+    from astropy.utils import iers
+
+    assert iers.conf.auto_download is False
+    assert iers.conf.auto_max_age is None
+    # UT1-UTC lookup for a date well beyond the bundled table's predictions.
+    far_future = Time("2030-01-01T00:00:00", scale="utc")
+    assert abs(far_future.ut1.jd - far_future.jd) < 1e-4
