@@ -71,6 +71,21 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   via `astroplan`.
 - Horizon-profile clearance (`site.horizon.min_alt(az)`) via per-sample
   `skyfield` checks.
+- Performance: ranking the full catalog (236 objects) takes ~1.5–2.5 s,
+  down from ~48 s. Everything night-level — the dark window, the Sun and
+  the Moon at each sample — is computed once per site and night
+  (memoized on plain values, so functions stay pure) instead of once per
+  target; each target's samples run as one vectorized batch; its Moon
+  separations are computed once and shared between the pre-check and the
+  best-time search; and the expensive `extra_ok` gate (field rotation)
+  is tried lazily, highest candidate first. Grouping uses one pairwise
+  separation matrix (`grouping.separation_matrix_arcmin`) instead of a
+  `SkyCoord` pair per comparison. Results are unchanged: a before/after
+  comparison of full rankings in three scenarios matched exactly, and a
+  test pins the pre-check to astroplan's own `observability_table`. A
+  further step — all targets × all samples as one matrix — would save
+  roughly another second but was deliberately not taken: it would
+  restructure the engine's per-target API for little practical gain.
 
 ## `nachtlotse/engine/framing.py`
 

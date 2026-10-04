@@ -146,3 +146,19 @@ def test_centroid_target_handles_the_ra_zero_wraparound() -> None:
     assert grouping.angular_separation_deg(centroid, expected) == pytest.approx(
         0.0, abs=1e-6
     )
+
+
+def test_separation_matrix_matches_pairwise_separations() -> None:
+    targets = [
+        Target(name="a", ra_deg=148.888, dec_deg=69.065),  # M81
+        Target(name="b", ra_deg=148.968, dec_deg=69.680),  # M82
+        Target(name="c", ra_deg=10.685, dec_deg=41.269),  # M31
+    ]
+    matrix = grouping.separation_matrix_arcmin(targets)
+    assert matrix.shape == (3, 3)
+    for i, a in enumerate(targets):
+        assert matrix[i, i] == pytest.approx(0.0, abs=1e-9)
+        for j, b in enumerate(targets):
+            assert matrix[i, j] == pytest.approx(
+                grouping.angular_separation_deg(a, b) * 60.0, abs=1e-9
+            )

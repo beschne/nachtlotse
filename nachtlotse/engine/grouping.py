@@ -20,6 +20,7 @@ import itertools
 import math
 from collections.abc import Sequence
 
+import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
@@ -75,6 +76,22 @@ def group_framing_score(rig: Rig, targets: Sequence[Target]) -> float:
     )
 
 
+def separation_matrix_arcmin(targets: Sequence[Target]) -> np.ndarray:
+    """Every pairwise separation among `targets`, in arcmin, as one
+    vectorized computation — the same `SkyCoord.separation` that
+    `angular_separation_deg` uses, broadcast over all pairs at once
+    instead of one call (and two `SkyCoord` objects) per pair. Positions
+    are fixed, so this only ever needs computing once per target list."""
+    coords = SkyCoord(
+        ra=[t.ra_deg for t in targets] * u.deg,
+        dec=[t.dec_deg for t in targets] * u.deg,
+        frame="icrs",
+    )
+    return (
+        np.asarray(coords[:, np.newaxis].separation(coords[np.newaxis, :]).deg) * 60.0
+    )
+
+
 def find_groups(rig: Rig, candidates: Sequence[Target]) -> list[tuple[Target, ...]]:
     """Cluster `candidates` into non-overlapping co-visible groups of
     two or more, preserving `candidates`' own order (already
@@ -88,21 +105,30 @@ def find_groups(rig: Rig, candidates: Sequence[Target]) -> list[tuple[Target, ..
     a theoretically better grouping in exchange for staying simple and
     order-stable — a starting heuristic, tunable later if that ever
     matters in practice (per CLAUDE.md's M4 note on tunable heuristics).
+
+    Works on `separation_matrix_arcmin`, computed once: a group formed so
+    far is already co-visible, so a candidate keeps it co-visible exactly
+    when it's within the frame's short side of every member — the same
+    test `co_visible_group` applies to the extended group.
     """
-    claimed: set[Target] = set()
+    if len(candidates) < 2:
+        return []
+    fov_short = framing.fov_short_arcmin(rig)
+    sep_arcmin = separation_matrix_arcmin(candidates)
+    claimed: set[int] = set()
     groups: list[tuple[Target, ...]] = []
-    for i, seed in enumerate(candidates):
-        if seed in claimed:
+    for i in range(len(candidates)):
+        if i in claimed:
             continue
-        group = [seed]
-        for candidate in candidates[i + 1 :]:
-            if candidate in claimed:
+        members = [i]
+        for j in range(i + 1, len(candidates)):
+            if j in claimed:
                 continue
-            if co_visible_group(rig, [*group, candidate]):
-                group.append(candidate)
-        if len(group) >= 2:
-            groups.append(tuple(group))
-            claimed.update(group)
+            if all(sep_arcmin[k, j] <= fov_short for k in members):
+                members.append(j)
+        if len(members) >= 2:
+            groups.append(tuple(candidates[k] for k in members))
+            claimed.update(members)
     return groups
 
 
