@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from nachtlotse import sky_survey
 from nachtlotse.data import store
 from nachtlotse.weather import open_meteo
 
@@ -62,6 +63,26 @@ def _no_real_weather_requests(
         ]
 
     monkeypatch.setattr(open_meteo, "fetch_hourly", _fake_fetch_hourly)
+
+
+@pytest.fixture(autouse=True)
+def _offline_sky_survey(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Keep survey cutouts offline and out of the real `.cache/sky_survey/`:
+    each test gets its own empty cache directory, and `fetch_cutout`
+    behaves as if the network were down unless a test patches it again.
+    Skipped for test_sky_survey.py, which tests the real client by mocking
+    `urllib.request.urlopen` and manages its own `tmp_path`.
+    """
+    if request.module.__name__.rsplit(".", 1)[-1] == "test_sky_survey":
+        return
+
+    def _unavailable(*_args: object, **_kwargs: object) -> sky_survey.SurveyImage:
+        raise sky_survey.SurveyImageUnavailable("offline (test suite)")
+
+    monkeypatch.setattr(sky_survey, "DEFAULT_CACHE_DIR", tmp_path / "sky_survey")
+    monkeypatch.setattr(sky_survey, "fetch_cutout", _unavailable)
 
 
 @pytest.fixture
