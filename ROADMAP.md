@@ -8,17 +8,9 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Framing preview for selected targets:** render what a target would
-   actually look like through the given rig — its angular size/shape
-   against the rig's field of view (from `framing.py`'s FoV/fill-fraction
-   math) — rather than only the numeric `framing_score`/reach. A visual
-   check for "does this actually fit, and how tightly" for a target picked
-   off the shortlist, complementing (not replacing) the existing polar
-   `--chart`, which shows where in the sky, not how it frames. To be implemented
-   for the CLI and the GUI. Both on demand only and cached.
-2. **Current events:** well-placed comets, supernova alerts; later also minor
+1. **Current events:** well-placed comets, supernova alerts; later also minor
    planets/asteroids and near-Earth objects (NEOs).
-3. **Session log:** record what's already been captured, and when — total
+2. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos. 
@@ -188,6 +180,20 @@ up when it fits, not in any particular order.
   dataclasses/NamedTuples, so this is a serializer in `cli.py`, not an
   engine change.
 - **Export today's pick to a NINA-compatible format.**
+- **Framing preview: camera view.** The framing preview (`lotse frame`,
+  the GUI's "Framing preview…") shows a square, north-up sky cutout with
+  the rig's frame drawn on it, so the rotated alt-az frame always fits and
+  the surroundings stay visible. A second rendering cropped to the frame
+  itself — the sensor's own aspect ratio, rotated the way the camera sees
+  it at the best time (zenith up, not north) — would show the actual
+  shot. Same geometry (`engine.framing_preview`), just a different crop.
+- **Position angles in the catalog:** `Target` has a size but no
+  position angle, so the framing preview draws each object's major axis
+  as a dashed circle (its reach, not its shape) and leaves the true
+  orientation to the survey image. A sourced `position_angle_deg` per
+  entry (same sourcing rules as magnitude/size, see CLAUDE.md) would
+  allow real ellipses — and an orientation-aware fit score for elongated
+  targets like M31 on an alt-az rig.
 - **Sort/filter Best Sky and the Sites tab by the machine's own current
   location**, not just a configured reference site — useful mainly when
   traveling. Tried a plain `pyobjc-framework-CoreLocation` script for

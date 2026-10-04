@@ -126,6 +126,15 @@ uv run lotse plan --prose
 # gitignored, never committed. Copy the template to create it:
 cp nachtlotse/data/prose_local.template.yaml nachtlotse/data/prose_local.yaml
 
+# frame shows how a target sits in your rig's field of view at its best
+# time tonight: the frame (rotated as an alt-az mount holds it), the
+# target and any catalog neighbors inside it, over a DSS2 sky image when
+# online. Several targets are framed together if they fit one frame.
+# Prints the numbers, writes a PNG (needs the charts extra, like --chart):
+uv run lotse frame M31
+uv run lotse frame M81 M82 --rig S30P --date 2026-11-14 --out m81.png
+uv run lotse frame "NGC 7000" --no-survey   # skip the sky image
+
 # best-sky answers "where's the clearest night", not "what should I shoot":
 # it ranks your configured sites by forecast cloud cover in each site's own
 # dark window. --radius-km restricts the comparison to sites within that
@@ -148,7 +157,9 @@ After that, everything runs offline.
 Every Open-Meteo forecast is cached per site for 1 hour in
 `.cache/open_meteo/` (also not part of the git repo) — a `plan` or
 `best-sky` run within that hour reuses it instead of hitting the network
-again.
+again. Sky images for `frame` are cached in `.cache/sky_survey/` and never
+expire; without network (and no cached image) the preview is simply drawn
+without one.
 
 ## Native GUI
 
@@ -205,7 +216,11 @@ Sky's own Distance column, each card then showing its distance/
 bearing), and a REGIONS checkbox row *filters* which sites show at
 all — independent of SORT, all checked by default. Handy together for
 a growing site list: narrow to one region, then order those by
-distance from a candidate new site. The sidebar's
+distance from a candidate new site. On the Shortlist and All ranked
+tabs, **Framing preview…** (or a double-click on a row) opens the same
+framing preview as `lotse frame` in its own window, at that row's best
+time — the frame appears right away, the sky image loads in the
+background. The sidebar's
 EVALUATE field is the GUI's own `--limit` (see above) — same
 brightest-first evaluation order, same unconditional exemption for
 starred favorites. See [ROADMAP.md](./ROADMAP.md) for the toolkit
@@ -222,6 +237,8 @@ nachtlotse/
 ├── weather/    # optional layer (from M4) — Open-Meteo, TTL-cached
 ├── charting.py # shared chart geometry, library-agnostic
 ├── chart_export.py  # CLI's --chart PNG export (matplotlib)
+├── sky_survey.py    # optional DSS2 cutouts for the framing preview, cached
+├── frame_export.py  # `lotse frame` PNG export + shared preview text
 ├── best_sky.py # cross-site weather comparison (`lotse best-sky`)
 ├── prose.py    # LLM nightly briefing (`lotse plan --prose`, opt-in)
 ├── gui/        # native app (PySide6, `lotse gui`, opt-in extra)

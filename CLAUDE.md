@@ -58,6 +58,7 @@ nachtlotse/
 │   ├── ephemeris.py     # altitude/azimuth/transit via skyfield
 │   ├── constraints.py   # altitude, twilight, moon distance, horizon, framing
 │   ├── framing.py       # FoV, sampling, field rotation (alt-az!)
+│   ├── framing_preview.py # frame layout on the sky (FoV rectangle, orientation)
 │   ├── scoring.py       # target ranking + verdict heuristic
 │   └── models.py        # dataclasses: Site, Rig, HorizonProfile, Target, Verdict
 ├── data/            # persistence — sites, rigs, horizons, session log
@@ -71,6 +72,8 @@ nachtlotse/
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
 ├── charting.py      # shared polar-chart geometry, no charting-library dependency
 ├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
+├── sky_survey.py    # optional DSS2 cutouts (CDS hips2fits), disk-cached
+├── frame_export.py  # `lotse frame`'s PNG export + shared preview text
 ├── best_sky.py      # cross-site weather comparison (`lotse best-sky`)
 ├── prose.py         # LLM nightly briefing (`lotse plan --prose`, opt-in)
 ├── gui/             # native app (PySide6, `lotse gui`, opt-in `gui` extra)
@@ -236,6 +239,7 @@ uv run lotse plan --limit 20   # evaluate only the first 20 matching objects
 uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
+uv run lotse frame M31         # framing preview: text + PNG (charts extra)
 uv run lotse gui                # the early native GUI (see ROADMAP.md)
 ```
 

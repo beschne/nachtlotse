@@ -380,6 +380,50 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   filled from this app's own muted `theme.VERDICT_COLORS` `_text` tones,
   not clearoutside's blue gradient or a generic traffic-light palette.
 
+## `nachtlotse/engine/framing_preview.py`
+
+- The framing preview's geometry (ROADMAP.md's former #1, now closed):
+  for one target or a co-visible group, the rig's FoV rectangle around it
+  (a group centers on `grouping.centroid_target`), every catalog object
+  that falls inside the frame, and the frame's orientation at a given
+  time — gnomonic (TAN) offsets in arcmin, no rendering. Fill and fit come
+  from `framing.fill_fraction_score`, the same curve the ranking uses, so
+  the preview can't disagree with the `Fit` column.
+- Alt-az orientation: the frame's "up" edge points at the zenith, so its
+  position angle is the parallactic angle — computed by nudging the
+  target's alt-az position upward and transforming back to ICRS with
+  astropy, i.e. measured against ICRS north (the north a survey image
+  uses). astroplan's own `parallactic_angle` was the first choice but
+  takes the hour angle from J2000 RA without precession: ~1.7° off near
+  the zenith (M31 at 81° altitude). Eq mounts: fixed frame, long side
+  east–west (camera rotation isn't modeled).
+- Tested against independent derivations: the textbook parallactic-angle
+  formula on apparent (TETE) coordinates (constant ~0.04° offset — the
+  ICRS-vs-true-of-date north tilt), astroplan away from the zenith, 0° at
+  a southern meridian transit (−0.15°, the predicted precession tilt),
+  and astropy's `spherical_offsets_to` for M32 around M31 (< 0.01′).
+
+## `nachtlotse/sky_survey.py` and `nachtlotse/frame_export.py`
+
+- `sky_survey.py`: optional backdrop for the framing preview, the same
+  kind of layer as weather — CDS hips2fits cutouts (DSS2 color, TAN,
+  ICRS, north up/east left, square, sized to the frame's diagonal + 15%
+  so a rotated frame always fits). Plain `urllib`, no new dependency.
+  Cached in `.cache/sky_survey/` with no expiry (the sky doesn't
+  change), written via rename so an interrupted write can't leave a
+  truncated JPEG behind. Failures raise `SurveyImageUnavailable`, which
+  every caller treats as routine: the preview draws without a backdrop.
+  The image's tangent-plane extent follows hips2fits' own WCS header
+  (CDELT = 2·tan(fov/2)/width), not fov/2.
+- `frame_export.py`: the matplotlib PNG renderer (`charts` extra, lazy
+  import like `chart_export.py`) plus the pieces both front ends share —
+  `summary_lines` (the text under the preview), colors, label formats,
+  and the view extent. Objects are dashed circles of their catalog major
+  axis: the catalog has no position angle (see ROADMAP.md's
+  non-prioritized ideas), and an ellipse would have to guess one.
+- Verified end to end against real cutouts: catalog positions of M32 and
+  M110 land exactly on them in the DSS image around M31.
+
 ## `nachtlotse/prose.py`
 
 - The LLM-prose roadmap item, now closed: the one module allowed to call
@@ -470,6 +514,16 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   an actionable stderr message and exit code 2, the same contract
   `--chart` uses for a missing extra.
 
+- `lotse frame TARGET... [--site] [--rig] [--date] [--out PATH]
+  [--no-survey]`: the framing preview for one target, or several that
+  fit one frame together (`data.catalog.find_target` resolves IDs,
+  aliases, and names, ignoring case and spaces). Framed at the same
+  best time `lotse plan` would pick (`planning.best_time_for`, shared
+  with `rank_targets`); a target that isn't observable that night is
+  framed at the middle of the dark window instead, and says so. Prints
+  the summary and writes a PNG (default `nachtlotse-frame-<id>.png`);
+  missing matplotlib is an actionable exit code 2, like `--chart`.
+
 ## `nachtlotse/charting.py` and `nachtlotse/chart_export.py`
 
 - `charting.py`: pure alt/az → (x, y) polar-projection geometry — zenith
@@ -513,6 +567,11 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   itself (`pytest.importorskip("matplotlib")`) when the `charts` extra
   isn't installed, but its "matplotlib missing" error path is tested
   unconditionally by forcing the `_import_matplotlib` seam to raise.
+
+- `sky_survey`'s tests mock `urllib.request.urlopen`; a `conftest.py`
+  fixture keeps every other test offline and on its own empty cutout
+  cache. The GUI's framing window has headless Qt smoke tests
+  (`QT_QPA_PLATFORM=offscreen`, skipped without the `gui` extra).
 
 ## Not yet implemented (by design)
 
