@@ -101,8 +101,8 @@ def fetch_comet_orbits(
         return CometOrbits(_read(path), cached_at)
     try:
         raw = _http.get(COMET_ELEMENTS_URL, source="MPC comet elements")
-    except EventsUnavailable:
-        _backoff.record_failure(path)
+    except EventsUnavailable as exc:
+        _backoff.record_failure(path, hold_off=exc.retry_after, now=now)
         if cached_at is None:
             raise
         return CometOrbits(_read(path), cached_at)

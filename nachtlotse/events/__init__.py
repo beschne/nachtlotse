@@ -12,10 +12,19 @@ as routine, like a missing weather forecast.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 DEFAULT_CACHE_DIR = Path(".cache/events")
 
 
 class EventsUnavailable(Exception):
-    """A source couldn't be fetched and nothing usable is cached."""
+    """A source couldn't be fetched and nothing usable is cached.
+
+    `retry_after`, when the server said how long to wait (HTTP 429 with
+    a rate-limit reset or Retry-After header), replaces the default
+    backoff — see `_backoff.record_failure`."""
+
+    def __init__(self, message: str, *, retry_after: timedelta | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after

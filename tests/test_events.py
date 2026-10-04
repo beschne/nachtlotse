@@ -276,7 +276,8 @@ def test_backoff_expires_and_a_success_clears_it(
     marker = tmp_path / "CometEls.txt.failed"
     assert marker.exists()
 
-    _age_cache(marker, hours=2)  # past RETRY_AFTER
+    expired = datetime.now(UTC) - timedelta(minutes=1)
+    marker.write_text(expired.isoformat())  # hold-off over
     monkeypatch.setattr(_http, "get", lambda url, source: COMET_ELS.encode())
     assert "10P" in mpc.fetch_comet_orbits(cache_dir=tmp_path).orbits
     assert not marker.exists()

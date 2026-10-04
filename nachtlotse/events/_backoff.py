@@ -1,11 +1,14 @@
 """Don't hammer a source that just failed.
 
 A failed request (network down, or the server refusing us — e.g. HTTP 429
-"too many requests") is remembered as a marker file next to the cache; for
-`RETRY_AFTER` after it, callers skip the network entirely and fall back to
-their cached copy (or report the source unavailable). Without this, every
-re-plan in the GUI would retry immediately — exactly the pattern that gets
-a client rate-limited or blocked.
+"too many requests") is remembered as a marker file next to the cache,
+holding the time until which to leave the source alone: `RETRY_AFTER` by
+default, or exactly as long as a rate-limited server asked (TNS, for one,
+resets its 10-requests-a-minute window in seconds, not hours). Until
+then, callers skip the network entirely and fall back to their cached
+copy (or report the source unavailable). Without this, every re-plan in
+the GUI would retry immediately — exactly the pattern that gets a client
+rate-limited or blocked.
 """
 
 from __future__ import annotations
@@ -21,19 +24,30 @@ def _marker(cache_path: Path) -> Path:
 
 
 def recently_failed(cache_path: Path, now: datetime) -> bool:
-    """Whether a request for this cache file failed within `RETRY_AFTER`."""
+    """Whether this source is still in its hold-off period."""
+    marker = _marker(cache_path)
     try:
-        failed_at = datetime.fromtimestamp(_marker(cache_path).stat().st_mtime, tz=UTC)
+        until = datetime.fromisoformat(marker.read_text().strip())
     except OSError:
         return False
-    return now - failed_at < RETRY_AFTER
+    except ValueError:
+        # An old-style (empty) marker: hold off `RETRY_AFTER` from its mtime.
+        try:
+            until = datetime.fromtimestamp(marker.stat().st_mtime, tz=UTC) + RETRY_AFTER
+        except OSError:
+            return False
+    return now < until
 
 
-def record_failure(cache_path: Path) -> None:
+def record_failure(
+    cache_path: Path, *, hold_off: timedelta | None = None, now: datetime | None = None
+) -> None:
+    """Hold this source off for `hold_off` (default `RETRY_AFTER`)."""
+    until = (now or datetime.now(UTC)) + (hold_off or RETRY_AFTER)
     try:
         marker = _marker(cache_path)
         marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.touch()
+        marker.write_text(until.isoformat())
     except OSError:
         pass  # best-effort — at worst the next call retries
 

@@ -114,8 +114,8 @@ def fetch_comet_brightness(
         return cached
     try:
         observations = _download(now - timedelta(days=WINDOW_DAYS))
-    except EventsUnavailable:
-        _backoff.record_failure(path)
+    except EventsUnavailable as exc:
+        _backoff.record_failure(path, hold_off=exc.retry_after, now=now)
         if cached is None:
             raise
         return cached
