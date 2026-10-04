@@ -223,3 +223,60 @@ def test_fetch_comet_brightness_raises_on_garbage_without_a_cache(
     monkeypatch.setattr(_http, "get", lambda url, source: b"not json")
     with pytest.raises(EventsUnavailable, match="malformed"):
         cobs.fetch_comet_brightness(now=NOW, cache_dir=tmp_path)
+
+
+# --- backoff after a failed request ----------------------------------------
+
+
+def _counting_offline(calls: list[str]):
+    def offline(url, source):
+        calls.append(url)
+        raise EventsUnavailable("HTTP Error 429: Too Many Requests")
+
+    return offline
+
+
+def test_a_failed_request_isnt_retried_within_the_hour(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(_http, "get", _counting_offline(calls))
+
+    for _ in range(3):
+        with pytest.raises(EventsUnavailable):
+            mpc.fetch_comet_orbits(cache_dir=tmp_path)
+        with pytest.raises(EventsUnavailable):
+            cobs.fetch_comet_brightness(cache_dir=tmp_path)
+    # One attempt per source, then quiet — no hammering on every re-plan.
+    assert len(calls) == 2
+
+
+def test_backoff_serves_the_stale_cache_without_a_request(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(_http, "get", lambda url, source: COMET_ELS.encode())
+    mpc.fetch_comet_orbits(cache_dir=tmp_path)
+    _age_cache(tmp_path / "CometEls.txt", hours=30)  # past the 24 h TTL
+
+    calls: list[str] = []
+    monkeypatch.setattr(_http, "get", _counting_offline(calls))
+    first = mpc.fetch_comet_orbits(cache_dir=tmp_path)
+    second = mpc.fetch_comet_orbits(cache_dir=tmp_path)
+    assert len(calls) == 1
+    assert "10P" in first.orbits and "10P" in second.orbits
+
+
+def test_backoff_expires_and_a_success_clears_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(_http, "get", _counting_offline(calls))
+    with pytest.raises(EventsUnavailable):
+        mpc.fetch_comet_orbits(cache_dir=tmp_path)
+    marker = tmp_path / "CometEls.txt.failed"
+    assert marker.exists()
+
+    _age_cache(marker, hours=2)  # past RETRY_AFTER
+    monkeypatch.setattr(_http, "get", lambda url, source: COMET_ELS.encode())
+    assert "10P" in mpc.fetch_comet_orbits(cache_dir=tmp_path).orbits
+    assert not marker.exists()

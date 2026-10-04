@@ -18,7 +18,7 @@ from pathlib import Path
 
 from nachtlotse import events
 from nachtlotse.engine.models import CometOrbit
-from nachtlotse.events import EventsUnavailable, _http
+from nachtlotse.events import EventsUnavailable, _backoff, _http
 
 COMET_ELEMENTS_URL = "https://www.minorplanetcenter.net/iau/MPCORB/CometEls.txt"
 # The MPC refreshes elements daily; a day-old file is still accurate to
@@ -82,7 +82,8 @@ def fetch_comet_orbits(
     """Current comet orbits: the cached copy if it's younger than
     `CACHE_TTL_HOURS`, else a fresh download — or, if that fails, the
     cached copy whatever its age (its `fetched_at` says how old). Raises
-    `EventsUnavailable` only with no network and no cache.
+    `EventsUnavailable` only with no network and no cache. After a failed
+    download, no new attempt for `_backoff.RETRY_AFTER`.
     """
     now = now or datetime.now(UTC)
     path = (cache_dir or events.DEFAULT_CACHE_DIR) / _CACHE_FILENAME
@@ -92,16 +93,25 @@ def fetch_comet_orbits(
         CACHE_TTL_HOURS * 3600
     ):
         return CometOrbits(_read(path), cached_at)
+    if _backoff.recently_failed(path, now):
+        if cached_at is None:
+            raise EventsUnavailable(
+                "MPC comet elements: last request failed, not retrying yet"
+            )
+        return CometOrbits(_read(path), cached_at)
     try:
         raw = _http.get(COMET_ELEMENTS_URL, source="MPC comet elements")
     except EventsUnavailable:
+        _backoff.record_failure(path)
         if cached_at is None:
             raise
         return CometOrbits(_read(path), cached_at)
 
     orbits = parse_comet_elements(raw.decode("utf-8", errors="replace"))
     if not orbits:
+        _backoff.record_failure(path)
         raise EventsUnavailable("MPC comet elements: no parsable orbits")
+    _backoff.clear_failure(path)
     _write(path, raw)
     return CometOrbits(orbits, now)
 

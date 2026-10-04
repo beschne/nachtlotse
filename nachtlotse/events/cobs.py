@@ -27,12 +27,14 @@ from pathlib import Path
 from typing import Any
 
 from nachtlotse import events
-from nachtlotse.events import EventsUnavailable, _http
+from nachtlotse.events import EventsUnavailable, _backoff, _http
 
 OBSERVATIONS_URL = "https://cobs.si/api/obs_list.api"
 WINDOW_DAYS = 14
-# Observations trickle in through the day; a few hours' delay is fine.
-CACHE_TTL_HOURS = 6.0
+# Observations trickle in through the day, and a comet's brightness
+# changes over days, not hours — half a day keeps COBS to two requests a
+# day per machine.
+CACHE_TTL_HOURS = 12.0
 _CACHE_FILENAME = "cobs_brightness.json"
 # Guard against a runaway paging loop if the API ever misreports `pages`.
 _MAX_PAGES = 20
@@ -96,7 +98,8 @@ def fetch_comet_brightness(
     """Every comet reported in the last `WINDOW_DAYS` days, with its
     median magnitude. Same caching contract as `mpc.fetch_comet_orbits`:
     fresh cache, else download, else stale cache, else
-    `EventsUnavailable`."""
+    `EventsUnavailable` — and no new attempt for `_backoff.RETRY_AFTER`
+    after a failed one."""
     now = now or datetime.now(UTC)
     path = (cache_dir or events.DEFAULT_CACHE_DIR) / _CACHE_FILENAME
     cached = _read_cache(path)
@@ -105,9 +108,14 @@ def fetch_comet_brightness(
         CACHE_TTL_HOURS * 3600
     ):
         return cached
+    if _backoff.recently_failed(path, now):
+        if cached is None:
+            raise EventsUnavailable("COBS: last request failed, not retrying yet")
+        return cached
     try:
         observations = _download(now - timedelta(days=WINDOW_DAYS))
     except EventsUnavailable:
+        _backoff.record_failure(path)
         if cached is None:
             raise
         return cached
@@ -115,6 +123,7 @@ def fetch_comet_brightness(
     report = CometBrightnessReport(
         summarize_observations(observations), now, WINDOW_DAYS
     )
+    _backoff.clear_failure(path)
     _write_cache(path, report)
     return report
 
