@@ -199,3 +199,25 @@ def test_moon_phase_angle_matches_astroplans_illumination_fraction() -> None:
         implied_fraction = (1 - math.cos(math.radians(angle_deg))) / 2
         expected_fraction = float(moon_illumination(Time(when)))
         assert implied_fraction == pytest.approx(expected_fraction, abs=0.02)
+
+
+def test_altaz_at_matches_altaz_moment_by_moment() -> None:
+    """Same skyfield math as `altaz`, batched — equal up to the last
+    floating-point digit (vectorized trig can round differently)."""
+    target = Target(name="t", ra_deg=83.82, dec_deg=-5.39)
+    whens = [
+        datetime(2026, 10, 4, 22, 0, tzinfo=UTC) + timedelta(hours=h) for h in range(5)
+    ]
+    batch = ephemeris.altaz_at(BAD_HOMBURG, target, whens)
+    for pos, when in zip(batch, whens, strict=True):
+        single = ephemeris.altaz(BAD_HOMBURG, target, when)
+        assert pos.alt_deg == pytest.approx(single.alt_deg, abs=1e-12)
+        assert pos.az_deg == pytest.approx(single.az_deg, abs=1e-12)
+
+
+def test_altaz_at_rejects_naive_datetimes_and_handles_empty_input() -> None:
+    target = Target(name="t", ra_deg=0.0, dec_deg=0.0)
+    assert ephemeris.altaz_at(BAD_HOMBURG, target, []) == []
+    with pytest.raises(ValueError):
+        naive = datetime(2026, 10, 4, 22, 0)  # noqa: DTZ001 — deliberately naive
+        ephemeris.altaz_at(BAD_HOMBURG, target, [naive])

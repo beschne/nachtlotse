@@ -10,25 +10,28 @@ the skyfield-based `ephemeris` module instead and checks each sample against
 auto-download is disabled; the bundled `astropy-iers-data` package is
 precise enough for twilight/moon timing, and no network access is needed at
 a dark site.
+
+Performance: ranking the whole catalog asks the same night-level
+questions once per target — the dark window, and the Sun and Moon at each
+of the night's samples. Those are computed once per site and night
+(`_night_samples`, memoized on plain values, so every function here stays
+pure) and reused; each target's own samples are evaluated as one
+vectorized batch instead of one astropy call per sample. Same inputs, same
+math, same results — just without recomputing the sky for every target.
 """
 
 from __future__ import annotations
 
+import functools
 import warnings
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import numpy as np
-from astroplan import (
-    AltitudeConstraint,
-    AtNightConstraint,
-    FixedTarget,
-    MoonSeparationConstraint,
-    Observer,
-    observability_table,
-)
+from astroplan import FixedTarget, Observer
 from astropy import units as u
-from astropy.coordinates import EarthLocation, SkyCoord, get_body
+from astropy.coordinates import EarthLocation, SkyCoord, get_body, get_sun
 from astropy.coordinates.errors import NonRotationTransformationWarning
 from astropy.time import Time
 from astropy.utils import iers
@@ -50,6 +53,9 @@ warnings.filterwarnings("ignore", category=NonRotationTransformationWarning)
 DEFAULT_MIN_ALT_DEG = 20.0
 DEFAULT_MIN_MOON_SEP_DEG = 30.0
 _SAMPLES_PER_NIGHT = 25
+# Astronomical twilight: the Sun at or below -18° (astroplan's
+# `AtNightConstraint.twilight_astronomical`).
+_MAX_SOLAR_ALT_DEG = -18.0
 
 
 def build_observer(site: Site) -> Observer:
@@ -83,9 +89,22 @@ def moon_separation_deg(site: Site, target: Target, when: datetime) -> float:
     per group member, not just for the single target `best_time_tonight`
     itself is scanning.
     """
-    moon = get_body("moon", Time(when), _earth_location(site))
+    moon = _moon_at(site.lat_deg, site.lon_deg, site.elevation_m, when)
     target_coord = SkyCoord(ra=target.ra_deg * u.deg, dec=target.dec_deg * u.deg)
     return float(moon.separation(target_coord).deg)
+
+
+@functools.lru_cache(maxsize=4096)
+def _moon_at(
+    lat_deg: float, lon_deg: float, elevation_m: float, when: datetime
+) -> SkyCoord:
+    """The Moon (GCRS, as `get_body` returns it) seen from a location at
+    `when` — memoized: group visibility checks ask for the same sample
+    times over and over, once per member."""
+    location = EarthLocation(
+        lat=lat_deg * u.deg, lon=lon_deg * u.deg, height=elevation_m * u.m
+    )
+    return get_body("moon", Time(when), location)
 
 
 def clears_horizon(site: Site, pos: ephemeris.AltAz) -> bool:
@@ -97,9 +116,22 @@ def dark_window(site: Site, reference: datetime) -> tuple[datetime, datetime]:
     """Astronomical-twilight dark window (sun below -18°) around `reference`.
 
     If `reference` falls within a night, returns that night's window;
-    otherwise returns the next upcoming one.
+    otherwise returns the next upcoming one. Memoized per location and
+    `reference` (see the module docstring): ranking asks this once per
+    catalog target, always for the same night.
     """
-    observer = build_observer(site)
+    return _dark_window(site.lat_deg, site.lon_deg, site.elevation_m, reference)
+
+
+@functools.lru_cache(maxsize=256)
+def _dark_window(
+    lat_deg: float, lon_deg: float, elevation_m: float, reference: datetime
+) -> tuple[datetime, datetime]:
+    observer = Observer(
+        latitude=lat_deg * u.deg,
+        longitude=lon_deg * u.deg,
+        elevation=elevation_m * u.m,
+    )
     t_ref = Time(reference)
 
     evening_start = observer.twilight_evening_astronomical(t_ref, which="previous")
@@ -117,6 +149,45 @@ def dark_window(site: Site, reference: datetime) -> tuple[datetime, datetime]:
     )
 
 
+@dataclass(frozen=True)
+class _NightSamples:
+    """Everything about a night that's the same for every target: the
+    sample times across the dark window, the Sun's altitude and the Moon's
+    position at each of them."""
+
+    times: Time
+    datetimes: tuple[datetime, ...]
+    sun_alt_deg: np.ndarray
+    moon: SkyCoord
+
+
+@functools.lru_cache(maxsize=64)
+def _night_samples(
+    lat_deg: float, lon_deg: float, elevation_m: float, reference: datetime
+) -> _NightSamples:
+    evening_start, morning_end = _dark_window(lat_deg, lon_deg, elevation_m, reference)
+    times = Time(
+        np.linspace(Time(evening_start).jd, Time(morning_end).jd, _SAMPLES_PER_NIGHT),
+        format="jd",
+    )
+    observer = Observer(
+        latitude=lat_deg * u.deg,
+        longitude=lon_deg * u.deg,
+        elevation=elevation_m * u.m,
+    )
+    # Same calls astroplan's AtNightConstraint/MoonSeparationConstraint make.
+    sun_alt_deg = observer.altaz(times, get_sun(times)).alt.deg
+    moon = get_body("moon", times, location=observer.location)
+    datetimes = tuple(
+        Time(jd, format="jd").to_datetime(timezone=UTC) for jd in times.jd
+    )
+    return _NightSamples(times, datetimes, np.asarray(sun_alt_deg), moon)
+
+
+def _samples_for(site: Site, reference: datetime) -> _NightSamples:
+    return _night_samples(site.lat_deg, site.lon_deg, site.elevation_m, reference)
+
+
 def is_observable_tonight(
     site: Site,
     target: Target,
@@ -127,24 +198,42 @@ def is_observable_tonight(
 ) -> bool:
     """Whether the target ever clears altitude/night/moon-separation
     constraints during tonight's astronomical-twilight dark window.
+
+    The same test astroplan's `observability_table` runs with
+    `AltitudeConstraint`, `AtNightConstraint.twilight_astronomical()` and
+    `MoonSeparationConstraint` — the same astropy calls on the same sample
+    times — but with the Sun and Moon computed once per night
+    (`_night_samples`) instead of once per target.
     """
-    evening_start, morning_end = dark_window(site, reference)
+    observable, _moon_sep_deg = _observability(
+        site, target, reference, min_alt_deg, min_moon_sep_deg
+    )
+    return observable
+
+
+def _observability(
+    site: Site,
+    target: Target,
+    reference: datetime,
+    min_alt_deg: float,
+    min_moon_sep_deg: float,
+) -> tuple[bool, np.ndarray]:
+    """`is_observable_tonight`'s answer, plus the target's Moon separation
+    (deg) at each of the night's samples — which `best_time_tonight`
+    needs too, so it's computed once and handed on rather than twice."""
+    night = _samples_for(site, reference)
     observer = build_observer(site)
-    times = Time(
-        np.linspace(Time(evening_start).jd, Time(morning_end).jd, _SAMPLES_PER_NIGHT),
-        format="jd",
+    fixed_target = build_fixed_target(target)
+    target_alt_deg = observer.altaz(night.times, fixed_target).alt.deg
+    # moon.separation(target), not the reverse: separation in the Moon's
+    # own (GCRS) frame, exactly as MoonSeparationConstraint computes it.
+    moon_sep_deg = np.asarray(night.moon.separation(fixed_target.coord).deg)
+    observable = (
+        (min_alt_deg <= target_alt_deg)
+        & (night.sun_alt_deg <= _MAX_SOLAR_ALT_DEG)
+        & (min_moon_sep_deg <= moon_sep_deg)
     )
-
-    night_constraints = [
-        AltitudeConstraint(min=min_alt_deg * u.deg),
-        AtNightConstraint.twilight_astronomical(),
-        MoonSeparationConstraint(min=min_moon_sep_deg * u.deg),
-    ]
-
-    table = observability_table(
-        night_constraints, observer, [build_fixed_target(target)], times=times
-    )
-    return bool(table["ever observable"][0])
+    return bool(np.any(observable)), moon_sep_deg
 
 
 def best_time_tonight(
@@ -169,35 +258,30 @@ def best_time_tonight(
     field-rotation safety from `engine.framing`) — kept as an injected
     callback rather than a parameter here so this module stays rig-agnostic
     and doesn't need to import `framing` (which itself imports the
-    `build_observer`/`build_fixed_target` helpers below).
+    `build_observer`/`build_fixed_target` helpers below). It's by far the
+    most expensive check, so it runs last and lazily: candidates that pass
+    everything else are tried highest first, and the first one `extra_ok`
+    accepts is the answer — the same sample a full scan would pick (ties
+    go to the earlier sample, as before).
     """
-    if not is_observable_tonight(
-        site,
-        target,
-        reference,
-        min_alt_deg=min_alt_deg,
-        min_moon_sep_deg=min_moon_sep_deg,
-    ):
+    observable, moon_sep_deg = _observability(
+        site, target, reference, min_alt_deg, min_moon_sep_deg
+    )
+    if not observable:
         return None
 
-    evening_start, morning_end = dark_window(site, reference)
-    start_jd = Time(evening_start).jd
-    end_jd = Time(morning_end).jd
+    night = _samples_for(site, reference)
+    positions = ephemeris.altaz_at(site, target, night.datetimes)
 
-    best: tuple[datetime, ephemeris.AltAz] | None = None
-    for sample_jd in np.linspace(start_jd, end_jd, _SAMPLES_PER_NIGHT):
-        sample_time = Time(sample_jd, format="jd").to_datetime(timezone=UTC)
-        pos = ephemeris.altaz(site, target, sample_time)
-
-        if pos.alt_deg < min_alt_deg:
-            continue
-        if not clears_horizon(site, pos):
-            continue
-        if moon_separation_deg(site, target, sample_time) < min_moon_sep_deg:
-            continue
-        if extra_ok is not None and not extra_ok(sample_time, pos):
-            continue
-        if best is None or pos.alt_deg > best[1].alt_deg:
-            best = (sample_time, pos)
-
-    return best
+    candidates = [
+        i
+        for i, pos in enumerate(positions)
+        if pos.alt_deg >= min_alt_deg
+        and clears_horizon(site, pos)
+        and moon_sep_deg[i] >= min_moon_sep_deg
+    ]
+    # Highest first; `sorted` is stable, so equal altitudes keep time order.
+    for i in sorted(candidates, key=lambda i: -positions[i].alt_deg):
+        if extra_ok is None or extra_ok(night.datetimes[i], positions[i]):
+            return night.datetimes[i], positions[i]
+    return None

@@ -7,6 +7,7 @@ cache directory, not in the git repo (see .gitignore).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -56,6 +57,23 @@ def altaz(site: Site, target: Target, when: datetime) -> AltAz:
     apparent = observer.at(t).observe(_star(target)).apparent()
     alt, az, distance = apparent.altaz()
     return AltAz(alt_deg=alt.degrees, az_deg=az.degrees, distance_au=distance.au)
+
+
+def altaz_at(site: Site, target: Target, whens: Sequence[datetime]) -> list[AltAz]:
+    """`altaz` at each of `whens`, computed as one vectorized batch — the
+    same skyfield calls, one array instead of one call per moment."""
+    if not whens:
+        return []
+    observer = _earth + _topos(site)
+    if any(w.tzinfo is None for w in whens):
+        raise ValueError("when must be timezone-aware (aware datetime)")
+    times = _timescale.from_datetimes(list(whens))
+    apparent = observer.at(times).observe(_star(target)).apparent()
+    alt, az, distance = apparent.altaz()
+    return [
+        AltAz(alt_deg=alt.degrees[i], az_deg=az.degrees[i], distance_au=distance.au[i])
+        for i in range(len(whens))
+    ]
 
 
 def altitude_series(

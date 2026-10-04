@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import numpy as np
 import pytest
 from astropy import units as u
 from astropy.coordinates import EarthLocation, get_body
@@ -160,3 +161,83 @@ def test_stale_iers_table_does_not_block_planning() -> None:
     # UT1-UTC lookup for a date well beyond the bundled table's predictions.
     far_future = Time("2030-01-01T00:00:00", scale="utc")
     assert abs(far_future.ut1.jd - far_future.jd) < 1e-4
+
+
+# --- per-night batching (performance) — must not change any result ---------
+
+_NIGHT_REFERENCE = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
+
+
+def _astroplan_reference_observable(site: Site, target: Target, reference) -> bool:
+    """The pre-check as it was originally written: astroplan's own
+    `observability_table` with the three constraints, per target."""
+    from astroplan import (
+        AltitudeConstraint,
+        AtNightConstraint,
+        MoonSeparationConstraint,
+        observability_table,
+    )
+
+    evening_start, morning_end = constraints.dark_window(site, reference)
+    times = Time(
+        np.linspace(
+            Time(evening_start).jd,
+            Time(morning_end).jd,
+            constraints._SAMPLES_PER_NIGHT,
+        ),
+        format="jd",
+    )
+    table = observability_table(
+        [
+            AltitudeConstraint(min=constraints.DEFAULT_MIN_ALT_DEG * u.deg),
+            AtNightConstraint.twilight_astronomical(),
+            MoonSeparationConstraint(min=constraints.DEFAULT_MIN_MOON_SEP_DEG * u.deg),
+        ],
+        constraints.build_observer(site),
+        [constraints.build_fixed_target(target)],
+        times=times,
+    )
+    return bool(table["ever observable"][0])
+
+
+def test_is_observable_tonight_matches_astroplans_observability_table() -> None:
+    """The batched pre-check (Sun/Moon once per night) gives exactly the
+    answer astroplan's per-target `observability_table` gives."""
+    from nachtlotse.data.catalog import CATALOG
+
+    sample = CATALOG[::12]  # ~20 real targets across the sky
+    answers = [
+        constraints.is_observable_tonight(BAD_HOMBURG, t, _NIGHT_REFERENCE)
+        for t in sample
+    ]
+    assert any(answers) and not all(answers)  # a meaningful mix
+    for target, answer in zip(sample, answers, strict=True):
+        assert answer == _astroplan_reference_observable(
+            BAD_HOMBURG, target, _NIGHT_REFERENCE
+        ), target.catalog_id
+
+
+def test_best_time_tonight_tries_extra_ok_highest_first_and_stops() -> None:
+    """`extra_ok` is only consulted, highest candidate first, until one
+    passes — and the answer is what a full scan would pick."""
+    full = constraints.best_time_tonight(
+        BAD_HOMBURG, CIRCUMPOLAR_TARGET, _NIGHT_REFERENCE, min_moon_sep_deg=0.0
+    )
+    assert full is not None
+    asked: list[float] = []
+
+    def reject_the_peak(when: datetime, pos) -> bool:
+        asked.append(pos.alt_deg)
+        return when != full[0]
+
+    second = constraints.best_time_tonight(
+        BAD_HOMBURG,
+        CIRCUMPOLAR_TARGET,
+        _NIGHT_REFERENCE,
+        min_moon_sep_deg=0.0,
+        extra_ok=reject_the_peak,
+    )
+    assert second is not None
+    assert len(asked) == 2  # the peak (rejected), then the runner-up
+    assert asked[0] == full[1].alt_deg
+    assert second[1].alt_deg == asked[1] <= full[1].alt_deg
