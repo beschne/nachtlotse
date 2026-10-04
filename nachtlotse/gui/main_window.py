@@ -12,6 +12,9 @@ briefing, and read-only Sites/Rigs reference screens (see
 `sites_rigs.py`'s own docstring for why they're read-only, not an editor).
 Either table also opens a framing preview for its selected row (see
 `framing_view.py`), by double-click or its "Framing preview…" button.
+The Events tab lists current events (comets observed lately) worth
+shooting tonight, the rest with reasons, and where the data came from —
+gathered by the same background plan run (`include_events=True`).
 
 `planning.plan_night` runs on a background `QThread` (`_PlanWorker`),
 same reasoning as `briefing._BriefingWorker`: it's not instant (catalog
@@ -87,6 +90,23 @@ _RANKED_COLUMNS = [
     ("fit_text", "Fit", "right"),
     ("reach_text", "Reach", "right"),
     ("best_time_text", "Best", "right"),
+]
+
+_EVENT_COLUMNS = [
+    ("label", "Event", "left"),
+    ("type_label", "Type", "left"),
+    ("magnitude_text", "Mag", "right"),
+    ("alt_text", "Alt", "right"),
+    ("az_text", "Az", "right"),
+    ("motion_text", "Motion", "right"),
+    ("best_time_text", "Best", "right"),
+    ("verdict", "Verdict", "center"),
+]
+
+_SKIPPED_EVENT_COLUMNS = [
+    ("label", "Not tonight", "left"),
+    ("magnitude_text", "Mag", "right"),
+    ("reason", "Why not", "left"),
 ]
 
 _ALIGN = {"left": Qt.AlignLeft, "right": Qt.AlignRight, "center": Qt.AlignCenter}
@@ -170,7 +190,11 @@ class _PlanWorker(QThread):
     def run(self) -> None:
         try:
             plan = planning.plan_night(
-                self._site, self._rig, self._when, limit=self._limit
+                self._site,
+                self._rig,
+                self._when,
+                limit=self._limit,
+                include_events=True,
             )
         except Exception as exc:  # noqa: BLE001 — surface any failure to the UI, don't crash it
             self.failed.emit(str(exc))
@@ -294,6 +318,25 @@ class MainWindow(QMainWindow):
         ranked_layout.addWidget(self.ranked_table)
         self.tabs.addTab(ranked_card, "All ranked")
 
+        # Current events (ROADMAP.md): comets worth shooting tonight, then
+        # the rest with reasons — the GUI's `lotse events`.
+        events_card = RoundedCard()
+        events_layout = QVBoxLayout(events_card)
+        events_layout.setContentsMargins(*([_CARD_CONTENT_MARGIN] * 4))
+        self.events_table = self._build_table(_EVENT_COLUMNS)
+        self.events_framing_button = self._framing_button(self.events_table)
+        events_layout.addLayout(self._export_row(self.events_framing_button))
+        events_layout.addWidget(self.events_table, stretch=3)
+        self.skipped_events_table = self._build_table(_SKIPPED_EVENT_COLUMNS)
+        events_layout.addWidget(self.skipped_events_table, stretch=2)
+        self.events_notes = QLabel()
+        self.events_notes.setWordWrap(True)
+        self.events_notes.setStyleSheet(
+            label_style(f"color: {COLORS['ink_secondary']}; font-size: 11px;")
+        )
+        events_layout.addWidget(self.events_notes)
+        self.tabs.addTab(events_card, "Events")
+
         self.sky_chart = SkyChartCard()
         self.tabs.addTab(self.sky_chart, "Sky chart")
 
@@ -363,11 +406,12 @@ class MainWindow(QMainWindow):
         if not selected:
             return
         row = selected[0].row()
-        entries = (
-            [entry.ranked for entry in self._plan.shortlist]
-            if table is self.shortlist_table
-            else self._plan.ranked
-        )
+        if table is self.shortlist_table:
+            entries: list = [entry.ranked for entry in self._plan.shortlist]
+        elif table is self.events_table:
+            entries = self._plan.events.events if self._plan.events else []
+        else:
+            entries = self._plan.ranked
         if not 0 <= row < len(entries):
             return
         if self._framing_window is None:
@@ -526,12 +570,31 @@ class MainWindow(QMainWindow):
             f"{summary.dark_window_text}  ·  Moon {summary.moon_text}  ·  "
             f"{summary.counts_text}"
         )
-        self.weather_label.setText(summary.weather_text)
+        events_status = data_adapter.events_status_text(plan)
+        self.weather_label.setText(
+            f"{summary.weather_text}  ·  {events_status}"
+            if events_status
+            else summary.weather_text
+        )
         self.hourly_cloud_bar.set_hourly_cloud_cover(plan.hourly_cloud_cover, local_tz)
 
         self._populate_table(self.shortlist_table, _SHORTLIST_COLUMNS, shortlist_rows)
         self._populate_table(self.ranked_table, _RANKED_COLUMNS, ranked_rows)
         self.tabs.setTabText(1, f"All ranked ({len(ranked_rows)})")
+        event_rows = data_adapter.build_event_rows(plan, local_tz)
+        self._populate_table(self.events_table, _EVENT_COLUMNS, event_rows)
+        self._populate_table(
+            self.skipped_events_table,
+            _SKIPPED_EVENT_COLUMNS,
+            data_adapter.build_skipped_event_rows(plan),
+        )
+        self.events_notes.setText(
+            "\n".join(plan.events.notes) if plan.events is not None else ""
+        )
+        self.tabs.setTabText(
+            self.tabs.indexOf(self.events_table.parentWidget()),
+            f"Events ({len(event_rows)})",
+        )
         self.sky_chart.set_plan(plan, local_tz)
         self.briefing.set_plan(plan)
         self.best_sky.set_date(selected_date)

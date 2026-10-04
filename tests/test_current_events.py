@@ -193,3 +193,15 @@ def test_find_event_returns_skipped_events_and_none(live_sources) -> None:
     assert "not observable" in skipped.reason
     assert planning.find_event(report, "M31") is None
     assert planning.find_event(report, "1P") is None  # not "161P"
+
+
+def test_current_events_only_cover_nights_near_the_data(live_sources) -> None:
+    """Brightness observed around 2026-10-04 says nothing about a night
+    two months away — no list, an explanation instead."""
+    far = datetime(2026, 12, 4, 10, 0, tzinfo=UTC)
+    report = planning.current_events(SITE, SEESTAR, far)
+    assert report.events == [] and report.skipped == []
+    assert report.notes[0].startswith("Current events only cover nights within 14")
+    # A week off is still fine.
+    near = datetime(2026, 10, 11, 10, 0, tzinfo=UTC)
+    assert planning.current_events(SITE, SEESTAR, near).events

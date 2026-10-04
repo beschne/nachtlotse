@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import NamedTuple
 
 from astroplan import moon_illumination
@@ -664,6 +664,13 @@ def plan_night_for_best_rig(
 # --- Current events (ROADMAP.md) ---------------------------------------------
 
 
+# How far a planned night may lie from the event data (before or after)
+# for "current" to still mean anything: observed comet brightness drifts
+# over weeks, and a night far off is better served by no list than by a
+# misleading one. The same span as COBS's own reporting window.
+EVENTS_HORIZON_DAYS = 14
+
+
 class RankedEvent(NamedTuple):
     """A current event that's worth shooting tonight: observable (the same
     constraints as any catalog target) and bright enough for the rig
@@ -729,13 +736,25 @@ def current_events(
         brightness = cobs.fetch_comet_brightness()
     except EventsUnavailable as exc:
         return EventsReport([], [], [f"Comets unavailable: {exc}"])
+    evening_start, morning_end = constraints.dark_window(site, when)
+    if abs(evening_start - brightness.fetched_at) > timedelta(days=EVENTS_HORIZON_DAYS):
+        return EventsReport(
+            [],
+            [],
+            [
+                (
+                    "Current events only cover nights within "
+                    f"{EVENTS_HORIZON_DAYS} days of today — this one is "
+                    f"{evening_start:%Y-%m-%d}."
+                )
+            ],
+        )
     notes.append(f"Comet orbits: MPC, {orbits.fetched_at:%Y-%m-%d %H:%M} UTC")
     notes.append(
         f"Comet brightness: COBS reports of the last {brightness.window_days} "
         f"days, {brightness.fetched_at:%Y-%m-%d %H:%M} UTC"
     )
 
-    evening_start, morning_end = constraints.dark_window(site, when)
     snapshot_time = evening_start + (morning_end - evening_start) / 2
     limit_mag = framing.event_limiting_magnitude(rig, site, "comet")
 

@@ -523,3 +523,88 @@ def build_framing_view(
         ),
         local_tz=local_tz,
     )
+
+
+# --- Current events (ROADMAP.md) ------------------------------------------
+
+
+@dataclass(frozen=True)
+class EventRow:
+    """One current event worth shooting tonight, display-ready."""
+
+    label: str
+    type_label: str
+    magnitude_text: str
+    alt_text: str
+    az_text: str
+    motion_text: str
+    best_time_text: str
+    verdict_level: str
+    # The brightness source first, then the verdict's own reasons — shown
+    # as the row's tooltip, like the Shortlist's.
+    verdict_reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SkippedEventRow:
+    label: str
+    magnitude_text: str
+    reason: str
+
+
+def build_event_rows(plan: NightPlan, local_tz: ZoneInfo) -> list[EventRow]:
+    if plan.events is None:
+        return []
+    rows = []
+    for event in plan.events.events:
+        rows.append(
+            EventRow(
+                label=event.target.name,
+                type_label=TARGET_TYPE_LABELS[event.kind],
+                magnitude_text=f"{event.target.magnitude:.1f}",
+                alt_text=f"{event.pos.alt_deg:.1f}°",
+                az_text=f"{event.pos.az_deg:.1f}°",
+                motion_text=(
+                    f"{event.motion_deg_per_hour * 60.0:.1f}′/h"
+                    if event.motion_deg_per_hour is not None
+                    else "—"
+                ),
+                best_time_text=_best_time_text(event.best_time.astimezone(local_tz)),
+                verdict_level=event.verdict.level,
+                verdict_reasons=(
+                    f"brightness: {event.magnitude_source}",
+                    *event.verdict.reasons,
+                ),
+            )
+        )
+    return rows
+
+
+def build_skipped_event_rows(plan: NightPlan) -> list[SkippedEventRow]:
+    if plan.events is None:
+        return []
+    return [
+        SkippedEventRow(
+            label=skipped.name,
+            magnitude_text=(
+                f"{skipped.magnitude:.1f}" if skipped.magnitude is not None else "—"
+            ),
+            reason=skipped.reason,
+        )
+        for skipped in plan.events.skipped
+    ]
+
+
+def events_status_text(plan: NightPlan) -> str:
+    """One line for the header: how many events are worth shooting, or
+    why there are none to show."""
+    if plan.events is None:
+        return ""
+    count = len(plan.events.events)
+    if count:
+        return f"Events: {count} comet{'' if count == 1 else 's'} worth shooting"
+    if any(note.startswith("Comets unavailable") for note in plan.events.notes):
+        return "Events unavailable (offline or sources unreachable)"
+    if any(note.startswith("Current events only cover") for note in plan.events.notes):
+        return "Events: only for nights within two weeks of today"
+    return "Events: no comet worth shooting tonight"

@@ -551,3 +551,83 @@ def test_build_header_summary_flags_a_nautical_only_night() -> None:
     )
     plain = data_adapter.build_header_summary(_night_plan([]), BERLIN)
     assert "nautical" not in plain.dark_window_text
+
+
+# --- current events -------------------------------------------------------
+
+
+def _events_report(events=(), skipped=(), notes=("Comet orbits: MPC, …",)):
+    from nachtlotse import planning
+
+    return planning.EventsReport(list(events), list(skipped), list(notes))
+
+
+def _comet_event():
+    from nachtlotse import planning
+
+    target = Target(
+        name="161P/Hartley-IRAS",
+        ra_deg=10.0,
+        dec_deg=-2.5,
+        magnitude=11.4,
+        size_arcmin=(3.4, 3.4),
+        types=("comet",),
+    )
+    return planning.RankedEvent(
+        kind="comet",
+        target=target,
+        best_time=_WHEN,
+        pos=_pos(37.4, 182.4),
+        fit=0.03,
+        reach=1.0,
+        verdict=Verdict(level="MARGINAL", reasons=["dew risk"]),
+        magnitude_source="COBS: median of 47 reports, latest 2026-10-03",
+        motion_deg_per_hour=0.121,
+    )
+
+
+def test_build_event_rows_is_display_ready() -> None:
+    plan = replace(_night_plan([]), events=_events_report([_comet_event()]))
+    (row,) = data_adapter.build_event_rows(plan, BERLIN)
+
+    assert row.label == "161P/Hartley-IRAS"
+    assert row.type_label == "Comet"
+    assert row.magnitude_text == "11.4"
+    assert (row.alt_text, row.az_text) == ("37.4°", "182.4°")
+    assert row.motion_text == "7.3′/h"
+    assert row.best_time_text == "00:00 CEST"
+    assert row.verdict_level == "MARGINAL"
+    assert row.verdict_reasons == (
+        "brightness: COBS: median of 47 reports, latest 2026-10-03",
+        "dew risk",
+    )
+
+
+def test_build_skipped_event_rows_keeps_the_reason() -> None:
+    from nachtlotse import planning
+
+    skipped = [
+        planning.SkippedEvent("comet", "10P/Tempel", 9.8, "not observable tonight"),
+        planning.SkippedEvent("comet", "95P/Chiron", None, "no MPC comet orbit"),
+    ]
+    plan = replace(_night_plan([]), events=_events_report(skipped=skipped))
+    rows = data_adapter.build_skipped_event_rows(plan)
+    assert [(r.label, r.magnitude_text, r.reason) for r in rows] == [
+        ("10P/Tempel", "9.8", "not observable tonight"),
+        ("95P/Chiron", "—", "no MPC comet orbit"),
+    ]
+
+
+def test_events_status_text_counts_or_explains() -> None:
+    assert data_adapter.events_status_text(_night_plan([])) == ""  # not gathered
+    one = replace(_night_plan([]), events=_events_report([_comet_event()]))
+    assert data_adapter.events_status_text(one) == "Events: 1 comet worth shooting"
+    none = replace(_night_plan([]), events=_events_report())
+    assert data_adapter.events_status_text(none) == (
+        "Events: no comet worth shooting tonight"
+    )
+    offline = replace(
+        _night_plan([]), events=_events_report(notes=["Comets unavailable: offline"])
+    )
+    assert "unavailable" in data_adapter.events_status_text(offline)
+    assert data_adapter.build_event_rows(_night_plan([]), BERLIN) == []

@@ -61,10 +61,7 @@ RESIZE_WIDTH = 1600
 # cutting the list off.
 WINDOW_SIZE = (1300, 1150)
 
-# (tab index, output filename) — see main_window.py's own addTab() order.
 SHORTLIST_TAB_INDEX = 0
-SKY_CHART_TAB_INDEX = 2
-BEST_SKY_TAB_INDEX = 4
 
 
 def _pump(
@@ -157,7 +154,7 @@ def main() -> int:
     _switch_tab(app, window, SHORTLIST_TAB_INDEX)
     _capture(window_id, SCREENSHOTS_DIR / "gui-shortlist.png")
 
-    _switch_tab(app, window, SKY_CHART_TAB_INDEX)
+    _switch_tab(app, window, window.tabs.indexOf(window.sky_chart))
     _capture(window_id, SCREENSHOTS_DIR / "gui-sky-chart.png")
 
     # Re-plan with the alt-az Seestar before the Best Sky capture, purely
@@ -178,7 +175,7 @@ def main() -> int:
         app.processEvents()
         time.sleep(0.02)
 
-    _switch_tab(app, window, BEST_SKY_TAB_INDEX)
+    _switch_tab(app, window, window.tabs.indexOf(window.best_sky))
     window.best_sky.set_center(site_record)  # match the rest of this screenshot's site
     window.best_sky.refresh_button.click()
     _pump(app, window.best_sky, 30.0)  # a real per-site Open-Meteo fetch, not instant
