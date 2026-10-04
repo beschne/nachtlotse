@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from nachtlotse import chart_export, cli, planning, prose
+from nachtlotse import chart_export, cli, frame_export, planning, prose
 from nachtlotse.data import store
 
 
@@ -628,3 +628,68 @@ def test_plan_command_prose_is_not_requested_when_nothing_is_observable(
     monkeypatch.setattr(planning, "CATALOG", [])
 
     assert cli.main(["plan", "--prose"]) == 0
+
+
+def test_frame_command_prints_the_framing_summary(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path,
+) -> None:
+    monkeypatch.setattr(frame_export, "save_framing_preview", lambda *a, **k: None)
+    assert cli.main(["frame", "m31", "--date", "2026-09-12", "--out", "x.png"]) == 0
+
+    output = capsys.readouterr().out
+    assert "framing M31 Andromeda Galaxy" in output
+    assert "Best time: 2026-09-1" in output
+    assert "of the frame's short side" in output
+    assert "Also in frame: M32, M110" in output
+    # The suite is offline (see conftest), so no backdrop — not an error.
+    assert "Sky image: unavailable" in output
+    assert "Preview written to x.png" in output
+
+
+def test_frame_command_writes_the_default_png(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    pytest.importorskip("matplotlib")
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["frame", "M81", "M82", "--no-survey"]) == 0
+    assert (tmp_path / "nachtlotse-frame-M81+M82.png").exists()
+
+
+def test_frame_command_rejects_an_unknown_target(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["frame", "M999"]) == 2
+    assert "No catalog object matches 'M999'" in capsys.readouterr().err
+
+
+def test_frame_command_rejects_targets_that_dont_share_one_frame(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["frame", "M31", "M42"]) == 2
+    assert "don't fit one frame" in capsys.readouterr().err
+
+
+def test_frame_command_reports_the_setup_hint_when_matplotlib_is_missing(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path,
+) -> None:
+    def _unavailable(*_args, **_kwargs):
+        raise frame_export.FrameExportUnavailable("needs `uv sync --extra charts`")
+
+    monkeypatch.setattr(frame_export, "save_framing_preview", _unavailable)
+    assert cli.main(["frame", "M31", "--out", str(tmp_path / "x.png")]) == 2
+    assert "--extra charts" in capsys.readouterr().err

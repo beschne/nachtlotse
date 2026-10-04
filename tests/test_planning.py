@@ -855,3 +855,28 @@ def test_rank_targets_limit_exceeds_catalog(
 
     assert call_count == 10  # all evaluated (no error)
     assert len(ranked) == 0
+
+
+def test_best_time_for_matches_rank_targets_for_single_targets_and_groups(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+) -> None:
+    """`best_time_for` is the same pick `rank_targets` makes — used by
+    `lotse frame`, which asks about specific targets instead of ranking."""
+    site = store.default_site_record().site
+    rig = store.default_rig_record().rig
+    when = datetime(2026, 9, 12, 12, 0, tzinfo=UTC)
+
+    entries = planning.rank_targets(site, rig, when, limit=40)
+    singles = [e for e in entries if isinstance(e, planning.RankedTarget)]
+    groups = [e for e in entries if isinstance(e, planning.RankedGroup)]
+    assert singles
+
+    for entry in singles[:3]:
+        result = planning.best_time_for(site, rig, (entry.target,), when)
+        assert result is not None
+        assert result[0] == entry.best_time
+    for group in groups[:2]:
+        result = planning.best_time_for(site, rig, group.targets, when)
+        assert result is not None
+        assert result[0] == group.best_time

@@ -189,6 +189,21 @@ def _group_best_time(
     )
 
 
+def best_time_for(
+    site: Site, rig: Rig, targets: tuple[Target, ...], when: datetime
+) -> tuple[datetime, ephemeris.AltAz] | None:
+    """The moment `rank_targets` would pick for one target, or for a group
+    sharing one frame — the same constraint checks and rotation gate, for
+    callers (e.g. `lotse frame`) asking about specific targets rather
+    than ranking the catalog. None if there's no such moment tonight."""
+    if len(targets) == 1:
+        (target,) = targets
+        return constraints.best_time_tonight(
+            site, target, when, extra_ok=_rotation_gate(rig, site, target)
+        )
+    return _group_best_time(site, rig, targets, when)
+
+
 def _build_ranked_group(
     site: Site, rig: Rig, members: tuple[Target, ...], when: datetime
 ) -> RankedGroup | None:

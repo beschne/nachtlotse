@@ -141,3 +141,21 @@ def _load_catalog() -> list[Target]:
 
 
 CATALOG: list[Target] = _load_catalog()
+
+
+def _normalize_designation(text: str) -> str:
+    """Case- and whitespace-insensitive key, so "m31", "M 31", and "M31"
+    all match the same entry (likewise "NGC224" vs "NGC 224")."""
+    return "".join(text.split()).casefold()
+
+
+def find_target(query: str, catalog: list[Target] | None = None) -> Target:
+    """The catalog entry whose `catalog_id`, any alias, or name matches
+    `query` (see `_normalize_designation`). Raises ValueError if nothing
+    matches."""
+    key = _normalize_designation(query)
+    for target in CATALOG if catalog is None else catalog:
+        designations = (target.catalog_id, *target.aliases, target.name)
+        if any(_normalize_designation(d) == key for d in designations if d):
+            return target
+    raise ValueError(f"No catalog object matches {query!r}.")

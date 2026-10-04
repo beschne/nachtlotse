@@ -356,3 +356,17 @@ def test_load_catalog_picks_up_any_new_mag_bin_file_automatically(
     targets = catalog._load_catalog()
 
     assert {target.catalog_id for target in targets} == {"M901", "M902"}
+
+
+@pytest.mark.parametrize("query", ["M31", "m31", "M 31", "NGC 224", "ngc224"])
+def test_find_target_matches_id_or_alias_ignoring_case_and_spaces(query: str) -> None:
+    assert catalog.find_target(query).catalog_id == "M31"
+
+
+def test_find_target_matches_by_name() -> None:
+    assert catalog.find_target("andromeda galaxy").catalog_id == "M31"
+
+
+def test_find_target_rejects_an_unknown_designation() -> None:
+    with pytest.raises(ValueError, match="No catalog object"):
+        catalog.find_target("M999")

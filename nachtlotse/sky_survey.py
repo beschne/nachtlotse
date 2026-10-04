@@ -70,6 +70,15 @@ class SurveyImage:
     def arcmin_per_px(self) -> float:
         return self.fov_deg * 60.0 / self.size_px
 
+    @property
+    def half_width_tangent_arcmin(self) -> float:
+        """Half the image width in tangent-plane arcmin — the coordinates
+        `engine.framing_preview` offsets use. hips2fits' `fov` is the true
+        angle across the image, so in the tangent plane its edge sits at
+        tan(fov/2), slightly beyond fov/2 (the image's own WCS header
+        confirms: CDELT = 2·tan(fov/2)/width)."""
+        return math.degrees(math.tan(math.radians(self.fov_deg / 2.0))) * 60.0
+
 
 def cutout_fov_deg(fov_width_arcmin: float, fov_height_arcmin: float) -> float:
     """Side of a square cutout that holds the frame at any rotation: its

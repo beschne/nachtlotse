@@ -14,10 +14,17 @@ from pathlib import Path
 from typing import get_args
 from zoneinfo import ZoneInfo
 
-from nachtlotse import best_sky, chart_export, planning, prose
-from nachtlotse.data import store
+from nachtlotse import (
+    best_sky,
+    chart_export,
+    frame_export,
+    planning,
+    prose,
+    sky_survey,
+)
+from nachtlotse.data import catalog, store
 from nachtlotse.data.store import RigRecord, SiteRecord
-from nachtlotse.engine import framing
+from nachtlotse.engine import constraints, framing, framing_preview, grouping
 from nachtlotse.engine.models import (
     TARGET_TYPE_LABELS,
     Site,
@@ -333,6 +340,107 @@ def _cmd_plan_best_rig(
     return 0
 
 
+def _cmd_frame(
+    queries: list[str],
+    site_name: str | None,
+    rig_name: str | None,
+    date_str: str | None,
+    out_path: str | None,
+    want_survey: bool,
+) -> int:
+    """`lotse frame`: one target (or several sharing one frame) drawn in
+    the rig's field of view at its best moment tonight — see
+    `engine.framing_preview` and `frame_export`."""
+    try:
+        site_record = (
+            store.get_site_record(site_name)
+            if site_name
+            else store.default_site_record()
+        )
+        rig_record = (
+            store.get_rig_record(rig_name) if rig_name else store.default_rig_record()
+        )
+        targets = tuple(catalog.find_target(query) for query in queries)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    targets = tuple(dict.fromkeys(targets))  # same object named twice
+
+    site = site_record.site
+    rig = rig_record.rig
+    local_tz = ZoneInfo(site.tz)
+    try:
+        now = _resolve_when(date_str, local_tz)
+    except _InvalidDate:
+        print(f"Invalid --date {date_str!r}, expected YYYY-MM-DD", file=sys.stderr)
+        return 2
+
+    if not grouping.co_visible_group(rig, targets):
+        print(
+            f"These don't fit one frame of {rig.name}: they span "
+            f"{grouping.group_span_arcmin(targets):.0f}′, the frame's short "
+            f"side is {framing.fov_short_arcmin(rig):.0f}′.",
+            file=sys.stderr,
+        )
+        return 2
+
+    label = " + ".join(_target_label(t) for t in targets)
+    print(f"Nachtlotse — framing {label}")
+    print(f"{site.name} · {rig.name}")
+
+    best = planning.best_time_for(site, rig, targets, now)
+    if best is None:
+        evening_start, morning_end = constraints.dark_window(site, now)
+        frame_time = evening_start + (morning_end - evening_start) / 2
+        print(
+            "Not observable tonight (altitude, horizon, moon, or field "
+            "rotation) — orientation shown at the middle of the dark window, "
+            f"{frame_time.astimezone(local_tz):%Y-%m-%d %H:%M %Z}, for reference only."
+        )
+    else:
+        frame_time, pos = best
+        print(
+            f"Best time: {frame_time.astimezone(local_tz):%Y-%m-%d %H:%M %Z} · "
+            f"altitude {pos.alt_deg:.0f}° · azimuth {pos.az_deg:.0f}°"
+        )
+
+    preview = framing_preview.framing_preview(
+        site, rig, targets, frame_time, neighbors=catalog.CATALOG
+    )
+    caption = frame_export.summary_lines(preview, rig, targets, local_tz)
+    for line in caption:
+        print(line)
+
+    image: sky_survey.SurveyImage | None = None
+    if want_survey:
+        try:
+            image = sky_survey.fetch_cutout_cached(
+                preview.center_ra_deg,
+                preview.center_dec_deg,
+                sky_survey.cutout_fov_deg(
+                    preview.fov_width_arcmin, preview.fov_height_arcmin
+                ),
+            )
+            print(f"Sky image: {image.credit}")
+        except sky_survey.SurveyImageUnavailable:
+            print("Sky image: unavailable (offline or hips2fits unreachable)")
+
+    path = Path(out_path or frame_export.default_filename(targets))
+    try:
+        frame_export.save_framing_preview(
+            preview,
+            path,
+            title=f"{label} — {rig.name}",
+            caption_lines=caption,
+            image=image,
+        )
+    except frame_export.FrameExportUnavailable as exc:
+        print(f"\n{exc}", file=sys.stderr)
+        return 2
+    print(f"\nPreview written to {path}")
+    return 0
+
+
 def _cmd_gui() -> int:
     """Launches the native GUI — lazily imports `nachtlotse.gui`, whose
     only real dependency (PySide6) is the `gui` extra, so plain `lotse
@@ -573,6 +681,60 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
 
+    frame_parser = subparsers.add_parser(
+        "frame",
+        help="Preview how a target (or a group) frames in the rig's field of view",
+    )
+    frame_parser.add_argument(
+        "targets",
+        nargs="+",
+        metavar="TARGET",
+        help=(
+            "Catalog ID, alias, or name (e.g. M31, 'NGC 224'). Several "
+            "targets are framed together, if they fit one frame."
+        ),
+    )
+    frame_parser.add_argument(
+        "--site",
+        default=None,
+        help="Site name or alias (default: the first site in your local site list)",
+    )
+    frame_parser.add_argument(
+        "--rig",
+        default=None,
+        help="Rig name or alias (default: the first rig in your local rig list)",
+    )
+    frame_parser.add_argument(
+        "--date",
+        default=None,
+        help=(
+            "Night to frame for, YYYY-MM-DD, local to the site (default: "
+            "tonight) — sets the best time, and with it the alt-az frame "
+            "orientation."
+        ),
+    )
+    frame_parser.add_argument(
+        "--out",
+        dest="out_path",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Write the PNG to PATH (default: nachtlotse-frame-<target>.png "
+            "in the current directory), overwriting any existing file. "
+            "Needs `uv sync --extra charts`."
+        ),
+    )
+    frame_parser.add_argument(
+        "--no-survey",
+        dest="survey",
+        action="store_false",
+        help=(
+            "Don't fetch a DSS2 sky image as the backdrop (default: fetch "
+            "one from CDS hips2fits, cached in .cache/sky_survey/; without "
+            "network the preview is drawn without it)."
+        ),
+    )
+
     subparsers.add_parser("sites", help="List all known observing sites")
     subparsers.add_parser("rigs", help="List all known rigs")
     subparsers.add_parser(
@@ -623,6 +785,10 @@ def main(argv: list[str] | None = None) -> int:
             args.limit,
             args.best_rig,
             args.prose,
+        )
+    if args.command == "frame":
+        return _cmd_frame(
+            args.targets, args.site, args.rig, args.date, args.out_path, args.survey
         )
     if args.command == "sites":
         return _cmd_sites()
