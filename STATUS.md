@@ -366,7 +366,7 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
 - No location or equipment data ships in code — both live entirely in
   local, gitignored `sites_local.yaml` / `rigs_local.yaml`. The matching
   `*.template.yaml` files (committed) document the formats with real
-  examples; copy one to get started (see the Quickstart in README.md).
+  examples; copy one to get started (see the Quickstart in README.md, or the wiki's Installation page).
 - `mount.kind` is a setup choice, not a fixed hardware property — even an
   alt-az smart telescope can be wedge-mounted and polar-aligned for true eq
   tracking, so the same optics/sensor can appear as two separate rig

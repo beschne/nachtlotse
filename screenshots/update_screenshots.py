@@ -9,11 +9,11 @@ finding the window on screen and hoping the coordinates still matched
 after any resize/reposition; this doesn't, since the script already
 holds the `MainWindow` object it's capturing.
 
-`gui-shortlist.png`, `gui-sky-chart.png`, and `gui-framing.png` (the
-framing preview window for the top shortlist entry, with the alt-az
-Seestar) are embedded in README.md; `gui-best-sky.png` is kept here for
-reference only (not embedded anywhere) — still regenerated alongside the
-others so it doesn't go stale unnoticed. The framing capture fetches a
+`gui-shortlist.png` and `gui-sky-chart.png` are shown in README.md and the
+wiki, `gui-framing.png` (the framing preview window for the top shortlist
+entry, with the alt-az Seestar) in the wiki; `gui-best-sky.png` is kept
+here for reference only, still regenerated alongside the others so it
+doesn't go stale unnoticed. The framing capture fetches a
 real DSS2 sky image (or reuses `.cache/sky_survey/`).
 
 Needs `screencapture` (macOS, always present) and `pyobjc-framework-
@@ -25,8 +25,8 @@ always present) for the final resize. Run with:
         python3 screenshots/update_screenshots.py
 
 Edit SITE_NAME / RIG_NAME / TARGET_DATE below for a different
-combination — and update the caption in README.md's "Native GUI"
-section to match; this script doesn't touch that text.
+combination, and update the screenshot caption in README.md (and any
+wiki page describing them) to match; this script doesn't touch that text.
 """
 
 from __future__ import annotations

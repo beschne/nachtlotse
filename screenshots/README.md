@@ -1,18 +1,19 @@
 # Screenshots
 
 `gui-shortlist.png` and `gui-sky-chart.png` are real screenshots of
-`lotse gui` — the same site/rig/date plan, two tabs — embedded near the
-top of the main [README.md](../README.md). No illustrative/fake data;
-same rule the GUI itself follows.
+`lotse gui` (the same site/rig/date plan, two tabs), shown at the top of
+the main [README.md](../README.md) and in the wiki. No illustrative or
+fake data, same rule the GUI itself follows.
 
 `gui-framing.png` is the framing preview window for the top shortlist
-entry of the same night, with the alt-az ZWO Seestar S30 Pro instead —
-embedded in README.md's Native GUI section. It fetches a real DSS2 sky
+entry of the same night, with the alt-az ZWO Seestar S30 Pro instead,
+shown in the wiki's Framing Preview pages. It fetches a real DSS2 sky
 image (or reuses `.cache/sky_survey/`).
 
 `gui-best-sky.png` is the same real run's Best sky tab (Center defaulted
-to the same site as the other two) — kept here for reference, not
-currently embedded in README.md.
+to the same site as the other two), kept here for reference.
+
+`scripts/publish_wiki.py` copies all of them into the wiki as `images/`.
 
 ## Regenerating them
 

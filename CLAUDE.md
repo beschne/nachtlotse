@@ -200,6 +200,30 @@ on why the Streamlit UI was retired), see
 
 ---
 
+## Documentation
+
+User documentation is the GitHub wiki, maintained as files in
+[`docs/wiki/`](./docs/wiki/): English pages in `en/`, German pages in
+`de/` (each section in both languages, every page linking to its
+counterpart), plus `Home.md`, `Startseite.md`, `_Sidebar.md` and
+`_Footer.md`. Page file names must be unique across both languages, since
+the wiki is flat. Publish with `uv run python scripts/publish_wiki.py`
+(dry run) and `--push`; edits made in the GitHub wiki itself get
+overwritten.
+
+- A feature that changes what users see or do updates its wiki pages in
+  both languages in the same change.
+- Write plainly: short, concrete sentences, no em dashes, no filler or
+  marketing phrases, no decorative bold. German pages are written as
+  natural German (informal "du"), not translated word for word; app labels
+  stay in English as the app shows them.
+- `README.md` (English) and `README.de.md` (German) stay short and in
+  step with each other (pitch, screenshots, quickstart, links into the
+  wiki in their language). `STATUS.md` and `ROADMAP.md` remain developer documents in the
+  repository.
+
+---
+
 ## Roadmap
 
 Tracked separately in [ROADMAP.md](./ROADMAP.md): the prioritized list of
@@ -243,6 +267,7 @@ uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
 uv run lotse frame M31         # framing preview: text + PNG (charts extra)
 uv run lotse events            # current comets/supernovae/novae: observable tonight, and why not
+uv run python scripts/publish_wiki.py          # wiki: dry run (add --push to publish)
 uv run lotse gui                # the early native GUI (see ROADMAP.md)
 ```
 
