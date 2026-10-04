@@ -59,6 +59,7 @@ nachtlotse/
 │   ├── constraints.py   # altitude, twilight, moon distance, horizon, framing
 │   ├── framing.py       # FoV, sampling, field rotation (alt-az!)
 │   ├── framing_preview.py # frame layout on the sky (FoV rectangle, orientation)
+│   ├── comets.py        # comets as rankable targets (positions from MPC orbits)
 │   ├── scoring.py       # target ranking + verdict heuristic
 │   └── models.py        # dataclasses: Site, Rig, HorizonProfile, Target, Verdict
 ├── data/            # persistence — sites, rigs, horizons, session log
@@ -70,6 +71,7 @@ nachtlotse/
 │                          profiles are azimuth→min-altitude points inline
 │                          in site YAML, no separate .HRZ import
 ├── weather/         # from M4 — Open-Meteo client, cleanly separated from the core
+├── events/          # current events — MPC comet orbits, COBS brightness (cached)
 ├── charting.py      # shared polar-chart geometry, no charting-library dependency
 ├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
 ├── sky_survey.py    # optional DSS2 cutouts (CDS hips2fits), disk-cached
@@ -240,6 +242,7 @@ uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
 uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
 uv run lotse frame M31         # framing preview: text + PNG (charts extra)
+uv run lotse events            # current comets: observable tonight, and why not
 uv run lotse gui                # the early native GUI (see ROADMAP.md)
 ```
 

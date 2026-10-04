@@ -8,8 +8,14 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Current events:** well-placed comets, supernova alerts; later also minor
-   planets/asteroids and near-Earth objects (NEOs).
+1. **Current events:** comets are done (3.3.0 — see STATUS.md). Next:
+   supernovae and novae via the IAU Transient Name Server (TNS; needs a
+   free account + bot API key, kept in a gitignored `events_local.yaml`);
+   later also minor planets/asteroids and near-Earth objects (NEOs) —
+   fast movers that would need real motion tracking, not the per-night
+   snapshot comets get. Also worth doing alongside: watching a recurrent
+   nova already in the catalog (T CrB) for an outburst, e.g. via AAVSO
+   photometry — TNS wouldn't necessarily list it.
 2. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of

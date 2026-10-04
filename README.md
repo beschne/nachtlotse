@@ -67,6 +67,7 @@ uv run lotse plan      # rank tonight's targets for your first site + rig
 uv run lotse sites     # list all configured observing sites
 uv run lotse rigs      # list all configured rigs
 uv run lotse best-sky  # compare all configured sites' forecast cloud cover tonight
+uv run lotse events    # current comets: observable tonight, and why the rest aren't
 
 # --site and --rig accept a name or alias (or a unique substring of one),
 # and can be combined; either defaults to the first entry in its file:
@@ -142,6 +143,16 @@ uv run lotse frame M31
 uv run lotse frame M81 M82 --rig S30P --date 2026-11-14 --out m81.png
 uv run lotse frame "NGC 7000" --no-survey   # skip the sky image
 
+# Current events: `plan` ends with comets observable tonight —
+# observed in the last two weeks (COBS), positioned from their orbits
+# (MPC), bright enough for your rig at your site, and verdicted like the
+# shortlist. `events` lists every current comet, each with the reason it
+# doesn't make it (too faint, not observable, ...); `frame` takes comets
+# by name too. Fetched data is cached (.cache/events/); offline it says so.
+uv run lotse plan --no-events                # skip the block (and the fetch)
+uv run lotse events --rig S30P --date 2026-10-10
+uv run lotse frame 161P                      # or "C/2026 A2", ...
+
 # best-sky answers "where's the clearest night", not "what should I shoot":
 # it ranks your configured sites by forecast cloud cover in each site's own
 # dark window. --radius-km restricts the comparison to sites within that
@@ -166,7 +177,9 @@ Every Open-Meteo forecast is cached per site for 1 hour in
 `best-sky` run within that hour reuses it instead of hitting the network
 again. Sky images for `frame` are cached in `.cache/sky_survey/` and never
 expire; without network (and no cached image) the preview is simply drawn
-without one.
+without one. Current-event data (`.cache/events/`) is kept for 24 h (MPC
+comet orbits) and 12 h (COBS observations); after a failed request a
+source isn't asked again for an hour, and an older copy serves instead.
 
 ## Native GUI
 
@@ -227,7 +240,9 @@ distance from a candidate new site. On the Shortlist and All ranked
 tabs, **Framing preview…** (or a double-click on a row) opens the same
 framing preview as `lotse frame` in its own window, at that row's best
 time — the frame appears right away, the sky image loads in the
-background. The sidebar's
+background. The **Events** tab lists current comets observable
+tonight (with their framing preview too), the rest with reasons, and
+where the data came from. The sidebar's
 EVALUATE field is the GUI's own `--limit` (see above) — same
 brightest-first evaluation order, same unconditional exemption for
 starred favorites. See [ROADMAP.md](./ROADMAP.md) for the toolkit
@@ -250,6 +265,7 @@ nachtlotse/
 ├── weather/    # optional layer (from M4) — Open-Meteo, TTL-cached
 ├── charting.py # shared chart geometry, library-agnostic
 ├── chart_export.py  # CLI's --chart PNG export (matplotlib)
+├── events/   # optional layer — current comets (MPC orbits, COBS brightness), cached
 ├── sky_survey.py    # optional DSS2 cutouts for the framing preview, cached
 ├── frame_export.py  # `lotse frame` PNG export + shared preview text
 ├── best_sky.py # cross-site weather comparison (`lotse best-sky`)

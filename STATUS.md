@@ -458,6 +458,49 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
 - Verified end to end against real cutouts: catalog positions of M32 and
   M110 land exactly on them in the DSS image around M31.
 
+## Current events: comets (`engine/comets.py`, `nachtlotse/events/`)
+
+- ROADMAP.md's "current events", first part. `engine.ephemeris.
+  comet_position` gives a comet's astrometric position from MPC
+  osculating elements (`models.CometOrbit`) — two-body, light-time
+  corrected, via skyfield's Kepler solver (the construction
+  `skyfield.data.mpc` uses, without its pandas dependency). Tested
+  against JPL Horizons for an elliptical (10P/Tempel, ~10") and a
+  hyperbolic orbit (C/2025 R3, 0.3"); sky motion against the MPC
+  ephemeris. `engine.comets.comet_target` freezes a comet at one moment
+  (the middle of the dark window) as an ordinary `Target`, so it goes
+  through the same ranking as catalog objects; its motion (°/h) is
+  reported alongside.
+- No predicted comet magnitudes: the MPC file's H/slope values didn't
+  reproduce the MPC's own ephemeris magnitude (10P: 13–14 vs. 9.0,
+  observed 10.2). Brightness comes from observations only — COBS
+  reports of the last 14 days, median per comet, with count and latest
+  date. COBS's own `current_mag` isn't used either: it's a light-curve
+  model filled in for nearly every comet ever catalogued. A comet counts
+  as current only if someone reported it lately; its observed coma
+  diameter becomes its size (framing preview, reach).
+- `events/mpc.py` (CometEls.txt, 24 h cache, own fixed-width parser;
+  fragments of numbered comets key as "73P-BT" instead of overwriting
+  their parent) and `events/cobs.py` (one paged query, 12 h cache) —
+  optional like weather: an older cached copy when offline (its age
+  shown), `EventsUnavailable` only with no network and no cache, and no
+  new request for an hour after a failed one (`events/_backoff.py`), so
+  re-plans never hammer a source.
+- `planning.current_events`: comets observed lately with a known orbit,
+  filtered by the rig's brightness limit
+  (`framing.event_limiting_magnitude`: photographic limiting magnitude
+  minus 2 mag for diffuse comets, 1 mag for point sources; none without
+  a Bortle class) and tonight's observability, verdicted like the
+  shortlist, ranked by altitude × reach (not fit — a coma is a few
+  arcmin in any field). Every comet left out gets a reason. Only for
+  nights within 14 days of the data (`EVENTS_HORIZON_DAYS`).
+  `plan_night(..., include_events=True)` attaches the `EventsReport`;
+  off by default.
+- Front ends: a "Current events" block in `lotse plan` (`--no-events`),
+  `lotse events` (everything, with reasons), comets by name in
+  `lotse frame` ("161P", "C/2026 A2"), and an Events tab in the GUI
+  (with framing preview).
+
 ## `nachtlotse/prose.py`
 
 - The LLM-prose roadmap item, now closed: the one module allowed to call
