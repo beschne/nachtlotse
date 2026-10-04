@@ -41,7 +41,10 @@ _SCALE_BAR_CHOICES_ARCMIN = (1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0, 180.0
 
 # Shown wherever a preview is drawn (PNG caption, GUI) — the circles are
 # a stand-in for shape, see `save_framing_preview`.
-CIRCLE_NOTE = "Dashed circles: catalog major axis (orientation not in catalog)"
+CIRCLE_NOTE = (
+    "Dashed circles: catalog major axis, or a comet's observed coma "
+    "(orientation not in catalog)"
+)
 
 
 class FrameExportUnavailable(Exception):

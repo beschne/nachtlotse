@@ -170,6 +170,45 @@ def _dark_window_line(
     )
 
 
+def _event_line(rank: int, event: planning.RankedEvent, local_tz: ZoneInfo) -> str:
+    kind = TARGET_TYPE_LABELS[event.kind].lower()
+    local_time = event.best_time.astimezone(local_tz)
+    motion = (
+        f" · moves {event.motion_deg_per_hour * 60.0:.1f}′/h"
+        if event.motion_deg_per_hour is not None
+        else ""
+    )
+    return (
+        f"  {rank}. Verdict: {event.verdict.level} — {event.target.name} · {kind} · "
+        f"{event.target.magnitude:.1f} mag · best {local_time:%H:%M %Z} · "
+        f"alt {event.pos.alt_deg:.0f}° az {event.pos.az_deg:.0f}°{motion}"
+    )
+
+
+def _print_events(report: planning.EventsReport | None, local_tz: ZoneInfo) -> None:
+    """`lotse plan`'s "Current events" block — the ones worth shooting
+    tonight, a count of the rest (`lotse events` lists them), and where
+    the data came from."""
+    if report is None:
+        return
+    print()
+    print("Current events (comets observed in the last two weeks):")
+    if not report.events:
+        print("  none worth shooting tonight")
+    for rank, event in enumerate(report.events, start=1):
+        print(_event_line(rank, event, local_tz))
+        print(f"       brightness: {event.magnitude_source}")
+        for reason in event.verdict.reasons:
+            print(f"       {reason}")
+    if report.skipped:
+        print(
+            f"  ({len(report.skipped)} more not worth shooting tonight — "
+            "`lotse events` lists them with reasons)"
+        )
+    for note in report.notes:
+        print(f"  {note}")
+
+
 def _cmd_plan(
     site_name: str | None,
     rig_name: str | None,
@@ -179,6 +218,7 @@ def _cmd_plan(
     limit: int | None,
     best_rig: bool,
     want_prose: bool,
+    want_events: bool = True,
 ) -> int:
     if best_rig and rig_name:
         print("--best-rig can't be combined with --rig.", file=sys.stderr)
@@ -219,7 +259,9 @@ def _cmd_plan(
 
     rig = rig_record.rig
     try:
-        plan = planning.plan_night(site, rig, now, types=type_filter, limit=limit)
+        plan = planning.plan_night(
+            site, rig, now, types=type_filter, limit=limit, include_events=want_events
+        )
     except constraints.NoDarkWindow as exc:
         print(exc, file=sys.stderr)
         return 2
@@ -238,6 +280,7 @@ def _cmd_plan(
             f"No catalog target{suffix} clears altitude/moon/night/horizon/"
             "rotation constraints tonight."
         )
+        _print_events(plan.events, local_tz)
         return 0
 
     print("Shortlist:")
@@ -259,6 +302,8 @@ def _cmd_plan(
             f"{entry.pos.alt_deg:7.1f}° {entry.pos.az_deg:6.1f}° {entry.fit:5.2f} "
             f"{entry.reach:6.2f}  {local_time:%Y-%m-%d %H:%M %Z}"
         )
+
+    _print_events(plan.events, local_tz)
 
     if chart_path is not None:
         try:
@@ -375,11 +420,9 @@ def _cmd_frame(
         rig_record = (
             store.get_rig_record(rig_name) if rig_name else store.default_rig_record()
         )
-        targets = tuple(catalog.find_target(query) for query in queries)
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
-    targets = tuple(dict.fromkeys(targets))  # same object named twice
 
     site = site_record.site
     rig = rig_record.rig
@@ -389,6 +432,32 @@ def _cmd_frame(
     except _InvalidDate:
         print(f"Invalid --date {date_str!r}, expected YYYY-MM-DD", file=sys.stderr)
         return 2
+
+    # Catalog objects first; anything else may be a current event (a comet
+    # observed lately) — looked up only if needed, it costs a fetch.
+    events: planning.EventsReport | None = None
+    resolved: list[Target] = []
+    motions: dict[str, float] = {}
+    for query in queries:
+        try:
+            resolved.append(catalog.find_target(query))
+            continue
+        except ValueError as exc:
+            catalog_error = exc
+        if events is None:
+            events = planning.current_events(site, rig, now)
+        match = planning.find_event(events, query)
+        if isinstance(match, planning.RankedEvent):
+            resolved.append(match.target)
+            if match.motion_deg_per_hour is not None:
+                motions[match.target.name] = match.motion_deg_per_hour
+        elif isinstance(match, planning.SkippedEvent):
+            print(f"{match.name}: {match.reason}.", file=sys.stderr)
+            return 2
+        else:
+            print(f"{catalog_error} Nor is it a current event.", file=sys.stderr)
+            return 2
+    targets = tuple(dict.fromkeys(resolved))  # same object named twice
 
     if not grouping.co_visible_group(rig, targets):
         print(
@@ -432,6 +501,11 @@ def _cmd_frame(
         night=(evening_start, morning_end),
     )
     caption = frame_export.summary_lines(preview, rig, targets, local_tz)
+    for name, motion in motions.items():
+        caption.append(
+            f"{name} moves {motion * 60.0:.1f}′/h against the stars — "
+            "drawn at its position in the middle of the night"
+        )
     for line in caption:
         print(line)
 
@@ -463,6 +537,73 @@ def _cmd_frame(
         print(f"\n{exc}", file=sys.stderr)
         return 2
     print(f"\nPreview written to {path}")
+    return 0
+
+
+def _cmd_events(
+    site_name: str | None, rig_name: str | None, date_str: str | None
+) -> int:
+    """`lotse events`: every current event known right now — the ones
+    worth shooting tonight first, then the rest with the reason each
+    doesn't make it."""
+    try:
+        site_record = (
+            store.get_site_record(site_name)
+            if site_name
+            else store.default_site_record()
+        )
+        rig_record = (
+            store.get_rig_record(rig_name) if rig_name else store.default_rig_record()
+        )
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    site = site_record.site
+    rig = rig_record.rig
+    local_tz = ZoneInfo(site.tz)
+    try:
+        now = _resolve_when(date_str, local_tz)
+        report = planning.current_events(
+            site,
+            rig,
+            now,
+            darkness=constraints.darkness(site, now),
+            weather=planning.fetch_weather_summary(
+                site, *constraints.dark_window(site, now)
+            ),
+        )
+    except _InvalidDate:
+        print(f"Invalid --date {date_str!r}, expected YYYY-MM-DD", file=sys.stderr)
+        return 2
+    except constraints.NoDarkWindow as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
+    limit = framing.event_limiting_magnitude(rig, site, "comet")
+    limit_text = f"comets to {limit:.1f} mag" if limit is not None else "no limit"
+    print(f"Nachtlotse — current events · {site.name} ({rig.name})")
+    print(f"Brightness limit for this rig here: {limit_text}")
+    print()
+    print("Worth shooting tonight:")
+    if not report.events:
+        print("  none")
+    for rank, event in enumerate(report.events, start=1):
+        print(_event_line(rank, event, local_tz))
+        print(f"       brightness: {event.magnitude_source}")
+        for reason in event.verdict.reasons:
+            print(f"       {reason}")
+    if report.skipped:
+        print()
+        print("Not tonight:")
+        width = max(len(skipped.name) for skipped in report.skipped)
+        for skipped in report.skipped:
+            magnitude = (
+                f"{skipped.magnitude:.1f} mag" if skipped.magnitude is not None else "—"
+            )
+            print(f"  {skipped.name:<{width}} {magnitude:>9}  {skipped.reason}")
+    print()
+    for note in report.notes:
+        print(note)
     return 0
 
 
@@ -683,6 +824,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     plan_parser.add_argument(
+        "--no-events",
+        dest="events",
+        action="store_false",
+        help=(
+            "Skip the 'Current events' block (comets observed in the last "
+            "two weeks — fetched from MPC/COBS, cached; offline it just "
+            "says so). Not shown with --best-rig either way."
+        ),
+    )
+    plan_parser.add_argument(
         "--best-rig",
         dest="best_rig",
         action="store_true",
@@ -717,8 +868,9 @@ def main(argv: list[str] | None = None) -> int:
         nargs="+",
         metavar="TARGET",
         help=(
-            "Catalog ID, alias, or name (e.g. M31, 'NGC 224'). Several "
-            "targets are framed together, if they fit one frame."
+            "Catalog ID, alias, or name (e.g. M31, 'NGC 224'), or a current "
+            "comet (e.g. 161P, 'C/2026 A2'). Several targets are framed "
+            "together, if they fit one frame."
         ),
     )
     frame_parser.add_argument(
@@ -760,6 +912,26 @@ def main(argv: list[str] | None = None) -> int:
             "one from CDS hips2fits, cached in .cache/sky_survey/; without "
             "network the preview is drawn without it)."
         ),
+    )
+
+    events_parser = subparsers.add_parser(
+        "events",
+        help="List current events (comets) — worth shooting tonight, and why not",
+    )
+    events_parser.add_argument(
+        "--site",
+        default=None,
+        help="Site name or alias (default: the first site in your local site list)",
+    )
+    events_parser.add_argument(
+        "--rig",
+        default=None,
+        help="Rig name or alias (default: the first rig in your local rig list)",
+    )
+    events_parser.add_argument(
+        "--date",
+        default=None,
+        help="Night, YYYY-MM-DD, local to the site (default: tonight)",
     )
 
     subparsers.add_parser("sites", help="List all known observing sites")
@@ -812,11 +984,14 @@ def main(argv: list[str] | None = None) -> int:
             args.limit,
             args.best_rig,
             args.prose,
+            args.events,
         )
     if args.command == "frame":
         return _cmd_frame(
             args.targets, args.site, args.rig, args.date, args.out_path, args.survey
         )
+    if args.command == "events":
+        return _cmd_events(args.site, args.rig, args.date)
     if args.command == "sites":
         return _cmd_sites()
     if args.command == "rigs":

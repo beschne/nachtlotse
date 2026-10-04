@@ -759,8 +759,7 @@ def current_events(
                     "comet",
                     orbit.designation,
                     observed.magnitude,
-                    f"too faint for this rig here ({observed.magnitude:.1f} mag, "
-                    f"limit {limit_mag:.1f})",
+                    f"too faint for this rig here (limit {limit_mag:.1f} mag)",
                 )
             )
             continue
@@ -816,3 +815,33 @@ def current_events(
     )
     skipped.sort(key=lambda s: (s.magnitude is None, s.magnitude or 0.0))
     return EventsReport(ranked, skipped, notes)
+
+
+def _event_name_keys(name: str) -> set[str]:
+    """The ways a user might type an event's name, normalized: the full
+    name ("C/2026 A2 (Bok)"), without the discoverer ("C/2026 A2"), and
+    for a numbered periodic comet its number alone ("161P" for
+    "161P/Hartley-IRAS")."""
+
+    def norm(text: str) -> str:
+        return "".join(text.split()).casefold()
+
+    keys = {norm(name), norm(name.split(" (")[0])}
+    head = name.split("/")[0]
+    if head[:-1].isdigit():
+        keys.add(norm(head))
+    return keys
+
+
+def find_event(report: EventsReport, query: str) -> RankedEvent | SkippedEvent | None:
+    """The event in `report` that `query` names (see `_event_name_keys`)
+    — a ranked one first, else a skipped one (whose reason then says why
+    it isn't worth shooting tonight), else None."""
+    wanted = "".join(query.split()).casefold()
+    for event in report.events:
+        if wanted in _event_name_keys(event.target.name):
+            return event
+    for skipped in report.skipped:
+        if wanted in _event_name_keys(skipped.name):
+            return skipped
+    return None

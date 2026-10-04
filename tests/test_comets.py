@@ -106,7 +106,8 @@ def test_comet_target_freezes_the_position_at_the_given_moment() -> None:
     position = ephemeris.comet_position(TEMPEL_2, BAD_HOMBURG, WHEN)
 
     assert (target.ra_deg, target.dec_deg) == (position.ra_deg, position.dec_deg)
-    assert target.name == target.catalog_id == "10P/Tempel"
+    assert target.name == "10P/Tempel"
+    assert target.catalog_id == ""  # the designation is the name
     assert target.types == ("comet",)
     assert target.size_arcmin == (0.0, 0.0)  # coma/tail not modeled
     assert target.magnitude is None  # an observation, not geometry

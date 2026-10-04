@@ -65,7 +65,7 @@ def test_plan_command_passes_selected_types_through_to_planning(
     captured: dict[str, object] = {}
     original_plan_night = planning.plan_night
 
-    def spy_plan_night(site, rig, when, types=None, limit=None):
+    def spy_plan_night(site, rig, when, types=None, limit=None, **_kwargs):
         captured["types"] = types
         return original_plan_night(site, rig, when, types=types, limit=limit)
 
@@ -83,7 +83,7 @@ def test_plan_command_defaults_to_no_type_filter(
     captured: dict[str, object] = {}
     original_plan_night = planning.plan_night
 
-    def spy_plan_night(site, rig, when, types=None, limit=None):
+    def spy_plan_night(site, rig, when, types=None, limit=None, **_kwargs):
         captured["types"] = types
         return original_plan_night(site, rig, when, types=types, limit=limit)
 
@@ -720,3 +720,89 @@ def test_plan_command_reports_a_missing_dark_window_cleanly(
     monkeypatch.setattr(planning, "plan_night", no_night)
     assert cli.main(["plan", "--date", "2026-06-21"]) == 2
     assert "No dark window" in capsys.readouterr().err
+
+
+# --- current events -----------------------------------------------------------
+
+
+@pytest.fixture
+def events_report(monkeypatch: pytest.MonkeyPatch):
+    """A canned EventsReport from the real planning code against mocked
+    sources (see test_current_events.py)."""
+    from tests import test_current_events as ce
+
+    monkeypatch.setattr(
+        ce.mpc,
+        "fetch_comet_orbits",
+        lambda: ce.mpc.CometOrbits(
+            ce.mpc.parse_comet_elements(ce.COMET_ELS), ce.FETCHED_AT
+        ),
+    )
+    monkeypatch.setattr(
+        ce.cobs,
+        "fetch_comet_brightness",
+        lambda: ce.cobs.CometBrightnessReport(dict(ce.BRIGHTNESS), ce.FETCHED_AT, 14),
+    )
+
+
+def test_plan_command_shows_current_events_or_why_not(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["plan", "--limit", "5"]) == 0
+    output = capsys.readouterr().out
+    assert "Current events (comets observed in the last two weeks):" in output
+    # The suite is offline (see conftest): explained, not an error.
+    assert "Comets unavailable" in output
+
+    assert cli.main(["plan", "--limit", "5", "--no-events"]) == 0
+    assert "Current events" not in capsys.readouterr().out
+
+
+def test_plan_command_lists_comets_worth_shooting(
+    template_sites, template_rigs, events_report, capsys
+) -> None:
+    assert cli.main(["plan", "--limit", "5", "--date", "2026-10-04"]) == 0
+    output = capsys.readouterr().out
+    block = output[output.index("Current events") :]
+    assert "161P/Hartley-IRAS · comet · 11.4 mag" in block
+    assert "brightness: COBS: median of 47 reports" in block
+    assert "more not worth shooting tonight" in block
+
+
+def test_events_command_lists_every_comet_with_a_reason(
+    template_sites, template_rigs, events_report, capsys
+) -> None:
+    assert cli.main(["events", "--date", "2026-10-04"]) == 0
+    output = capsys.readouterr().out
+    assert "Worth shooting tonight:" in output
+    assert "C/2026 A2 (Bok)" in output
+    assert "Not tonight:" in output
+    assert "10P/Tempel" in output and "not observable tonight" in output
+    assert "95P/Chiron" in output and "no MPC comet orbit" in output
+    assert "Comet orbits: MPC" in output
+
+
+def test_frame_command_frames_a_current_comet(
+    template_sites, template_rigs, events_report, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(frame_export, "save_framing_preview", lambda *a, **k: None)
+    assert cli.main(["frame", "161P", "--date", "2026-10-04", "--out", "x.png"]) == 0
+    output = capsys.readouterr().out
+    assert "framing 161P/Hartley-IRAS" in output
+    assert "moves" in output and "′/h against the stars" in output
+
+
+def test_frame_command_explains_a_comet_not_worth_shooting(
+    template_sites, template_rigs, events_report, capsys
+) -> None:
+    assert cli.main(["frame", "10P", "--date", "2026-10-04"]) == 2
+    assert "10P/Tempel: not observable tonight" in capsys.readouterr().err
+
+
+def test_frame_command_rejects_something_neither_catalog_nor_event(
+    template_sites, template_rigs, events_report, capsys
+) -> None:
+    assert cli.main(["frame", "M999"]) == 2
+    assert "Nor is it a current event" in capsys.readouterr().err

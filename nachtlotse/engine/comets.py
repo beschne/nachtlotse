@@ -27,13 +27,14 @@ from nachtlotse.engine.models import CometOrbit, Site, Target
 def comet_target(orbit: CometOrbit, site: Site, when: datetime) -> Target:
     """`orbit`'s comet as a fixed `Target` at its position at `when`.
     Size unknown (coma and tail aren't modeled), so framing treats it as
-    unconstrained, and no magnitude — that's an observation, not geometry."""
+    unconstrained, and no magnitude — that's an observation, not geometry.
+    No `catalog_id` either: the designation is its name, and every label
+    built from "catalog_id name" would otherwise print it twice."""
     position = ephemeris.comet_position(orbit, site, when)
     return Target(
         name=orbit.designation,
         ra_deg=position.ra_deg,
         dec_deg=position.dec_deg,
-        catalog_id=orbit.designation,
         types=("comet",),
     )
 

@@ -164,3 +164,32 @@ def test_plan_night_gathers_events_only_when_asked(live_sources) -> None:
         "C/2026 A2 (Bok)",
         "161P/Hartley-IRAS",
     }
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("161P/Hartley-IRAS", "161P/Hartley-IRAS"),
+        ("161P", "161P/Hartley-IRAS"),
+        ("161p", "161P/Hartley-IRAS"),
+        ("C/2026 A2 (Bok)", "C/2026 A2 (Bok)"),
+        ("C/2026 A2", "C/2026 A2 (Bok)"),
+        ("c/2026a2", "C/2026 A2 (Bok)"),
+    ],
+)
+def test_find_event_accepts_the_usual_ways_to_name_a_comet(
+    live_sources, query, expected
+) -> None:
+    report = planning.current_events(SITE, SEESTAR, WHEN)
+    event = planning.find_event(report, query)
+    assert isinstance(event, planning.RankedEvent)
+    assert event.target.name == expected
+
+
+def test_find_event_returns_skipped_events_and_none(live_sources) -> None:
+    report = planning.current_events(SITE, SEESTAR, WHEN)
+    skipped = planning.find_event(report, "10P")
+    assert isinstance(skipped, planning.SkippedEvent)
+    assert "not observable" in skipped.reason
+    assert planning.find_event(report, "M31") is None
+    assert planning.find_event(report, "1P") is None  # not "161P"
