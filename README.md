@@ -130,7 +130,11 @@ cp nachtlotse/data/prose_local.template.yaml nachtlotse/data/prose_local.yaml
 # time tonight: the frame (rotated as an alt-az mount holds it), the
 # target and any catalog neighbors inside it, over a DSS2 sky image when
 # online. Several targets are framed together if they fit one frame.
-# Prints the numbers, writes a PNG (needs the charts extra, like --chart):
+# Prints the numbers and writes a PNG (needs the charts extra, like
+# --chart) to nachtlotse-frame-<target>.png in the current directory —
+# catalog IDs without spaces, several joined by "+", e.g.
+# nachtlotse-frame-M81+M82.png — overwriting any existing file there.
+# --out picks your own path instead:
 uv run lotse frame M31
 uv run lotse frame M81 M82 --rig S30P --date 2026-11-14 --out m81.png
 uv run lotse frame "NGC 7000" --no-survey   # skip the sky image

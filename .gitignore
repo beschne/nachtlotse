@@ -12,8 +12,9 @@ wheels/
 # Virtual environments
 .venv
 
-# Skyfield ephemeris cache, Open-Meteo forecast cache — both
-# re-downloadable, neither committed.
+# Skyfield ephemeris cache, Open-Meteo forecast cache, sky-survey cutouts
+# for `lotse frame` — all re-downloadable, none committed. Unanchored, so
+# a .cache/ created wherever the CLI runs is covered too.
 .cache/
 
 # Your local observing-site and rig lists — never committed. Copy the
@@ -40,6 +41,12 @@ scratch.md
 # Anchored: `exports/nachtlotse-shortlist.png` is the GUI's own same-named
 # export and, unlike this one, is deliberately tracked (see exports/).
 /nachtlotse-shortlist.png
+
+# `lotse frame`'s default PNG output (nachtlotse-frame-<target>.png) at the
+# repo root — same reasoning as the --chart PNG above, and anchored the
+# same way, so a framing preview exported to exports/ from the GUI stays
+# trackable.
+/nachtlotse-frame-*.png
 
 # Desktop-launcher .app bundle — bakes in an absolute path to this
 # checkout and the local `uv` binary, so it's machine-specific, not
