@@ -672,7 +672,7 @@ EVENTS_HORIZON_DAYS = 14
 
 
 class RankedEvent(NamedTuple):
-    """A current event that's worth shooting tonight: observable (the same
+    """A current event that's a candidate tonight: observable (the same
     constraints as any catalog target) and bright enough for the rig
     (`framing.event_limiting_magnitude`)."""
 

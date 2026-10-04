@@ -318,7 +318,7 @@ class MainWindow(QMainWindow):
         ranked_layout.addWidget(self.ranked_table)
         self.tabs.addTab(ranked_card, "All ranked")
 
-        # Current events (ROADMAP.md): comets worth shooting tonight, then
+        # Current events (ROADMAP.md): comets observable tonight, then
         # the rest with reasons — the GUI's `lotse events`.
         events_card = RoundedCard()
         events_layout = QVBoxLayout(events_card)

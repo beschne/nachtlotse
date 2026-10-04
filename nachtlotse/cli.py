@@ -186,7 +186,7 @@ def _event_line(rank: int, event: planning.RankedEvent, local_tz: ZoneInfo) -> s
 
 
 def _print_events(report: planning.EventsReport | None, local_tz: ZoneInfo) -> None:
-    """`lotse plan`'s "Current events" block — the ones worth shooting
+    """`lotse plan`'s "Current events" block — the ones observable
     tonight, a count of the rest (`lotse events` lists them), and where
     the data came from."""
     if report is None:
@@ -194,7 +194,7 @@ def _print_events(report: planning.EventsReport | None, local_tz: ZoneInfo) -> N
     print()
     print("Current events (comets observed in the last two weeks):")
     if not report.events:
-        print("  none worth shooting tonight")
+        print("  none observable and bright enough tonight")
     for rank, event in enumerate(report.events, start=1):
         print(_event_line(rank, event, local_tz))
         print(f"       brightness: {event.magnitude_source}")
@@ -202,7 +202,7 @@ def _print_events(report: planning.EventsReport | None, local_tz: ZoneInfo) -> N
             print(f"       {reason}")
     if report.skipped:
         print(
-            f"  ({len(report.skipped)} more not worth shooting tonight — "
+            f"  ({len(report.skipped)} more not observable or too faint tonight — "
             "`lotse events` lists them with reasons)"
         )
     for note in report.notes:
@@ -544,7 +544,7 @@ def _cmd_events(
     site_name: str | None, rig_name: str | None, date_str: str | None
 ) -> int:
     """`lotse events`: every current event known right now — the ones
-    worth shooting tonight first, then the rest with the reason each
+    observable and bright enough tonight first, then the rest with the reason each
     doesn't make it."""
     try:
         site_record = (
@@ -584,7 +584,7 @@ def _cmd_events(
     print(f"Nachtlotse — current events · {site.name} ({rig.name})")
     print(f"Brightness limit for this rig here: {limit_text}")
     print()
-    print("Worth shooting tonight:")
+    print("Observable tonight and bright enough:")
     if not report.events:
         print("  none")
     for rank, event in enumerate(report.events, start=1):
@@ -916,7 +916,7 @@ def main(argv: list[str] | None = None) -> int:
 
     events_parser = subparsers.add_parser(
         "events",
-        help="List current events (comets) — worth shooting tonight, and why not",
+        help="List current events (comets) — observable tonight, and why the rest aren't",
     )
     events_parser.add_argument(
         "--site",

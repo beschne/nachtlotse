@@ -768,7 +768,7 @@ def test_plan_command_lists_comets_worth_shooting(
     block = output[output.index("Current events") :]
     assert "161P/Hartley-IRAS · comet · 11.4 mag" in block
     assert "brightness: COBS: median of 47 reports" in block
-    assert "more not worth shooting tonight" in block
+    assert "more not observable or too faint tonight" in block
 
 
 def test_events_command_lists_every_comet_with_a_reason(
@@ -776,7 +776,7 @@ def test_events_command_lists_every_comet_with_a_reason(
 ) -> None:
     assert cli.main(["events", "--date", "2026-10-04"]) == 0
     output = capsys.readouterr().out
-    assert "Worth shooting tonight:" in output
+    assert "Observable tonight and bright enough:" in output
     assert "C/2026 A2 (Bok)" in output
     assert "Not tonight:" in output
     assert "10P/Tempel" in output and "not observable tonight" in output

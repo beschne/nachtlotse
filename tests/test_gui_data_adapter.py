@@ -621,10 +621,10 @@ def test_build_skipped_event_rows_keeps_the_reason() -> None:
 def test_events_status_text_counts_or_explains() -> None:
     assert data_adapter.events_status_text(_night_plan([])) == ""  # not gathered
     one = replace(_night_plan([]), events=_events_report([_comet_event()]))
-    assert data_adapter.events_status_text(one) == "Events: 1 comet worth shooting"
+    assert data_adapter.events_status_text(one) == "Events: 1 comet observable tonight"
     none = replace(_night_plan([]), events=_events_report())
     assert data_adapter.events_status_text(none) == (
-        "Events: no comet worth shooting tonight"
+        "Events: no comet observable tonight"
     )
     offline = replace(
         _night_plan([]), events=_events_report(notes=["Comets unavailable: offline"])

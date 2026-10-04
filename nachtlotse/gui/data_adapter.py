@@ -530,7 +530,7 @@ def build_framing_view(
 
 @dataclass(frozen=True)
 class EventRow:
-    """One current event worth shooting tonight, display-ready."""
+    """One current event observable and bright enough tonight, display-ready."""
 
     label: str
     type_label: str
@@ -596,15 +596,15 @@ def build_skipped_event_rows(plan: NightPlan) -> list[SkippedEventRow]:
 
 
 def events_status_text(plan: NightPlan) -> str:
-    """One line for the header: how many events are worth shooting, or
+    """One line for the header: how many events are observable tonight, or
     why there are none to show."""
     if plan.events is None:
         return ""
     count = len(plan.events.events)
     if count:
-        return f"Events: {count} comet{'' if count == 1 else 's'} worth shooting"
+        return f"Events: {count} comet{'' if count == 1 else 's'} observable tonight"
     if any(note.startswith("Comets unavailable") for note in plan.events.notes):
         return "Events unavailable (offline or sources unreachable)"
     if any(note.startswith("Current events only cover") for note in plan.events.notes):
         return "Events: only for nights within two weeks of today"
-    return "Events: no comet worth shooting tonight"
+    return "Events: no comet observable tonight"
