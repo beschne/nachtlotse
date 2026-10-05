@@ -5,7 +5,7 @@
 #
 #   cp nachtlotse/data/sites_local.template.yaml nachtlotse/data/sites_local.yaml
 #
-# Edit the copy freely: replace these two examples with your own sites, or
+# Edit the copy freely: replace these three examples with your own sites, or
 # keep them and add more. `sites_local.yaml` is gitignored — your sites
 # never get committed. The first entry in your file becomes the default
 # site for `lotse plan` when you don't pass --site.
@@ -72,3 +72,40 @@
   address: "Plateau Großer Feldberg, 61389 Schmitten - Niederreifenberg"
   aliases: ["Feldberg"]
   # no horizon_points/sector: unrestricted 360° view
+
+- name: "Beobachtungsplatz Pfaffenwiesbach"
+  lat_deg: 50.32469
+  lon_deg: 8.61212
+  elevation_m: 340.0
+  region: "Hintertaunus"
+  bortle: "4–5 (light-polluted; forest cover helps to the south)"
+  # A real SQM reading: Unihedron Sky Quality Meter, zenith, mean of 5
+  # readings, 2026-10-04 21:15 CEST, moon 16.8° below the horizon.
+  zenith_sky_brightness_mag_arcsec2: 20.49
+  address: "Kapersburgstraße 24, 61273 Wehrheim"
+  horizon_points:
+    - [0.0, 3.0]
+    - [17.0, 3.6]
+    - [45.0, 4.3]
+    - [46.0, 4.0]
+    - [57.0, 2.2]
+    - [104.0, 4.0]
+    - [137.0, 2.4]
+    - [137.5, 2.7]
+    - [149.0, 10.7]
+    - [150.0, 10.0]
+    - [200.0, 6.8]
+    - [205.0, 12.8]
+    - [223.0, 11.0]
+    - [225.0, 10.0]
+    - [230.0, 5.6]
+    - [244.5, 6.5]
+    - [252.5, 3.1]
+    - [271.0, 3.5]
+    - [280.0, 5.3]
+    - [288.4, 7.9]
+    - [300.0, 8.8]
+    - [314.0, 4.0]
+    - [318.2, 3.6]
+    - [321.4, 9.3]
+    - [323.8, 3.4]

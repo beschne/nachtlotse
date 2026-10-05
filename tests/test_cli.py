@@ -305,7 +305,7 @@ def test_best_sky_command_respects_radius_km(
     template_sites: list[store.SiteRecord],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The template's two sites are ~5 km apart — a 1 km radius keeps only
+    """The template's first two sites are ~7 km apart — a 1 km radius keeps only
     the reference site itself."""
     reference_name = template_sites[0].site.name
     other_name = template_sites[1].site.name

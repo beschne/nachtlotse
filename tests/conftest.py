@@ -107,7 +107,7 @@ def _offline_events(
 
 @pytest.fixture
 def template_sites(monkeypatch: pytest.MonkeyPatch) -> list[store.SiteRecord]:
-    """Monkeypatch store.SITES to the committed template's two examples.
+    """Monkeypatch store.SITES to the committed template's three examples.
 
     Decouples tests from whatever a developer's own gitignored
     sites_local.yaml happens to contain — or whether it exists at all — so

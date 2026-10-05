@@ -7,11 +7,15 @@ import pytest
 from nachtlotse.data import store
 
 
-def test_template_file_parses_into_two_distinct_named_sites(
+def test_template_file_parses_into_three_distinct_named_sites(
     template_sites: list[store.SiteRecord],
 ) -> None:
     names = {record.site.name for record in template_sites}
-    assert names == {"Volkssternwarte Hochtaunus", "Großer Feldberg"}
+    assert names == {
+        "Volkssternwarte Hochtaunus",
+        "Großer Feldberg",
+        "Beobachtungsplatz Pfaffenwiesbach",
+    }
 
 
 def test_get_site_record_matches_by_exact_name(

@@ -242,7 +242,7 @@ def require_sites() -> None:
             "No observing sites configured. Copy "
             f"nachtlotse/data/{_TEMPLATE_SITES_PATH.name} to "
             f"nachtlotse/data/{_LOCAL_SITES_PATH.name} and add your own "
-            "sites — that file documents the format with two examples."
+            "sites — that file documents the format with three examples."
         )
 
 
