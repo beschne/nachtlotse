@@ -46,6 +46,7 @@ def verdict_for_target(
     *,
     weather: WeatherSummary | None = None,
     darkness: Darkness = "astronomical",
+    cloud_at_best_time_pct: float | None = None,
 ) -> Verdict:
     """GO/MARGINAL/SKIP for a target at its best altitude tonight.
 
@@ -60,6 +61,13 @@ def verdict_for_target(
     night that only gets nautically dark (Sun below -12°, around midsummer)
     caps every verdict at MARGINAL — the sky background stays noticeably
     brighter than in a real astronomical night, however clear it is.
+
+    `cloud_at_best_time_pct` is the forecast cloud cover in the hour of
+    the target's best time (`engine.night.cloud_at`), when an hourly
+    forecast covers it. The cloud rules above judge the window's worst
+    hour; this says whether the target's own best moment falls in cloud
+    (MARGINAL at the same 40% line) or in a clear hour (a note, no change
+    of level — the window's worst hour still counts).
     """
     level: _Level = "GO"
     reasons: list[str] = []
@@ -84,6 +92,19 @@ def verdict_for_target(
             downgrade(
                 "MARGINAL", f"cloud cover up to {weather.max_cloud_cover_pct:.0f}%"
             )
+
+        if cloud_at_best_time_pct is not None:
+            if cloud_at_best_time_pct >= MARGINAL_CLOUD_COVER_PCT:
+                downgrade(
+                    "MARGINAL",
+                    f"best time falls in a cloudy hour "
+                    f"({cloud_at_best_time_pct:.0f}% effective cloud)",
+                )
+            elif weather.max_cloud_cover_pct >= MARGINAL_CLOUD_COVER_PCT:
+                reasons.append(
+                    f"best time falls in a clear hour "
+                    f"({cloud_at_best_time_pct:.0f}% effective cloud)"
+                )
 
         if weather.max_wind_kmh >= SKIP_WIND_KMH:
             downgrade("SKIP", f"wind up to {weather.max_wind_kmh:.0f} km/h")

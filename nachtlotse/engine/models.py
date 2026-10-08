@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from datetime import datetime
 from itertools import pairwise
 from typing import Literal
 
@@ -235,6 +236,61 @@ class Target:
     # _load_catalog` folds it in afterwards from the user's own local,
     # gitignored `favorites_local.yaml` (see that module's docstring).
     favorite: bool = False
+
+
+@dataclass(frozen=True)
+class HourlyConditions:
+    """One forecast hour, in the engine's own terms (independent of the
+    weather provider, like `WeatherSummary`): the conditions are taken to
+    hold for the hour starting at `when` (aware, UTC)."""
+
+    when: datetime
+    # Effective cloud cover, thin high cloud already at half weight (see
+    # `engine.night.effective_cloud_cover_pct`).
+    cloud_cover_pct: float
+    wind_kmh: float
+    dew_point_spread_c: float  # temperature - dew point; low = dew risk
+
+
+@dataclass(frozen=True)
+class ClearRun:
+    """An unbroken stretch of clear forecast hours inside the dark window."""
+
+    start: datetime
+    end: datetime
+
+    @property
+    def duration_h(self) -> float:
+        return (self.end - self.start).total_seconds() / 3600.0
+
+
+HeldBackTerm = Literal["cloud", "wind", "dew", "moon"]
+
+
+@dataclass(frozen=True)
+class HeldBack:
+    """One thing that cost the night time, and how much (hours inside the
+    dark window); `detail` is the engine's own wording with its numbers."""
+
+    term: HeldBackTerm
+    duration_h: float
+    detail: str
+
+
+@dataclass(frozen=True)
+class NightVerdict:
+    """Is the night worth setting up for at all — judged on the longest
+    clear run in the dark window, before any single target is (see
+    `engine.night`). `level` is None when the forecast can't say: none
+    covers the window, or only part of it and the covered part isn't
+    clear enough to rule the rest out."""
+
+    level: Literal["GO", "MARGINAL", "SKIP"] | None
+    window_h: float
+    forecast_h: float  # how much of the window the forecast covers
+    clear_h: float  # total clear time, all runs together
+    longest_run: ClearRun | None
+    held_back_by: tuple[HeldBack, ...]  # costliest first, only what cost time
 
 
 @dataclass(frozen=True)

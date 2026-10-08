@@ -266,6 +266,7 @@ def test_plan_command_falls_back_gracefully_when_weather_is_unavailable(
 
     assert "Weather: unavailable" in output
     assert "Clouds tonight:" not in output  # no hourly forecast to show either
+    assert "Night verdict: unknown — no weather forecast" in output
     assert "Verdict:" in output  # still produced, from sky geometry alone
     assert "Best time (local)" in output  # the ranked table still printed
 
@@ -814,3 +815,17 @@ def test_type_filter_offers_catalog_categories_only(capsys) -> None:
     with pytest.raises(SystemExit):
         cli.main(["plan", "--type", "comet"])
     assert "invalid choice: 'comet'" in capsys.readouterr().err
+
+
+def test_plan_command_prints_the_night_verdict_above_the_shortlist(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The conftest forecast is clear all night, so the night is a GO."""
+    assert cli.main(["plan", "--no-events"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Night verdict: GO — clear " in output
+    assert output.index("Night verdict:") < output.index("Shortlist:")
+    assert "Held back by:" not in output  # nothing cost time

@@ -880,3 +880,48 @@ def test_best_time_for_matches_rank_targets_for_single_targets_and_groups(
         result = planning.best_time_for(site, rig, group.targets, when)
         assert result is not None
         assert result[0] == group.best_time
+
+
+def test_thin_high_cloud_counts_at_half_weight_in_the_night_and_target_verdicts(
+    template_sites: list[store.SiteRecord],
+    template_rigs: list[store.RigRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A night of 70% total cloud that is all high cirrus: effective cloud
+    35%, so the night is clear enough for a GO, while each target's own
+    window-maximum rule still sees 70% and stays MARGINAL — with a note
+    that its best time itself falls in a clear hour."""
+    from nachtlotse.weather import open_meteo
+
+    site = store.default_site_record().site
+    rig = store.default_rig_record().rig
+    base = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+
+    def cirrus_night(lat_deg: float, lon_deg: float) -> list[open_meteo.HourlyWeather]:
+        return [
+            open_meteo.HourlyWeather(
+                when=base + timedelta(hours=offset),
+                cloud_cover_pct=70.0,
+                wind_speed_kmh=5.0,
+                humidity_pct=50.0,
+                dew_point_c=5.0,
+                temperature_c=15.0,
+                cloud_low_pct=0.0,
+                cloud_mid_pct=0.0,
+                cloud_high_pct=70.0,
+            )
+            for offset in range(-24, 72)
+        ]
+
+    monkeypatch.setattr(open_meteo, "fetch_hourly", cirrus_night)
+
+    plan = planning.plan_night(site, rig, datetime.now(UTC), limit=5)
+
+    assert plan.night_verdict is not None
+    assert plan.night_verdict.level == "GO"
+    assert plan.shortlist
+    for entry in plan.shortlist:
+        assert entry.verdict.level == "MARGINAL"
+        assert "best time falls in a clear hour (35% effective cloud)" in (
+            entry.verdict.reasons
+        )

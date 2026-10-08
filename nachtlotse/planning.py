@@ -24,11 +24,14 @@ from nachtlotse.engine import (
     ephemeris,
     framing,
     grouping,
+    night,
     scoring,
 )
 from nachtlotse.engine.models import (
     Darkness,
     EventKind,
+    HourlyConditions,
+    NightVerdict,
     Rig,
     Site,
     Target,
@@ -131,6 +134,10 @@ class NightPlan:
     # Current events tonight (comets, ...) — None unless asked for
     # (`plan_night(..., include_events=True)`), see `current_events`.
     events: EventsReport | None = None
+    # The night as a whole, before any single target — see
+    # `engine.night`. Its level is None when no hourly forecast covers
+    # the dark window (weather unreachable, or the night out of range).
+    night_verdict: NightVerdict | None = None
 
 
 def _rotation_gate(
@@ -484,6 +491,41 @@ def fetch_hourly_cloud_cover(
     return open_meteo.hourly_forecast_in_window(hours, evening_start, morning_end)
 
 
+def fetch_hourly_conditions(site: Site) -> list[HourlyConditions]:
+    """The hourly forecast for `site` in the engine's own terms, for
+    `engine.night`. Same offline-safe contract as `fetch_hourly_cloud_
+    cover`: unreachable weather is an empty list, and the same cached
+    fetch, so no extra network round-trip."""
+    try:
+        hours = open_meteo.fetch_hourly_cached(site.lat_deg, site.lon_deg)
+    except open_meteo.WeatherUnavailable:
+        return []
+    return [
+        HourlyConditions(
+            when=hour.when,
+            cloud_cover_pct=night.effective_cloud_cover_pct(
+                hour.cloud_cover_pct,
+                hour.cloud_low_pct,
+                hour.cloud_mid_pct,
+                hour.cloud_high_pct,
+            ),
+            wind_kmh=hour.wind_speed_kmh,
+            dew_point_spread_c=hour.temperature_c - hour.dew_point_c,
+        )
+        for hour in hours
+    ]
+
+
+def _moon_up_hours(site: Site, evening_start: datetime, morning_end: datetime) -> float:
+    """How long the Moon is above the horizon inside the dark window,
+    from its altitude at evenly spaced samples (`ephemeris.moon_altaz_
+    series`) — accurate to a few minutes, which is all a "held back by"
+    line needs."""
+    series = ephemeris.moon_altaz_series(site, evening_start, morning_end)
+    up_fraction = sum(1 for _, pos in series if pos.alt_deg > 0.0) / len(series)
+    return up_fraction * (morning_end - evening_start).total_seconds() / 3600.0
+
+
 def _entry_targets(entry: object) -> tuple[Target, ...]:
     """The one or more real catalog targets behind a ranked entry — a
     `RankedGroup`'s members, or a single-target entry's own target.
@@ -554,13 +596,24 @@ def plan_night(
     moonrise, moonset = _moon_rise_set(site, evening_start, morning_end)
     weather = fetch_weather_summary(site, evening_start, morning_end)
     hourly_cloud_cover = fetch_hourly_cloud_cover(site, evening_start, morning_end)
+    conditions = fetch_hourly_conditions(site)
+    night_verdict = night.night_verdict(
+        conditions,
+        evening_start,
+        morning_end,
+        moon_illumination_pct=illumination_pct,
+        moon_up_h=_moon_up_hours(site, evening_start, morning_end),
+    )
     ranked = rank_targets(site, rig, when, types=types, limit=limit)
 
     shortlist = [
         ShortlistEntry(
             row,
             scoring.verdict_for_target(
-                row.pos.alt_deg, weather=weather, darkness=darkness
+                row.pos.alt_deg,
+                weather=weather,
+                darkness=darkness,
+                cloud_at_best_time_pct=night.cloud_at(conditions, row.best_time),
             ),
         )
         for row in _fold_favorites_into_shortlist(ranked)
@@ -584,6 +637,7 @@ def plan_night(
             if include_events
             else None
         ),
+        night_verdict=night_verdict,
     )
 
 

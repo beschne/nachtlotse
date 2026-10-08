@@ -30,7 +30,8 @@ DEFAULT_CACHE_DIR = Path(".cache/open_meteo")
 _FORECAST_DAYS = 16  # Open-Meteo's max for the free hourly forecast — covers
 # `lotse plan --date` for any night within that horizon, not just tonight.
 _HOURLY_FIELDS = (
-    "cloudcover,windspeed_10m,relative_humidity_2m,dew_point_2m,temperature_2m"
+    "cloudcover,windspeed_10m,relative_humidity_2m,dew_point_2m,temperature_2m,"
+    "cloudcover_low,cloudcover_mid,cloudcover_high"
 )
 
 
@@ -52,6 +53,13 @@ class HourlyWeather:
     humidity_pct: float
     dew_point_c: float
     temperature_c: float
+    # The three cloud layers, each as its own area fraction (they overlap,
+    # so they don't add up to `cloud_cover_pct`). None when the forecast
+    # has no value for the layer — `engine.night` then falls back to the
+    # total.
+    cloud_low_pct: float | None = None
+    cloud_mid_pct: float | None = None
+    cloud_high_pct: float | None = None
 
 
 def fetch_hourly(lat_deg: float, lon_deg: float) -> list[HourlyWeather]:
@@ -85,6 +93,10 @@ def fetch_hourly(lat_deg: float, lon_deg: float) -> list[HourlyWeather]:
                 hourly["relative_humidity_2m"],
                 hourly["dew_point_2m"],
                 hourly["temperature_2m"],
+                *(
+                    hourly.get(layer) or [None] * len(hourly["time"])
+                    for layer in ("cloudcover_low", "cloudcover_mid", "cloudcover_high")
+                ),
                 strict=True,
             )
         )
@@ -104,10 +116,17 @@ def fetch_hourly(lat_deg: float, lon_deg: float) -> list[HourlyWeather]:
             humidity_pct=float(humidity),
             dew_point_c=float(dew_point),
             temperature_c=float(temperature),
+            cloud_low_pct=_optional_float(low),
+            cloud_mid_pct=_optional_float(mid),
+            cloud_high_pct=_optional_float(high),
         )
-        for t, cloud, wind, humidity, dew_point, temperature in rows
+        for t, cloud, wind, humidity, dew_point, temperature, low, mid, high in rows
         if None not in (cloud, wind, humidity, dew_point, temperature)
     ]
+
+
+def _optional_float(value: float | None) -> float | None:
+    return None if value is None else float(value)
 
 
 def _cache_path(cache_dir: Path, lat_deg: float, lon_deg: float) -> Path:
@@ -136,6 +155,10 @@ def _read_cache(path: Path) -> list[HourlyWeather] | None:
                 humidity_pct=row["humidity_pct"],
                 dew_point_c=row["dew_point_c"],
                 temperature_c=row["temperature_c"],
+                # Entries written before the layers were fetched lack them.
+                cloud_low_pct=row.get("cloud_low_pct"),
+                cloud_mid_pct=row.get("cloud_mid_pct"),
+                cloud_high_pct=row.get("cloud_high_pct"),
             )
             for row in payload["hours"]
         ]
@@ -154,6 +177,9 @@ def _write_cache(path: Path, hours: list[HourlyWeather]) -> None:
                 "humidity_pct": hour.humidity_pct,
                 "dew_point_c": hour.dew_point_c,
                 "temperature_c": hour.temperature_c,
+                "cloud_low_pct": hour.cloud_low_pct,
+                "cloud_mid_pct": hour.cloud_mid_pct,
+                "cloud_high_pct": hour.cloud_high_pct,
             }
             for hour in hours
         ],

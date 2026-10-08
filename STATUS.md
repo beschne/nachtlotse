@@ -636,6 +636,62 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   retired (see CLAUDE.md's M5 note); the projection math and horizon-wedge
   geometry never had to be duplicated for `chart_export.py`.
 
+## Night verdict (`engine/night.py`, `night_text.py`)
+
+- ROADMAP.md's "Night verdict", done: one line above the per-target
+  verdicts answering "is it worth setting up tonight?" — `lotse plan`
+  prints it under the cloud sparkline, the GUI shows it in the header
+  (`NightPlan.night_verdict`, `HeaderSummary.night_verdict_text`).
+- `night.night_verdict` is pure: hourly forecast values
+  (`HourlyConditions`: cloud, wind, dew point spread, converted from the
+  Open-Meteo hours by `planning.fetch_hourly_conditions`) and the Moon's
+  illumination and hours up go in, a `NightVerdict` comes out. Each
+  forecast hour holds for the hour starting at its timestamp, clipped to
+  the dark window; consecutive hours below 40% cloud (the same line
+  `scoring` draws between GO and MARGINAL for a target) form a clear
+  run, and time the forecast doesn't cover is never counted as clear.
+- Level from the longest run alone: 3 h or more GO, 1.5 h or more
+  MARGINAL, less SKIP (`GO_CLEAR_RUN_H`, `SKIP_CLEAR_RUN_H`). Level is
+  None ("unknown") when no forecast covers the window, and a SKIP also
+  becomes None when the forecast covers only part of the window — a short
+  clear run there can't rule out the rest, while GO and MARGINAL still
+  stand.
+- "Held back by" lists what cost hours inside the window, costliest
+  first: cloud (40% or more), wind (25 km/h or more), dew (spread 2°C or
+  less), and the Moon when at least 50% illuminated and up. It only
+  explains; it never changes the level. The Moon's hours up come from
+  `ephemeris.moon_altaz_series` samples (`planning._moon_up_hours`),
+  accurate to a few minutes.
+- The night verdict doesn't cap or follow the per-target verdicts: those
+  still judge cloud by the window's maximum, so a night can be GO while
+  every target is MARGINAL for that reason. Not computed for `--best-rig`
+  plans, and not part of `--prose`'s input.
+- Text shared by CLI and GUI in `night_text.py` (only local clock times
+  are formatted there; the numbers all come from the engine).
+- Thin high cloud counts at half weight: `open_meteo` now also fetches
+  `cloudcover_low/mid/high` (`HourlyWeather.cloud_low_pct` etc., None when
+  the forecast has no value; old cache entries without them still read),
+  and `night.effective_cloud_cover_pct` takes the largest of low, mid and
+  half of high, capped at the total (`HIGH_CLOUD_WEIGHT`), falling back to
+  the total when a layer is missing. The layers overlap, so this errs on
+  the clear side when low and mid cloud cover different parts of the sky.
+  `HourlyConditions.cloud_cover_pct` is this effective value; the header's
+  weather line, the sparkline and `WeatherSummary` still use the total.
+- Per target: `night.cloud_at` gives the effective cloud in the hour of a
+  target's best time, `scoring.verdict_for_target(...,
+  cloud_at_best_time_pct=...)` caps it at MARGINAL when that hour is at
+  40% or more ("best time falls in a cloudy hour"), and adds a note
+  without changing the level when the best time is clear but the window's
+  worst hour wasn't. Because the window-maximum rule already fires
+  whenever any hour is cloudy, the level itself never changes — this
+  explains rather than relaxes (ROADMAP.md has the follow-up). Wired into
+  `plan_night`'s shortlist only, not `--best-rig` or the current events.
+- Tests: `test_night.py` (runs, clipping, gaps, boundaries, partial
+  coverage, held-back ordering, effective cloud, `cloud_at`),
+  `test_night_text.py`, the layer fetch/cache in `test_open_meteo.py`, the
+  best-time rule in `test_scoring.py`, a cirrus night end to end in
+  `test_planning.py`, plus the CLI and GUI header.
+
 ## `nachtlotse/skylist.py`
 
 - SkySafari observing list (`.skylist`) export (ROADMAP.md's "Export to

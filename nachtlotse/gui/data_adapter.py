@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from nachtlotse import best_sky, frame_export, sky_survey
+from nachtlotse import best_sky, frame_export, night_text, sky_survey
 from nachtlotse.data import catalog
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine import framing, framing_preview
@@ -187,6 +187,10 @@ class HeaderSummary:
     moon_text: str
     weather_text: str
     counts_text: str
+    # The night verdict (ROADMAP.md): its line, and what held the night
+    # back — both "" for a best-rig plan, which has no night verdict.
+    night_verdict_text: str = ""
+    held_back_text: str = ""
 
 
 def _moon_event_text(
@@ -224,6 +228,11 @@ def build_header_summary(
     if plan.darkness == "nautical":
         dark_window_text += " (nautical only — no astronomical darkness)"
 
+    night_verdict_text = held_back_text = ""
+    if isinstance(plan, NightPlan) and plan.night_verdict is not None:
+        night_verdict_text = night_text.verdict_line(plan.night_verdict, local_tz)
+        held_back_text = night_text.held_back_line(plan.night_verdict) or ""
+
     return HeaderSummary(
         dark_window_text=dark_window_text,
         moon_text=moon_text,
@@ -232,6 +241,8 @@ def build_header_summary(
             f"{len(plan.shortlist)} shortlisted · {counts['GO']} GO · "
             f"{counts['MARGINAL']} marginal · {counts['SKIP']} skip"
         ),
+        night_verdict_text=night_verdict_text,
+        held_back_text=held_back_text,
     )
 
 

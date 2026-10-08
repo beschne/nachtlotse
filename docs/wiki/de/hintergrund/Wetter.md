@@ -14,6 +14,20 @@ Sie gehen in die [Bewertungen](Bewertungen) ein. Im Kopf der Ausgabe steht
 außerdem die Bewölkung Stunde für Stunde: als Reihe kleiner Balken auf der
 Kommandozeile, als farbige Zellen in der App.
 
+## Dünne hohe Wolken
+
+Open-Meteo teilt die Bewölkung außerdem in eine tiefe, eine mittlere und eine
+hohe Schicht. Hohe Wolken (Cirren) sind dünn und lassen oft noch viel Licht
+durch. Für die Bewertung der Nacht zählt eine Stunde deshalb mit dem
+größten dieser Werte: tiefe Schicht, mittlere Schicht und die Hälfte der
+hohen Schicht. Mehr als die Gesamtbewölkung wird es nie. Hat die Vorhersage
+für eine Stunde keine Schichten, gilt die Gesamtbewölkung.
+
+Diese „effektive Bewölkung“ nutzt die [Bewertung der Nacht](Bewertungen), um
+klare Stunden zu finden, und „Held back by“ zählt damit. Die Bewölkung im Kopf
+der Ausgabe und die Regeln für die einzelnen Ziele rechnen weiter mit der
+Gesamtbewölkung.
+
 ## Grenzen
 
 Die Vorhersage reicht 16 Tage weit. Für eine Nacht danach funktioniert der

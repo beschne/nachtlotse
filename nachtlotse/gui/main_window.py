@@ -240,6 +240,14 @@ class MainWindow(QMainWindow):
         self.sub.setStyleSheet(
             label_style(f"color: {COLORS['ink_secondary']}; font-size: 13px;")
         )
+        # The night verdict (ROADMAP.md): the one line that answers "is it
+        # worth setting up tonight?" before the table answers "what?".
+        self.night_verdict_label = QLabel()
+        self.night_verdict_label.setWordWrap(True)
+        self.night_verdict_label.setStyleSheet(
+            label_style(f"color: {COLORS['ink']}; font-size: 14px; font-weight: 600;")
+        )
+        self.night_verdict_label.hide()
         self.weather_label = QLabel()
         self.weather_label.setStyleSheet(
             label_style(f"color: {COLORS['ink_secondary']}; font-size: 12px;")
@@ -263,6 +271,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.eyebrow)
         content_layout.addWidget(self.title)
         content_layout.addWidget(self.sub)
+        content_layout.addWidget(self.night_verdict_label)
         content_layout.addWidget(self.weather_label)
         content_layout.addWidget(self.hourly_cloud_bar)
         content_layout.addWidget(self.progress)
@@ -588,6 +597,7 @@ class MainWindow(QMainWindow):
         self.title.setText("Planning…")
         self.sub.setText("")
         self.weather_label.setText("")
+        self.night_verdict_label.hide()
         self.hourly_cloud_bar.hide()
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
@@ -629,6 +639,11 @@ class MainWindow(QMainWindow):
             f"{summary.dark_window_text}  ·  Moon {summary.moon_text}  ·  "
             f"{summary.counts_text}"
         )
+        night_verdict_text = summary.night_verdict_text
+        if summary.held_back_text:
+            night_verdict_text += f"\n{summary.held_back_text}"
+        self.night_verdict_label.setText(night_verdict_text)
+        self.night_verdict_label.setVisible(bool(night_verdict_text))
         events_status = data_adapter.events_status_text(plan)
         self.weather_label.setText(
             f"{summary.weather_text}  ·  {events_status}"

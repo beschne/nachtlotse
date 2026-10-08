@@ -237,3 +237,85 @@ def test_fetch_hourly_cached_keys_the_cache_by_coordinates(tmp_path: Path) -> No
 
     assert mock_urlopen.call_count == 2
     assert len(list(tmp_path.iterdir())) == 2
+
+
+_LAYER_PAYLOAD = {
+    "hourly": {
+        **_SAMPLE_PAYLOAD["hourly"],
+        "cloudcover_low": [0.0, 10.0, None],
+        "cloudcover_mid": [5.0, 20.0, 30.0],
+        "cloudcover_high": [80.0, 60.0, 40.0],
+    }
+}
+
+
+def test_fetch_hourly_reads_the_three_cloud_layers() -> None:
+    with patch("urllib.request.urlopen", return_value=_mock_response(_LAYER_PAYLOAD)):
+        hours = open_meteo.fetch_hourly(50.237, 8.551)
+
+    assert (
+        hours[0].cloud_low_pct,
+        hours[0].cloud_mid_pct,
+        hours[0].cloud_high_pct,
+    ) == (
+        0.0,
+        5.0,
+        80.0,
+    )
+    assert hours[2].cloud_low_pct is None  # null for one layer in one hour
+    assert hours[2].cloud_high_pct == pytest.approx(40.0)
+
+
+def test_fetch_hourly_requests_the_cloud_layers() -> None:
+    with patch(
+        "urllib.request.urlopen", return_value=_mock_response(_LAYER_PAYLOAD)
+    ) as mock_urlopen:
+        open_meteo.fetch_hourly(50.237, 8.551)
+
+    query = urllib.parse.parse_qs(
+        urllib.parse.urlparse(mock_urlopen.call_args.args[0]).query
+    )
+    fields = query["hourly"][0].split(",")
+    assert {"cloudcover_low", "cloudcover_mid", "cloudcover_high"} <= set(fields)
+
+
+def test_a_response_without_layers_still_parses_with_unknown_layers() -> None:
+    with patch("urllib.request.urlopen", return_value=_mock_response(_SAMPLE_PAYLOAD)):
+        hours = open_meteo.fetch_hourly(50.237, 8.551)
+
+    assert all(
+        (h.cloud_low_pct, h.cloud_mid_pct, h.cloud_high_pct) == (None, None, None)
+        for h in hours
+    )
+
+
+def test_cache_round_trips_the_layers_and_reads_entries_written_without_them(
+    tmp_path: Path,
+) -> None:
+    hour = open_meteo.HourlyWeather(
+        when=datetime(2026, 9, 12, 20, tzinfo=UTC),
+        cloud_cover_pct=50.0,
+        wind_speed_kmh=5.0,
+        humidity_pct=50.0,
+        dew_point_c=5.0,
+        temperature_c=15.0,
+        cloud_low_pct=1.0,
+        cloud_mid_pct=2.0,
+        cloud_high_pct=3.0,
+    )
+    path = tmp_path / "entry.json"
+    open_meteo._write_cache(path, [hour])
+    assert open_meteo._read_cache(path) == [hour]
+
+    # An entry from before the layers were fetched: no layer keys at all.
+    payload = json.loads(path.read_text())
+    for row in payload["hours"]:
+        for key in ("cloud_low_pct", "cloud_mid_pct", "cloud_high_pct"):
+            del row[key]
+    path.write_text(json.dumps(payload))
+    (old,) = open_meteo._read_cache(path)
+    assert (old.cloud_low_pct, old.cloud_mid_pct, old.cloud_high_pct) == (
+        None,
+        None,
+        None,
+    )

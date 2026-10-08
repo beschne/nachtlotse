@@ -12,7 +12,9 @@ In the app: pick site, rig and date in the sidebar and press Re-plan.
 The header shows the dark window (from the end of evening twilight to the
 start of morning twilight, see [Dark Window](Dark-Window)), the Moon's phase
 and rise or set time, and the weather forecast for that window with an
-hour-by-hour cloud bar.
+hour-by-hour cloud bar. Under the cloud bar sits the night verdict, one line
+that says whether the night is worth setting up for at all and, if something
+cost time, what held it back. [Verdicts](Verdicts) explains it.
 
 Then comes the shortlist: the five best targets of the night, each with a
 verdict (GO, MARGINAL or SKIP) and the reasons behind it. [Verdicts](Verdicts)

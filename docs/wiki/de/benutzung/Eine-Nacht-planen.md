@@ -13,7 +13,9 @@ Re-plan.
 Oben stehen die Dunkelphase (vom Ende der Abenddämmerung bis zum Beginn der
 Morgendämmerung, siehe [Dunkelphase](Dunkelphase)), Mondphase und Mondauf-
 oder -untergang sowie die Wettervorhersage für diese Zeit mit einem
-stundenweisen Wolkenbalken.
+stundenweisen Wolkenbalken. Unter dem Wolkenbalken steht die Bewertung der
+Nacht, eine Zeile, die sagt, ob sich der Aufbau überhaupt lohnt und was
+gegebenenfalls Zeit gekostet hat. Das erklärt [Bewertungen](Bewertungen).
 
 Darunter folgt die Shortlist: die fünf besten Ziele der Nacht, jedes mit
 Bewertung (GO, MARGINAL oder SKIP) und Begründung. Wie die Bewertung

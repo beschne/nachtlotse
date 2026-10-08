@@ -61,6 +61,7 @@ nachtlotse/
 │   ├── framing_preview.py # frame layout on the sky (FoV rectangle, orientation)
 │   ├── comets.py        # comets as rankable targets (positions from MPC orbits)
 │   ├── scoring.py       # target ranking + verdict heuristic
+│   ├── night.py         # night verdict: longest clear run in the dark window
 │   └── models.py        # dataclasses: Site, Rig, HorizonProfile, Target, Verdict
 ├── data/            # persistence — sites, rigs, horizons, session log
 │   ├── catalog/         # object catalog, YAML files banded by magnitude
@@ -74,6 +75,7 @@ nachtlotse/
 ├── events/          # current events — MPC, COBS (comets), Rochester, TNS (supernovae/novae)
 ├── charting.py      # shared polar-chart geometry, no charting-library dependency
 ├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
+├── night_text.py    # the night verdict as text, shared by cli.py and gui/
 ├── skylist.py       # SkySafari observing list export (`lotse plan --skylist`)
 ├── sky_survey.py    # optional DSS2 cutouts (CDS hips2fits), disk-cached
 ├── frame_export.py  # `lotse frame`'s PNG export + shared preview text

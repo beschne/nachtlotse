@@ -8,28 +8,21 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Night verdict above the per-target verdicts:** one line at the top
-   of `lotse plan` and the GUI answering "is it worth setting up
-   tonight?" before "what do I shoot?" — e.g. "GO, clear 21:30–03:10
-   (5.7 h)" or "SKIP: longest clear run 1 h from 22:00, rule needs 3 h",
-   plus a "held back by" line naming the terms that cost the most
-   (Moon, cloud, dew, wind). The per-target GO/MARGINAL/SKIP stays; this
-   frames it. Needs 2.
-2. **Hourly weather instead of a window aggregate:** `weather/open_meteo.py`
-   already fetches hourly values, but `summarize_window` collapses them
-   into `WeatherSummary`'s max/avg — an average of 40% cloud can mean
-   "clear until 01:00, then closed". A pure engine function that finds
-   contiguous clear runs inside the dark window (configurable minimum
-   hours and cloud threshold), with high thin cloud counted at half
-   weight (Open-Meteo has `cloud_cover_low/mid/high`), and per target:
-   does its best time fall in the clear part of the night?
-3. **Per-target difficulty rating:** an `Easy`/`Moderate`/`Hard`/`Elite`
+1. **Target verdicts from the hourly forecast:** the per-target verdict still
+   judges cloud, wind and dew by the dark window's worst hour, so one
+   cloudy hour makes every target MARGINAL even when its own best time is
+   clear (the verdict now says so in a note, but keeps the level). Judging
+   them at the target's own hours would fix that. Also for the best-rig
+   plan and the current events, which don't get the best-time cloud note
+   yet. Builds on the hourly weather done in 3.6.0 (clear runs, thin high
+   cloud, the best-time hour — see STATUS.md).
+2. **Per-target difficulty rating:** an `Easy`/`Moderate`/`Hard`/`Elite`
    field on `Target`, derived from apparent size, magnitude, and
    circumpolar-vs-seasonal accessibility. Shown in CLI output, GUI, and
    chart labels. Complements the GO/MARGINAL/SKIP verdict rather than
    replacing it — the verdict says "is this shootable tonight", difficulty
    says "how hard is it to get right".
-4. **Integration time estimation:** a minimum-exposure estimate per target
+3. **Integration time estimation:** a minimum-exposure estimate per target
    from magnitude, sensor pixel size, and mount tracking, shown alongside
    the verdict. Answers "how long does this take" — the natural follow-up
    once a target clears GO.
@@ -121,11 +114,11 @@ offline-first design. Listed in priority order.
     central Europe, and saying so honestly fits the guiding principle.
 17. **Clear-night notification:** a small launchd job, outside the engine
     in its own module, that runs the plan in the evening and posts a macOS
-    notification when the night verdict (Ideas 1) is GO.
+    notification when the night verdict (done, see STATUS.md) is GO.
 18. **Shooting hints per rig:** optional per-rig filter/exposure fields
     (Seestar S30 Pro: light-pollution filter on for emission targets, off
     for broadband, 10 s frames), with the frame count computed from the
-    clear window. The practical side of integration time estimation (Ideas 4).
+    clear window. The practical side of integration time estimation (Ideas 3).
 19. **Horizon from terrain data:** look up the surrounding terrain once per
     site (Open-Meteo's elevation API, Copernicus DEM 90 m) and propose it
     as a lower bound for the horizon profile. Terrain sees hills only,
@@ -139,7 +132,7 @@ offline-first design. Listed in priority order.
     class, complementing measured SQM values. Large effort (data volume,
     licensing), hence low.
 22. **Menu-bar indicator:** a `QSystemTrayIcon` showing tonight's night
-    verdict (Ideas 1) at a glance. Only worth it once that exists.
+    verdict at a glance, now that it exists (see STATUS.md).
 
 ## Non-prioritized ideas
 

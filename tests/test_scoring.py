@@ -126,3 +126,51 @@ def test_a_nautical_only_night_caps_the_verdict_at_marginal() -> None:
     verdict = scoring.verdict_for_target(70.0, weather=clear, darkness="nautical")
     assert verdict.level == "MARGINAL"
     assert any("no astronomical darkness" in r for r in verdict.reasons)
+
+
+_CLOUDY_NIGHT = WeatherSummary(
+    max_cloud_cover_pct=70.0,
+    avg_cloud_cover_pct=30.0,
+    max_wind_kmh=5.0,
+    min_dew_point_spread_c=6.0,
+)
+_CLEAR_NIGHT = WeatherSummary(
+    max_cloud_cover_pct=10.0,
+    avg_cloud_cover_pct=5.0,
+    max_wind_kmh=5.0,
+    min_dew_point_spread_c=6.0,
+)
+
+
+def test_a_best_time_in_a_cloudy_hour_is_named_as_a_reason() -> None:
+    verdict = scoring.verdict_for_target(
+        70.0, weather=_CLOUDY_NIGHT, cloud_at_best_time_pct=65.0
+    )
+    assert verdict.level == "MARGINAL"
+    assert "best time falls in a cloudy hour (65% effective cloud)" in verdict.reasons
+
+
+def test_a_best_time_in_a_clear_hour_adds_a_note_but_keeps_the_level() -> None:
+    without = scoring.verdict_for_target(70.0, weather=_CLOUDY_NIGHT)
+    verdict = scoring.verdict_for_target(
+        70.0, weather=_CLOUDY_NIGHT, cloud_at_best_time_pct=10.0
+    )
+    assert verdict.level == without.level == "MARGINAL"  # the window's worst hour
+    assert "best time falls in a clear hour (10% effective cloud)" in verdict.reasons
+
+
+def test_a_clear_night_gets_no_best_time_cloud_reason() -> None:
+    verdict = scoring.verdict_for_target(
+        70.0, weather=_CLEAR_NIGHT, cloud_at_best_time_pct=10.0
+    )
+    assert verdict.level == "GO"
+    assert not any("best time" in reason for reason in verdict.reasons)
+
+
+def test_best_time_cloud_is_ignored_without_a_forecast_or_without_its_hour() -> None:
+    no_weather = scoring.verdict_for_target(70.0, cloud_at_best_time_pct=90.0)
+    assert not any("best time" in reason for reason in no_weather.reasons)
+    no_hour = scoring.verdict_for_target(
+        70.0, weather=_CLOUDY_NIGHT, cloud_at_best_time_pct=None
+    )
+    assert not any("best time" in reason for reason in no_hour.reasons)

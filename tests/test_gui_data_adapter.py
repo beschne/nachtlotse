@@ -642,3 +642,34 @@ def test_events_status_text_counts_each_kind() -> None:
     assert data_adapter.events_status_text(plan) == (
         "Events: 2 supernovae, 1 comet observable tonight"
     )
+
+
+def test_build_header_summary_carries_the_night_verdict_text() -> None:
+    from nachtlotse.engine.models import ClearRun, HeldBack, NightVerdict
+
+    run = ClearRun(
+        datetime(2026, 9, 21, 19, 30, tzinfo=UTC),
+        datetime(2026, 9, 22, 1, 10, tzinfo=UTC),
+    )
+    plan = replace(
+        _night_plan([]),
+        night_verdict=NightVerdict(
+            level="GO",
+            window_h=5 + 40 / 60,
+            forecast_h=5 + 40 / 60,
+            clear_h=5 + 40 / 60,
+            longest_run=run,
+            held_back_by=(HeldBack("wind", 1.0, "wind of 25 km/h or more for 1.0 h"),),
+        ),
+    )
+
+    summary = data_adapter.build_header_summary(plan, BERLIN)
+
+    assert summary.night_verdict_text == "Night verdict: GO — clear 21:30–03:10 (5.7 h)"
+    assert summary.held_back_text == "Held back by: wind of 25 km/h or more for 1.0 h"
+
+
+def test_build_header_summary_has_no_night_verdict_text_without_one() -> None:
+    summary = data_adapter.build_header_summary(_night_plan([]), BERLIN)
+    assert summary.night_verdict_text == ""
+    assert summary.held_back_text == ""

@@ -18,6 +18,7 @@ from nachtlotse import (
     best_sky,
     chart_export,
     frame_export,
+    night_text,
     planning,
     prose,
     sky_survey,
@@ -281,6 +282,11 @@ def _cmd_plan(
     hourly_line = _hourly_cloud_cover_line(plan.hourly_cloud_cover, local_tz)
     if hourly_line is not None:
         print(hourly_line)
+    if plan.night_verdict is not None:
+        print(night_text.verdict_line(plan.night_verdict, local_tz))
+        held_back_line = night_text.held_back_line(plan.night_verdict)
+        if held_back_line is not None:
+            print(held_back_line)
     print()
 
     if not plan.ranked:
