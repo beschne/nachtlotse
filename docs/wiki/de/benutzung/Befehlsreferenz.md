@@ -19,8 +19,10 @@ Sortiert den Katalog für eine Nacht und vergibt Bewertungen. Siehe
 | `--type KATEGORIE` | nur diese Objektart; mehrfach möglich. Kategorien: `emission_nebula`, `reflection_nebula`, `planetary_nebula`, `dark_nebula`, `galaxy`, `galaxy_group`, `open_cluster`, `globular_cluster`, `variable_star` |
 | `--limit N` | nur die N hellsten Katalogobjekte prüfen (Vorgabe 50, 0 für alle) |
 | `--chart [PFAD]` | die Himmelskarte als PNG schreiben (Vorgabe `nachtlotse-shortlist.png`); braucht `charts` |
+| `--skylist [PFAD]` | eine SkySafari-Beobachtungsliste schreiben (Vorgabe `nachtlotse.skylist`); nicht mit `--best-rig` |
+| `--skylist-scope UMFANG` | was `--skylist` neben den Ereignissen schreibt: `shortlist` (Vorgabe) oder `ranked` |
 | `--no-events` | Kometen, Supernovae und Novae weglassen |
-| `--best-rig` | pro Ziel das beste Rig wählen statt eines festen; nicht mit `--rig` oder `--chart` |
+| `--best-rig` | pro Ziel das beste Rig wählen statt eines festen; nicht mit `--rig`, `--chart` oder `--skylist` |
 | `--prose` | ein geschriebenes Briefing anhängen; braucht `prose` und einen API-Schlüssel |
 
 ## lotse events

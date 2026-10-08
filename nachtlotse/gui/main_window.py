@@ -49,7 +49,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from nachtlotse import planning
+from nachtlotse import planning, skylist
 from nachtlotse.data import store
 from nachtlotse.data.store import RigRecord, SiteRecord
 from nachtlotse.engine.models import Rig, Site
@@ -294,11 +294,16 @@ class MainWindow(QMainWindow):
         self.shortlist_export_button = secondary_button("Export CSV…")
         self.shortlist_export_button.setEnabled(False)
         self.shortlist_export_button.clicked.connect(self._on_export_shortlist_csv)
+        self.shortlist_skylist_button = secondary_button("Export SkySafari…")
+        self.shortlist_skylist_button.setEnabled(False)
+        self.shortlist_skylist_button.clicked.connect(self._on_export_shortlist_skylist)
         self.shortlist_table = self._build_table(_SHORTLIST_COLUMNS)
         self.shortlist_framing_button = self._framing_button(self.shortlist_table)
         shortlist_layout.addLayout(
             self._export_row(
-                self.shortlist_framing_button, self.shortlist_export_button
+                self.shortlist_framing_button,
+                self.shortlist_skylist_button,
+                self.shortlist_export_button,
             )
         )
         shortlist_layout.addWidget(self.shortlist_table)
@@ -310,10 +315,17 @@ class MainWindow(QMainWindow):
         self.ranked_export_button = secondary_button("Export CSV…")
         self.ranked_export_button.setEnabled(False)
         self.ranked_export_button.clicked.connect(self._on_export_ranked_csv)
+        self.ranked_skylist_button = secondary_button("Export SkySafari…")
+        self.ranked_skylist_button.setEnabled(False)
+        self.ranked_skylist_button.clicked.connect(self._on_export_ranked_skylist)
         self.ranked_table = self._build_table(_RANKED_COLUMNS)
         self.ranked_framing_button = self._framing_button(self.ranked_table)
         ranked_layout.addLayout(
-            self._export_row(self.ranked_framing_button, self.ranked_export_button)
+            self._export_row(
+                self.ranked_framing_button,
+                self.ranked_skylist_button,
+                self.ranked_export_button,
+            )
         )
         ranked_layout.addWidget(self.ranked_table)
         self.tabs.addTab(ranked_card, "All ranked")
@@ -325,7 +337,12 @@ class MainWindow(QMainWindow):
         events_layout.setContentsMargins(*([_CARD_CONTENT_MARGIN] * 4))
         self.events_table = self._build_table(_EVENT_COLUMNS)
         self.events_framing_button = self._framing_button(self.events_table)
-        events_layout.addLayout(self._export_row(self.events_framing_button))
+        self.events_skylist_button = secondary_button("Export SkySafari…")
+        self.events_skylist_button.setEnabled(False)
+        self.events_skylist_button.clicked.connect(self._on_export_events_skylist)
+        events_layout.addLayout(
+            self._export_row(self.events_framing_button, self.events_skylist_button)
+        )
         events_layout.addWidget(self.events_table, stretch=3)
         self.skipped_events_table = self._build_table(_SKIPPED_EVENT_COLUMNS)
         events_layout.addWidget(self.skipped_events_table, stretch=2)
@@ -452,6 +469,43 @@ class MainWindow(QMainWindow):
         except OSError as exc:
             QMessageBox.critical(self, "Export failed", str(exc))
 
+    def _on_export_shortlist_skylist(self) -> None:
+        if self._plan is not None:
+            self._export_skylist(
+                skylist.entries_for_plan(self._plan, "shortlist"),
+                "Export Shortlist for SkySafari",
+            )
+
+    def _on_export_ranked_skylist(self) -> None:
+        if self._plan is not None:
+            self._export_skylist(
+                skylist.entries_for_plan(self._plan, "ranked"),
+                "Export All Ranked for SkySafari",
+            )
+
+    def _on_export_events_skylist(self) -> None:
+        if self._plan is not None and self._plan.events is not None:
+            self._export_skylist(
+                skylist.entries_for_events(self._plan.events),
+                "Export Current Events for SkySafari",
+            )
+
+    def _export_skylist(
+        self, entries: list[skylist.SkyListEntry], dialog_title: str
+    ) -> None:
+        default_path = str(
+            gui_export.default_export_dir() / skylist.DEFAULT_SKYLIST_FILENAME
+        )
+        path_str, _ = QFileDialog.getSaveFileName(
+            self, dialog_title, default_path, "SkySafari lists (*.skylist)"
+        )
+        if not path_str:
+            return
+        try:
+            skylist.write_skylist(entries, Path(path_str))
+        except OSError as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
+
     def _build_table(self, columns: list[tuple[str, str, str]]) -> QTableWidget:
         table = QTableWidget(0, len(columns))
         table.setHorizontalHeaderLabels([label for _key, label, _align in columns])
@@ -561,6 +615,11 @@ class MainWindow(QMainWindow):
         ranked_rows = data_adapter.build_ranked_rows(plan, local_tz)
         self.shortlist_export_button.setEnabled(bool(shortlist_rows))
         self.ranked_export_button.setEnabled(bool(ranked_rows))
+        self.shortlist_skylist_button.setEnabled(bool(plan.shortlist))
+        self.ranked_skylist_button.setEnabled(bool(plan.ranked))
+        self.events_skylist_button.setEnabled(
+            plan.events is not None and bool(plan.events.events)
+        )
 
         self.eyebrow.setText(
             f"{site.name} · {rig.name} · {selected_date:%a %d %b}".upper()

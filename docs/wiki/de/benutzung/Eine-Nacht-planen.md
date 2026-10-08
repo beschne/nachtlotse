@@ -59,10 +59,10 @@ App ist das das Feld EVALUATE.
 
 `--best-rig` probiert für jedes Ziel alle eingetragenen Rigs und behält das,
 bei dem es am besten ins Bild passt. Jede Zeile nennt dann ihr Rig. Die
-Option lässt sich nicht mit `--rig` oder `--chart` kombinieren und bildet
+Option lässt sich nicht mit `--rig`, `--chart` oder `--skylist` kombinieren und bildet
 keine Gruppen.
 
-`--chart` und `--prose` stehen in [Himmelskarte und Export](Himmelskarte-und-Export)
+`--chart`, `--skylist` und `--prose` stehen in [Himmelskarte und Export](Himmelskarte-und-Export)
 und [Nachtbriefing](Nachtbriefing). Alle Optionen findest du in der
 [Befehlsreferenz](Befehlsreferenz).
 

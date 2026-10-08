@@ -74,6 +74,7 @@ nachtlotse/
 ├── events/          # current events — MPC, COBS (comets), Rochester, TNS (supernovae/novae)
 ├── charting.py      # shared polar-chart geometry, no charting-library dependency
 ├── chart_export.py  # `lotse plan --chart`'s PNG export (matplotlib)
+├── skylist.py       # SkySafari observing list export (`lotse plan --skylist`)
 ├── sky_survey.py    # optional DSS2 cutouts (CDS hips2fits), disk-cached
 ├── frame_export.py  # `lotse frame`'s PNG export + shared preview text
 ├── best_sky.py      # cross-site weather comparison (`lotse best-sky`)
@@ -271,6 +272,7 @@ uv run lotse plan              # tonight's recommendation (from M0)
 uv run lotse plan --limit 20   # evaluate only the first 20 matching objects
 uv run lotse plan --limit 0    # evaluate all catalog objects
 uv run lotse plan --chart      # + the shortlist's polar chart as a PNG
+uv run lotse plan --skylist    # + a SkySafari observing list (.skylist)
 uv run lotse plan --prose      # + an LLM-written nightly briefing (needs ANTHROPIC_API_KEY)
 uv run lotse frame M31         # framing preview: text + PNG (charts extra)
 uv run lotse events            # current comets/supernovae/novae: observable tonight, and why not

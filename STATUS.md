@@ -636,6 +636,36 @@ full roadmap, see [ROADMAP.md](./ROADMAP.md).
   retired (see CLAUDE.md's M5 note); the projection math and horizon-wedge
   geometry never had to be duplicated for `chart_export.py`.
 
+## `nachtlotse/skylist.py`
+
+- SkySafari observing list (`.skylist`) export (ROADMAP.md's "Export to
+  SkySafari", done): `lotse plan --skylist [PATH]` (scope via
+  `--skylist-scope shortlist|ranked`) and an "Export SkySafari…" button on
+  the GUI's Shortlist, All ranked and Events tabs. Pure string-building
+  like `gui/export.py`; the only I/O is `write_skylist`. Not available
+  with `--best-rig`.
+- The format comes from a list SkySafari 6 exported
+  (`tests/fixtures/skysafari_reference.skylist`: M31, M42, comets 220P and
+  C/2014 UN271), then probed on the device with hand-edited variants.
+  What those showed: Messier/NGC objects resolve by `CommonName` and
+  `CatalogNumber` alone, with no `ObjectID`; a comet needs an `ObjectID`
+  of comet type (`1,0,n`) but resolves by name, even when the number
+  doesn't exist in SkySafari or belongs to another comet, so the export
+  writes unique placeholders (`1,0,99990000` upward); supernovae and
+  novae are not in SkySafari's catalogs and SkySafari 6 and 8 can't create
+  custom objects, so they're name-only entries, shown greyed out and not
+  selectable.
+- To still say where to point, a supernova's or nova's name carries its
+  J2000 coordinates, ASCII only (`SN 2026abc (RA 12h34m Dec +12d30m
+  J2000)`), from the engine's position, like every other number.
+- The catalog's `M31` is written as SkySafari's `M 31`; other
+  designations go out unchanged. Whether SkySafari resolves every
+  catalog family the catalog carries (Sh2, Barnard, vdB, ...) is not
+  verified; an object it doesn't know just shows greyed out.
+- Tests: format against the reference file, the placeholder IDs, the
+  coordinates text, scope/ordering/de-duplication of the plan entries, the
+  CLI flag and its failure paths.
+
 ## Tests
 
 - Against independently known astronomical/textbook values: Polaris

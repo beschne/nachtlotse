@@ -8,15 +8,7 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Export to SkySafari (`.skylist`):** write the shortlist, the full
-   ranking, or tonight's current events as a SkySafari observing list, so
-   the night's targets open directly in SkySafari on the phone or tablet at
-   the telescope. From the CLI (e.g. `lotse plan --skylist PATH`) and as an
-   Export button in the GUI, next to CSV. Catalog objects can go by
-   designation; comets, supernovae and novae may need their coordinates or a
-   name SkySafari itself knows. Build the format from a list exported by
-   SkySafari, not from memory.
-2. **Current events:** comets (3.3.0) and supernovae/novae (3.4.0) are
+1. **Current events:** comets (3.3.0) and supernovae/novae (3.4.0) are
    done — see STATUS.md. Still open:
    - **Galactic novae's current brightness:** TNS lists them, but only
      with their discovery magnitude; AAVSO photometry could say how bright
@@ -29,7 +21,7 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
    - **Minor planets/asteroids and near-Earth objects (NEOs):** fast
      movers that would need real motion tracking, not the per-night
      snapshot comets get.
-3. **Session log:** record what's already been captured, and when — total
+2. **Session log:** record what's already been captured, and when — total
    exposure time per target, logged per session. Prior exposure on a target
    is informational, not a deterrent; it doesn't mean the target drops out of
    contention, more can still be worth shooting. No attached photos. 
@@ -114,7 +106,7 @@ offline-first design. Listed in priority order.
     into a timeline (target A 21:30–23:00, target B 23:00–01:30, …) and
     flag conflicts where two GO targets peak at the same time. A smart
     telescope shoots one target after another; the sequence would also
-    be the natural order for the SkySafari export (priority #1 above).
+    be the natural order for the SkySafari export (see STATUS.md).
 16. **Seeing and transparency:** 7Timer's ASTRO product as an optional
     source in `weather/`, as extra `WeatherSummary` terms with tests.
     Transparency matters almost as much as cloud for deep sky at a

@@ -25,10 +25,38 @@ Every screen in the app has an export button:
 
 | Screen | Export |
 |---|---|
-| Shortlist, All ranked | CSV |
+| Shortlist, All ranked | CSV, SkySafari list |
+| Events | SkySafari list |
 | Sky chart | PNG |
 | Briefing | text file |
 | Sites, Rigs | text file |
 | Framing preview | PNG |
 
 The save dialog starts in the `exports/` folder of the repository.
+
+## SkySafari lists
+
+The SkySafari export writes an observing list (`.skylist`) that you open in
+SkySafari on your phone or tablet, so tonight's targets are at hand at the
+telescope. In the app, use Export SkySafari on the Shortlist, All ranked or
+Events tab. From the command line, `lotse plan --skylist` writes the list
+(`nachtlotse.skylist` in the current folder, or a path you give).
+
+What goes into the list:
+
+- Shortlist: the shortlisted targets, then the comets, supernovae and novae
+  that are observable tonight. `--skylist-scope ranked` writes the whole
+  ranking instead of the shortlist.
+- All ranked: every ranked target, then the same events.
+- Events: only the events observable tonight.
+
+Catalog objects and comets open in SkySafari like any other object. Messier
+and NGC objects are found by name and catalog number, comets by name.
+
+Supernovae and novae are not in SkySafari's catalogs, and SkySafari can't
+create objects of your own. They show up greyed out in the list and you
+can't select them. To still tell you where to point, their J2000
+coordinates are part of the name, for example
+`SN 2026abc (RA 12h34m Dec +12d30m J2000)`.
+
+This was checked with SkySafari 6.

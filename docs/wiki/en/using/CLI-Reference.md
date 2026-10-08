@@ -18,8 +18,10 @@ Ranks the catalog for one night and gives verdicts. See [Planning a Night](Plann
 | `--type CATEGORY` | only this kind of object; can be repeated. Categories: `emission_nebula`, `reflection_nebula`, `planetary_nebula`, `dark_nebula`, `galaxy`, `galaxy_group`, `open_cluster`, `globular_cluster`, `variable_star` |
 | `--limit N` | check only the N brightest catalog objects (default 50, 0 for all) |
 | `--chart [PATH]` | write the sky chart as a PNG (default `nachtlotse-shortlist.png`); needs `charts` |
+| `--skylist [PATH]` | write a SkySafari observing list (default `nachtlotse.skylist`); not with `--best-rig` |
+| `--skylist-scope SCOPE` | what `--skylist` writes besides the events: `shortlist` (default) or `ranked` |
 | `--no-events` | leave out comets, supernovae and novae |
-| `--best-rig` | choose the best rig per target instead of using one; not with `--rig` or `--chart` |
+| `--best-rig` | choose the best rig per target instead of using one; not with `--rig`, `--chart` or `--skylist` |
 | `--prose` | add a written briefing; needs `prose` and an API key |
 
 ## lotse events

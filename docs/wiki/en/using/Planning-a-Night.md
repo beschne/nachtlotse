@@ -56,9 +56,9 @@ app this is the EVALUATE field.
 
 `--best-rig` tries every rig you have configured for every target and keeps
 the one that frames it best. Each row then names its rig. This option can't
-be combined with `--rig` or `--chart`, and it doesn't build groups.
+be combined with `--rig`, `--chart` or `--skylist`, and it doesn't build groups.
 
-`--chart` and `--prose` are described in [Sky Chart and Exports](Sky-Chart-and-Exports)
+`--chart`, `--skylist` and `--prose` are described in [Sky Chart and Exports](Sky-Chart-and-Exports)
 and [Nightly Briefing](Nightly-Briefing). All options are listed in the
 [CLI Reference](CLI-Reference).
 
