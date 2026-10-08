@@ -21,6 +21,7 @@ from nachtlotse import (
     planning,
     prose,
     sky_survey,
+    skylist,
 )
 from nachtlotse.data import catalog, store
 from nachtlotse.data.store import RigRecord, SiteRecord
@@ -222,12 +223,17 @@ def _cmd_plan(
     best_rig: bool,
     want_prose: bool,
     want_events: bool = True,
+    skylist_path: str | None = None,
+    skylist_scope: skylist.SkyListScope = "shortlist",
 ) -> int:
     if best_rig and rig_name:
         print("--best-rig can't be combined with --rig.", file=sys.stderr)
         return 2
     if best_rig and chart_path is not None:
         print("--best-rig can't be combined with --chart yet.", file=sys.stderr)
+        return 2
+    if best_rig and skylist_path is not None:
+        print("--best-rig can't be combined with --skylist yet.", file=sys.stderr)
         return 2
 
     try:
@@ -315,6 +321,16 @@ def _cmd_plan(
             print(f"\n{exc}", file=sys.stderr)
             return 2
         print(f"\nChart written to {chart_path}")
+
+    if skylist_path is not None:
+        try:
+            skylist.write_skylist(
+                skylist.entries_for_plan(plan, skylist_scope), Path(skylist_path)
+            )
+        except OSError as exc:
+            print(f"\nCouldn't write {skylist_path}: {exc}", file=sys.stderr)
+            return 2
+        print(f"\nSkySafari list written to {skylist_path}")
 
     if want_prose:
         exit_code = _print_prose_briefing(plan)
@@ -820,6 +836,32 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     plan_parser.add_argument(
+        "--skylist",
+        dest="skylist_path",
+        nargs="?",
+        const=skylist.DEFAULT_SKYLIST_FILENAME,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Write the plan as a SkySafari observing list to PATH "
+            f"(default: {skylist.DEFAULT_SKYLIST_FILENAME} in the current "
+            "directory), overwriting any existing file at that path: the "
+            "targets (see --skylist-scope), then the comets, supernovae and "
+            "novae observable tonight. Supernovae and novae show greyed out "
+            "in SkySafari, with their coordinates in the name."
+        ),
+    )
+    plan_parser.add_argument(
+        "--skylist-scope",
+        dest="skylist_scope",
+        choices=get_args(skylist.SkyListScope),
+        default="shortlist",
+        help=(
+            "Which catalog targets --skylist writes: the shortlist "
+            "(default) or the full ranking."
+        ),
+    )
+    plan_parser.add_argument(
         "--limit",
         dest="limit",
         default=None,
@@ -996,6 +1038,8 @@ def main(argv: list[str] | None = None) -> int:
             args.best_rig,
             args.prose,
             args.events,
+            args.skylist_path,
+            args.skylist_scope,
         )
     if args.command == "frame":
         return _cmd_frame(
