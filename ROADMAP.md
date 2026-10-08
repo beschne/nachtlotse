@@ -8,31 +8,6 @@ below must still follow, see [CLAUDE.md](./CLAUDE.md).
 
 ## Ideas for after the MVP, in priority order
 
-1. **Current events:** comets (3.3.0) and supernovae/novae (3.4.0) are
-   done — see STATUS.md. Still open:
-   - **Galactic novae's current brightness:** TNS lists them, but only
-     with their discovery magnitude; AAVSO photometry could say how bright
-     one is now. The same would cover watching a recurrent nova already in
-     the catalog (T CrB) for an outburst, which TNS wouldn't necessarily
-     list.
-   - **TNS bot credentials (optional):** requests could identify as a bot
-     (courtesy, higher limits than anonymous search's 10 a minute), and
-     TNS photometry could become a second brightness source.
-   - **Minor planets/asteroids and near-Earth objects (NEOs):** fast
-     movers that would need real motion tracking, not the per-night
-     snapshot comets get.
-2. **Session log:** record what's already been captured, and when — total
-   exposure time per target, logged per session. Prior exposure on a target
-   is informational, not a deterrent; it doesn't mean the target drops out of
-   contention, more can still be worth shooting. No attached photos. 
-
-## Think about
-
-Candidate ideas not yet slotted into the prioritized list above — surfaced
-while scanning comparable tools for gaps, not committed to, and some in
-tension with the engine's own scope (open catalog, not curation) or its
-offline-first design. Listed in priority order.
-
 1. **Night verdict above the per-target verdicts:** one line at the top
    of `lotse plan` and the GUI answering "is it worth setting up
    tonight?" before "what do I shoot?" — e.g. "GO, clear 21:30–03:10
@@ -58,88 +33,113 @@ offline-first design. Listed in priority order.
    from magnitude, sensor pixel size, and mount tracking, shown alongside
    the verdict. Answers "how long does this take" — the natural follow-up
    once a target clears GO.
-5. **Per-target reference images:** lightweight thumbnail paths in the
+
+## Think about
+
+Candidate ideas not yet slotted into the prioritized list above — surfaced
+while scanning comparable tools for gaps, not committed to, and some in
+tension with the engine's own scope (open catalog, not curation) or its
+offline-first design. Listed in priority order.
+
+1. **Current events:** comets (3.3.0) and supernovae/novae (3.4.0) are
+   done — see STATUS.md. Still open:
+   - **Galactic novae's current brightness:** TNS lists them, but only
+     with their discovery magnitude; AAVSO photometry could say how bright
+     one is now. The same would cover watching a recurrent nova already in
+     the catalog (T CrB) for an outburst, which TNS wouldn't necessarily
+     list.
+   - **TNS bot credentials (optional):** requests could identify as a bot
+     (courtesy, higher limits than anonymous search's 10 a minute), and
+     TNS photometry could become a second brightness source.
+   - **Minor planets/asteroids and near-Earth objects (NEOs):** fast
+     movers that would need real motion tracking, not the per-night
+     snapshot comets get.
+2. **Session log:** record what's already been captured, and when — total
+   exposure time per target, logged per session. Prior exposure on a target
+   is informational, not a deterrent; it doesn't mean the target drops out of
+   contention, more can still be worth shooting. No attached photos. 
+3. **Per-target reference images:** lightweight thumbnail paths in the
    catalog YAML (CC-licensed), shown in the GUI and optionally on the
    polar chart, so a target on the shortlist isn't just a name and a
    score.
-6. **Lunar-aware object-type weighting:** boost narrowband-friendly types
+4. **Lunar-aware object-type weighting:** boost narrowband-friendly types
    (emission nebulae) in scoring as moon phase rises above ~0.5, and
    broadband types (galaxies, reflection nebulae) as it drops below
    ~0.3. `engine.ephemeris.moon_phase_angle_deg` already exists; today
    every type is scored the same regardless of moon phase.
-7. **Seasonal preview ("what's coming up"):** a `--season` flag or GUI
+5. **Seasonal preview ("what's coming up"):** a `--season` flag or GUI
    mode listing targets that will rise into a good observing window in
    the coming weeks/months, not just tonight — for planning ahead rather
    than only reacting to the current night.
-8. **Finder charts / proximity maps:** a simple chart showing a target's
+6. **Finder charts / proximity maps:** a simple chart showing a target's
    position relative to nearby bright stars, from astropy coordinates +
    matplotlib. A navigation aid, complementing the polar `--chart` (which
    shows *when*, not *how to find it in the eyepiece/frame*).
-9. **Integration time tracking in the session log:** once the session log
+7. **Integration time tracking in the session log:** once the session log
    (see the prioritized list above) exists, record planned vs. actual
    integration time per target per session, building a personal history
    over time.
-10. **Southern-hemisphere correctness audit:** verify the RA/Dec →
+8. **Southern-hemisphere correctness audit:** verify the RA/Dec →
     alt/az math and dark-window calculations carry no northern-hemisphere
     bias, and add test cases for southern-latitude sites. (Curating
     southern-sky *catalog content* stays explicitly out of scope — see
     below — this is purely about the math not silently assuming north.)
-11. **Jargon-free descriptions ("beginner mode"):** an optional free-text,
+9. **Jargon-free descriptions ("beginner mode"):** an optional free-text,
     human-readable description per catalog entry, shown via a CLI
     `--verbose` flag or in the GUI, for anyone newer to the hobby than the
     current magnitude/size/type fields assume.
-12. **Curated-shortlist mode:** an opt-in smaller, hand-picked subset of
+10. **Curated-shortlist mode:** an opt-in smaller, hand-picked subset of
     the catalog (Messier + a few standout Caldwell/NGC targets) as an
     alternative to evaluating everything — relief from choice overload for
     someone just starting out, while the full open-catalog ranking stays
     the default. Sits in real tension with the "evaluate everything,
     rank objectively" principle in CLAUDE.md, so only worth doing if it's
     clearly opt-in and never changes the default behavior.
-13. **Web interface:** a lightweight browser front end (independent of the
+11. **Web interface:** a lightweight browser front end (independent of the
     retired Streamlit MVP — see STATUS.md for why that one was dropped)
     for no-install, cross-device access. The CLI and native GUI would
     stay primary either way.
-14. **Mobile-friendly output:** a shareable HTML/PDF report, or a
+12. **Mobile-friendly output:** a shareable HTML/PDF report, or a
     terminal-friendly compact summary, for checking the plan on a phone
     at the eyepiece rather than needing a laptop open.
-15. **Evening sequence instead of only a ranking:** order the shortlist
+13. **Evening sequence instead of only a ranking:** order the shortlist
     into a timeline (target A 21:30–23:00, target B 23:00–01:30, …) and
     flag conflicts where two GO targets peak at the same time. A smart
     telescope shoots one target after another; the sequence would also
     be the natural order for the SkySafari export (see STATUS.md).
-16. **Seeing and transparency:** 7Timer's ASTRO product as an optional
+14. **Seeing and transparency:** 7Timer's ASTRO product as an optional
     source in `weather/`, as extra `WeatherSummary` terms with tests.
     Transparency matters almost as much as cloud for deep sky at a
     suburban site. 7Timer data is for non-commercial use only.
-17. **Week ahead:** `lotse week` (and a GUI view) with one row per night —
+15. **Week ahead:** `lotse week` (and a GUI view) with one row per night —
     darkness, Moon, clear window — as far as the 16-day forecast reaches,
     nights from three days out marked as less certain. For picking the
     night to drive to a dark site.
-18. **Second weather opinion:** fetch a second model through Open-Meteo
+16. **Second weather opinion:** fetch a second model through Open-Meteo
     (e.g. ICON-D2 vs. ECMWF) and name the disagreement as a reason; the
     verdict still comes from the primary model. Models often diverge over
     central Europe, and saying so honestly fits the guiding principle.
-19. **Clear-night notification:** a small launchd job, outside the engine
+17. **Clear-night notification:** a small launchd job, outside the engine
     in its own module, that runs the plan in the evening and posts a macOS
-    notification when the night verdict (1) is GO.
-20. **Shooting hints per rig:** optional per-rig filter/exposure fields
+    notification when the night verdict (Ideas 1) is GO.
+18. **Shooting hints per rig:** optional per-rig filter/exposure fields
     (Seestar S30 Pro: light-pollution filter on for emission targets, off
     for broadband, 10 s frames), with the frame count computed from the
-    clear window. The practical side of integration time estimation (4).
-21. **Horizon from terrain data:** look up the surrounding terrain once per
+    clear window. The practical side of integration time estimation (Ideas 4).
+19. **Horizon from terrain data:** look up the surrounding terrain once per
     site (Open-Meteo's elevation API, Copernicus DEM 90 m) and propose it
     as a lower bound for the horizon profile. Terrain sees hills only,
     never trees or buildings, so it complements a hand-measured profile
     rather than replacing it — most useful for field sites that have none.
-22. **More events:** meteor showers, lunar occultations, ISS passes, with
+20. **More events:** meteor showers, lunar occultations, ISS passes, with
     a calendar export. Useful for public observing nights more than for
     imaging plans.
-23. **Dark sites from light-pollution data:** a VIIRS-derived grid for the
+21. **Dark sites from light-pollution data:** a VIIRS-derived grid for the
     region, listing darker places within reach with an estimated Bortle
     class, complementing measured SQM values. Large effort (data volume,
     licensing), hence low.
-24. **Menu-bar indicator:** a `QSystemTrayIcon` showing tonight's night
-    verdict (1) at a glance. Only worth it once 1 exists.
+22. **Menu-bar indicator:** a `QSystemTrayIcon` showing tonight's night
+    verdict (Ideas 1) at a glance. Only worth it once that exists.
 
 ## Non-prioritized ideas
 
